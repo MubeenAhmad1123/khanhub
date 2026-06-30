@@ -147,8 +147,11 @@ export async function getAdmissionsByDate(
 ) {
   await assertVoiceAccess();
   const date = targetDate || getPKTDate(daysBack || 0);
-  const start = `${date}T00:00:00`;
-  const end = `${date}T23:59:59`;
+
+  const [year, month, day] = date.split('-').map(Number);
+  // Construct start and end of that day in PKT (UTC+5) converted to UTC Dates (which Firestore handles as Timestamps)
+  const start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
+  const end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
 
   const collMap: Record<string, string> = {
     rehab: 'rehab_patients',
@@ -159,14 +162,13 @@ export async function getAdmissionsByDate(
   };
 
   const collections = department && collMap[department]
-    ? [collMap[department]]
-    : Object.values(collMap);
+    ? [{ col: collMap[department], dept: department }]
+    : Object.entries(collMap).map(([dept, col]) => ({ col, dept }));
 
   const patients: { name: string; id: string; department: string }[] = [];
 
-  for (const col of collections) {
+  for (const { col, dept } of collections) {
     try {
-      const dept = Object.keys(collMap).find(k => collMap[k] === col) || '';
       const snap = await adminDb.collection(col)
         .where('createdAt', '>=', start)
         .where('createdAt', '<=', end)
