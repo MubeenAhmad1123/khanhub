@@ -60,11 +60,18 @@ export async function getLatestAdmission(department: string | null) {
 
   if (!latest) return null;
 
+  let admittedAtStr = '';
+  const rawAdmittedAt = latest.admissionDate || latest.createdAt;
+  if (rawAdmittedAt) {
+    const dDate = rawAdmittedAt.toDate ? rawAdmittedAt.toDate() : new Date(rawAdmittedAt);
+    admittedAtStr = dDate.toISOString();
+  }
+
   return {
     name: latest.name || latest.displayName || 'Unknown',
     id: latest.id,
     department: latestDept,
-    admittedAt: latest.admissionDate || latest.createdAt,
+    admittedAt: admittedAtStr,
     detail: latest.substanceOfAddiction
       ? `Addiction: ${latest.substanceOfAddiction}`
       : latest.course
@@ -116,11 +123,17 @@ export async function getMostRecentDischarge(department: string | null) {
 
   if (!latest) return null;
 
+  let dischargeDateStr = '';
+  if (latest.dischargeDate) {
+    const dDate = latest.dischargeDate.toDate ? latest.dischargeDate.toDate() : new Date(latest.dischargeDate);
+    dischargeDateStr = dDate.toISOString();
+  }
+
   return {
     name: latest.name || 'Unknown',
     id: latest.id,
     department: latestDept,
-    dischargeDate: latest.dischargeDate,
+    dischargeDate: dischargeDateStr,
     dischargeReason: latest.dischargeReason || 'Not specified',
     fatherName: latest.fatherName || '',
   };
