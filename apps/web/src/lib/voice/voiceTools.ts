@@ -165,7 +165,16 @@ export async function getAdmissionsByDate(
     ? [{ col: collMap[department], dept: department }]
     : Object.entries(collMap).map(([dept, col]) => ({ col, dept }));
 
-  const patients: { name: string; id: string; department: string }[] = [];
+  const admissions: { name: string; id: string; department: string; type: string }[] = [];
+
+  const typeMap: Record<string, string> = {
+    rehab: 'patient',
+    hospital: 'patient',
+    spims: 'student',
+    welfare: 'child',
+    'job-center': 'job seeker',
+    sukoon: 'client',
+  };
 
   for (const { col, dept } of collections) {
     try {
@@ -174,12 +183,15 @@ export async function getAdmissionsByDate(
         .where('createdAt', '<=', end)
         .get();
 
+      const type = typeMap[dept] || 'patient';
+
       snap.docs.forEach(doc => {
         const d = doc.data();
-        patients.push({
+        admissions.push({
           name: d.name || d.displayName || 'Unknown',
           id: doc.id,
           department: dept,
+          type,
         });
       });
     } catch (e) {
@@ -187,7 +199,7 @@ export async function getAdmissionsByDate(
     }
   }
 
-  return { date, count: patients.length, patients };
+  return { date, count: admissions.length, admissions };
 }
 
 // ─── TOOL 4: Financial summary ────────────────────────────────────────────────
@@ -223,19 +235,21 @@ export async function getFinancialSummary(
 
   for (const { col, dept } of collections) {
     try {
+      // Query date range only, filtering status client-side to bypass composite index requirements
       const snap = await adminDb.collection(col)
         .where('date', '>=', start)
         .where('date', '<=', end)
-        .where('status', '==', 'approved')
         .get();
 
       let dIncome = 0;
       let dExpense = 0;
       snap.docs.forEach(doc => {
         const d = doc.data();
-        txCount++;
-        if (d.type === 'income') dIncome += d.amount || 0;
-        else if (d.type === 'expense') dExpense += d.amount || 0;
+        if (d.status === 'approved') {
+          txCount++;
+          if (d.type === 'income') dIncome += d.amount || 0;
+          else if (d.type === 'expense') dExpense += d.amount || 0;
+        }
       });
 
       totalIncome += dIncome;
@@ -389,17 +403,19 @@ export async function getStudentsByCourse(course: string) {
   try {
     const snap = await adminDb.collection('spims_students')
       .where('course', '==', course)
-      .where('status', '==', 'active')
-      .orderBy('name')
       .get();
+
+    const activeStudents = snap.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter((d: any) => d.status === 'active');
+
+    // Sort by name client-side
+    activeStudents.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
 
     return {
       course,
-      count: snap.docs.length,
-      students: snap.docs.map(doc => {
-        const d = doc.data();
-        return { name: d.name, rollNo: d.rollNo, id: doc.id };
-      }),
+      count: activeStudents.length,
+      students: activeStudents.map((d: any) => ({ name: d.name, rollNo: d.rollNo, id: d.id })),
     };
   } catch (e) {
     console.warn('[voiceTools] getStudentsByCourse error:', e);

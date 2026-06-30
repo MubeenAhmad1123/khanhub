@@ -42,6 +42,7 @@ interface VoiceAssistantContextType {
   clearPendingIntent: () => void;
   voiceState: 'idle' | 'listening' | 'thinking' | 'speaking' | 'error';
   thinkingMessage: string | null;
+  spokenResponse: string | null;
 }
 
 const VoiceAssistantContext = createContext<VoiceAssistantContextType | undefined>(undefined);
@@ -93,6 +94,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
   const [pendingIntent, setPendingIntent] = useState<{ intent: ParsedVoiceIntent; matches: EntityMatch[] } | null>(null);
   const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'thinking' | 'speaking' | 'error'>('idle');
   const [thinkingMessage, setThinkingMessage] = useState<string | null>(null);
+  const [spokenResponse, setSpokenResponse] = useState<string | null>(null);
 
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -159,6 +161,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
 
     setProcessing(true);
     setLiveTranscript(commandText);
+    setSpokenResponse(null);
     
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch (e) {}
@@ -236,9 +239,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
             else if (data.department === 'job-center') type = 'seeker';
             
             const profilePath = buildProfilePath(data.department, type, data.id);
-            setVoiceState('speaking');
-            speak(`Opening the profile of the latest admitted patient, ${data.name}.`);
             setThinkingMessage(null);
+            speakUtterance(`Opening the profile of the latest admitted ${type === 'seeker' ? 'job seeker' : type === 'student' ? 'student' : type === 'child' ? 'child' : 'patient'}, ${data.name}.`);
             router.push(profilePath);
             return;
           }
@@ -262,9 +264,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
             else if (data.department === 'job-center') type = 'seeker';
             
             const profilePath = buildProfilePath(data.department, type, data.id);
-            setVoiceState('speaking');
-            speak(`Opening the profile of the last discharged patient, ${data.name}.`);
             setThinkingMessage(null);
+            speakUtterance(`Opening the profile of the last discharged ${type === 'seeker' ? 'job seeker' : type === 'student' ? 'student' : type === 'child' ? 'child' : 'patient'}, ${data.name}.`);
             router.push(profilePath);
             return;
           }
@@ -288,18 +289,16 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
             // Need to search by name first
             const results = await searchPersonByName(entityName, null, entityType, departmentCode);
             if (results.length === 0) {
-              setVoiceState('speaking');
-              speak(`Sorry, no record found for ${entityName}.`);
               setThinkingMessage(null);
+              speakUtterance(`Sorry, no record found for ${entityName}.`);
               return;
             }
             if (results.length === 1) {
               data = await getRemainingFee(results[0].id, results[0].department);
               topic = 'remaining_fee';
               const spokenText = await generateSpokenResponse(topic, data, results[0].name);
-              setVoiceState('speaking');
               setThinkingMessage(null);
-              speak(spokenText);
+              speakUtterance(spokenText);
               return;
             }
             // Multiple matches — disambiguate
@@ -330,9 +329,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
             });
             setPendingIntent({ intent, matches: entityMatches });
             const names = results.slice(0, 3).map((r, i) => `${i + 1}. ${r.name}${r.fatherName ? `, son of ${r.fatherName}` : ''}`).join(', ');
-            setVoiceState('speaking');
-            speak(`Found ${results.length} matches. ${names}. Which one do you mean?`);
             setThinkingMessage(null);
+            speakUtterance(`Found ${results.length} matches. ${names}. Which one do you mean?`);
             return;
           }
           data = await getRemainingFee(entityId, departmentCode);
@@ -344,18 +342,16 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           const results = await searchPersonByName(entityName, entityId, entityType, departmentCode);
 
           if (results.length === 0) {
-            setVoiceState('speaking');
-            speak(`Sorry, no record found for ${entityName || entityId}.`);
             setThinkingMessage(null);
+            speakUtterance(`Sorry, no record found for ${entityName || entityId}.`);
             return;
           }
 
           if (results.length === 1) {
             const match = results[0];
             const path = buildProfilePath(match.department, match.type, match.id);
-            setVoiceState('speaking');
-            speak(`Opening profile for ${match.name}.`);
             setThinkingMessage(null);
+            speakUtterance(`Opening profile for ${match.name}.`);
             router.push(path);
             return;
           }
@@ -390,9 +386,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           const names = results.slice(0, 3).map((r, i) =>
             `${i + 1}. ${r.name}${r.fatherName ? `, son of ${r.fatherName}` : ''} - ${r.department}`
           ).join('. ');
-          setVoiceState('speaking');
-          speak(`Found ${results.length} matches: ${names}. Which one do you want to open?`);
           setThinkingMessage(null);
+          speakUtterance(`Found ${results.length} matches: ${names}. Which one do you want to open?`);
           return;
         }
 
@@ -404,9 +399,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
 
         case 'getStudentsByCourse': {
           if (!course) {
-            setVoiceState('speaking');
-            speak('Please specify the course name.');
             setThinkingMessage(null);
+            speakUtterance('Please specify the course name.');
             return;
           }
           data = await getStudentsByCourse(course);
@@ -415,28 +409,26 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         }
 
         default: {
-          setVoiceState('speaking');
-          speak("I did not understand that command. Please say it again or ask differently.");
           setThinkingMessage(null);
+          speakUtterance("I did not understand that command. Please say it again or ask differently.");
           return;
         }
       }
 
       // Generate AI spoken response
       const spokenText = await generateSpokenResponse(topic, data, entityName || undefined);
-      setVoiceState('speaking');
       setThinkingMessage(null);
-      speak(spokenText);
+      speakUtterance(spokenText);
 
     } catch (err: any) {
       console.error('[Voice Dispatch] Error:', err);
+      setThinkingMessage(null);
       if (err?.status === 429 || err?.message?.includes('429') || err?.message?.includes('rate limit')) {
-        speak("I am a bit busy, please try again in 10 seconds.");
+        speakUtterance("I am a bit busy, please try again in 10 seconds.");
       } else {
-        speak("Something went wrong. Please try again.");
+        speakUtterance("Something went wrong. Please try again.");
       }
       setVoiceState('error');
-      setThinkingMessage(null);
     } finally {
       setTimeout(() => setVoiceState('idle'), 3000);
     }
@@ -466,11 +458,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
   }
 
   const resolveDisambiguation = async (match: EntityMatch) => {
-    if (!pendingIntent) return;
-    setPendingIntent(null);
-    
     let entityType: EntityType = 'patient';
-    if (match.collection.endsWith('_users') || match.collection.endsWith('_staff')) {
+    if (match.collection.endsWith('_staff') || match.collection.endsWith('_users')) {
       entityType = 'staff';
     } else if (match.collection === 'spims_students') {
       entityType = 'student';
@@ -503,7 +492,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
   };
 
   const speakUtterance = (text: string) => {
-    setSpeaking(true);
+    setSpokenResponse(text);
+    setVoiceState('speaking');
     speak(text);
     
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -629,6 +619,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     setError(null);
     setLiveTranscript('');
     setPendingIntent(null);
+    setSpokenResponse(null);
     
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -689,7 +680,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         resolveDisambiguation,
         clearPendingIntent,
         voiceState,
-        thinkingMessage
+        thinkingMessage,
+        spokenResponse
       }}
     >
       {children}

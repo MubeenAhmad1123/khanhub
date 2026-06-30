@@ -15,7 +15,8 @@ export default function VoiceCommandBar() {
     error,
     mode,
     voiceState,
-    thinkingMessage
+    thinkingMessage,
+    spokenResponse
   } = useVoiceAssistant();
 
   // Determine if we should show the bar
@@ -63,9 +64,9 @@ export default function VoiceCommandBar() {
       )}
 
       {voiceState === 'speaking' && (
-        <div className="flex items-center gap-3 px-4 py-3 bg-green-950 border border-green-700 rounded-xl shadow-2xl">
+        <div className="flex items-start gap-3 px-4 py-3 bg-green-950 border border-green-700 rounded-xl shadow-2xl">
           {/* Sound wave animation */}
-          <div className="flex gap-0.5 items-center shrink-0">
+          <div className="flex gap-0.5 items-center shrink-0 mt-1">
             {[1, 2, 3, 4, 3, 2, 1].map((h, i) => (
               <span
                 key={i}
@@ -74,7 +75,7 @@ export default function VoiceCommandBar() {
               />
             ))}
           </div>
-          <p className="text-green-200 text-sm font-medium">Speaking...</p>
+          <p className="text-green-200 text-sm font-medium leading-relaxed">{spokenResponse || 'Speaking...'}</p>
         </div>
       )}
 

@@ -15,7 +15,16 @@ Style rules:
 - For lists: if 1-3 items, mention all names. If 4+, say "There are X people, including [first 3 names]"
 - Maximum 4 sentences
 - Never say "data shows", "according to records", "system indicates"
-- Respond ONLY with the spoken text — no JSON, no formatting`;
+- Respond ONLY with the spoken text — no JSON, no formatting
+
+Department Terminology Rules:
+- rehab: call them "patients" or "clients"
+- hospital: call them "patients"
+- spims: call them "students" (never patients)
+- welfare: call them "children" (never patients)
+- job-center: call them "job seekers" (never patients)
+- sukoon: call them "clients" (never patients)
+`;
 
 export async function generateSpokenResponse(
   topic: string,

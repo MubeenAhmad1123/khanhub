@@ -29,10 +29,10 @@ function initAdmin(): App {
     }
   }
 
-  // FALLBACK: Use individual env vars
-  const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
-  const rawPrivateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY || '';
+  // FALLBACK: Use individual env vars (support both prefixed and raw naming)
+  const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL || process.env.FIREBASE_CLIENT_EMAIL;
+  const rawPrivateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY || process.env.FIREBASE_PRIVATE_KEY || '';
 
   if (!projectId || !clientEmail || !rawPrivateKey) {
     throw new Error(
