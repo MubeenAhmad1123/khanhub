@@ -216,7 +216,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
   };
 
   const dispatchVoiceTool = async (intent: ParsedVoiceIntent) => {
-    const { tool, entityName, entityId, entityType, departmentCode, targetDate, daysBack, course } = intent;
+    const { tool, entityName, entityId, entityType, departmentCode, startDate, endDate, daysBack, course } = intent;
 
     // Show thinking state with LLM-generated message
     setVoiceState('thinking');
@@ -278,19 +278,19 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         }
 
         case 'getAdmissionsByDate': {
-          data = await getAdmissionsByDate(departmentCode, targetDate, daysBack);
+          data = await getAdmissionsByDate(departmentCode, startDate, endDate, daysBack);
           topic = 'admissions_by_date';
           break;
         }
 
         case 'getDischargesByDate': {
-          data = await getDischargesByDate(departmentCode, targetDate, daysBack);
+          data = await getDischargesByDate(departmentCode, startDate, endDate, daysBack);
           topic = 'discharges_by_date';
           break;
         }
 
         case 'getFinancialSummary': {
-          data = await getFinancialSummary(departmentCode, targetDate, daysBack);
+          data = await getFinancialSummary(departmentCode, startDate, endDate, daysBack);
           topic = 'financial_summary';
           break;
         }
@@ -404,7 +404,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         }
 
         case 'getAttendanceSummary': {
-          data = await getAttendanceSummary(targetDate, daysBack);
+          data = await getAttendanceSummary(startDate, endDate, daysBack);
           topic = 'attendance_summary';
           break;
         }
@@ -488,7 +488,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       entityId: match.id,
       entityType,
       departmentCode: match.department as any,
-      targetDate: null,
+      startDate: null,
+      endDate: null,
       daysBack: null,
       course: null,
       rawTranscript: '',

@@ -25,7 +25,8 @@ export interface ParsedVoiceIntent {
   entityId: string | null;
   entityType: EntityType;
   departmentCode: string | null;
-  targetDate: string | null;
+  startDate: string | null; // YYYY-MM-DD
+  endDate: string | null;   // YYYY-MM-DD
   daysBack: number | null;
   course: string | null;
   rawTranscript: string;
@@ -58,18 +59,24 @@ JSON format:
   "entityId": string or null (convert word-numbers: "ninety nine" → "99"),
   "entityType": "patient"|"student"|"staff"|"child"|"seeker" or null,
   "departmentCode": "rehab"|"spims"|"hospital"|"welfare"|"job-center" or null,
-  "targetDate": "YYYY-MM-DD" or null,
+  "startDate": "YYYY-MM-DD" or null,
+  "endDate": "YYYY-MM-DD" or null,
   "daysBack": number or null,
   "course": exact course name from SPIMS list or null,
   "llmConfidence": 0.0 to 1.0,
   "thinkingMessage": short English message shown in UI while fetching (e.g. "Searching Rehab data..." or "Checking patient records...")
 }
 
+Date Range Guidelines:
+- If the user specifies a specific day (e.g., "24th of June"), set both "startDate" and "endDate" to that date ("2026-06-24").
+- If the user specifies a date range (e.g., "1st of June till 7th of June" or "first week of June"), calculate the exact dates and set "startDate" to the beginning date ("2026-06-01") and "endDate" to the ending date ("2026-06-07").
+- If the user specifies a relative range (e.g. "last week"), set "daysBack" to 7, and populate "startDate" and "endDate" with null.
+
 Tool selection guide:
 - getLatestAdmission     → "latest patient", "last admitted", "recent admission", "naya patient"
 - getMostRecentDischarge → "recently discharged", "last discharge", "most recent discharge", "discharge hua"
 - getAdmissionsByDate    → "how many patients", "admissions on [date]", "count of patients", "new clients"
-- getDischargesByDate    → "how many discharges", "discharges last week", "discharged from rehab last week"
+- getDischargesByDate    → "how many discharges", "discharges last week", "discharged from rehab last week", "discharged in the first week of June"
 - getFinancialSummary    → "income", "expense", "earnings", "revenue", "loss", "kamaya", "kharch", "stats of 24 of June"
 - getRemainingFee        → "remaining", "balance", "fee left"
 - searchPersonByName     → name mentioned + open/profile/find (e.g., "open profile of Raman", "profile of Rehman")
@@ -79,10 +86,9 @@ Tool selection guide:
 
 Examples:
 "open the profile of last discharge patient" → tool: "getMostRecentDischarge", thinkingMessage: "Finding most recently discharged patient..."
-"open the profile of patient Raman" → tool: "searchPersonByName", entityName: "Raman", entityType: "patient", thinkingMessage: "Searching for patient Raman..."
+"tell me from the date range 1st of June till 7th of June how many patient got discharged from rehab" → tool: "getDischargesByDate", departmentCode: "rehab", startDate: "2026-06-01", endDate: "2026-06-07", thinkingMessage: "Checking Rehab discharges..."
 "how much did rehab earn yesterday" → tool: "getFinancialSummary", departmentCode: "rehab", daysBack: 1, thinkingMessage: "Calculating rehab revenue..."
-"how many patient goes discharge last week from rehab" → tool: "getDischargesByDate", departmentCode: "rehab", daysBack: 7, thinkingMessage: "Checking Rehab discharges..."
-"who was the latest patient admitted to hospital" → tool: "getLatestAdmission", departmentCode: "hospital", thinkingMessage: "Finding latest hospital admission..."
+"how many patient got discharged in the very first week of June" → tool: "getDischargesByDate", startDate: "2026-06-01", endDate: "2026-06-07", thinkingMessage: "Checking discharges..."
 `;
 
 export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceIntent> {
@@ -110,7 +116,8 @@ export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceInt
       entityId: parsed.entityId || null,
       entityType: parsed.entityType || null,
       departmentCode: parsed.departmentCode || null,
-      targetDate: parsed.targetDate || null,
+      startDate: parsed.startDate || null,
+      endDate: parsed.endDate || null,
       daysBack: typeof parsed.daysBack === 'number' ? parsed.daysBack : null,
       course: parsed.course || null,
       rawTranscript: transcript,
@@ -125,7 +132,8 @@ export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceInt
       entityId: null,
       entityType: null,
       departmentCode: null,
-      targetDate: null,
+      startDate: null,
+      endDate: null,
       daysBack: null,
       course: null,
       rawTranscript: transcript,

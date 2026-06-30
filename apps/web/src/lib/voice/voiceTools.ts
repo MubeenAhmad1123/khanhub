@@ -20,6 +20,24 @@ function getPKTDate(daysBack: number = 0): string {
   return now.toISOString().split('T')[0];
 }
 
+function resolveDateRange(
+  startDate: string | null,
+  endDate: string | null,
+  daysBack: number | null
+): { start: Date; end: Date; label: string; rawStart: string; rawEnd: string } {
+  const resolvedStartDate = startDate || (daysBack ? getPKTDate(daysBack) : getPKTDate(0));
+  const resolvedEndDate = endDate || getPKTDate(0);
+
+  const [sY, sM, sD] = resolvedStartDate.split('-').map(Number);
+  const [eY, eM, eD] = resolvedEndDate.split('-').map(Number);
+
+  const start = new Date(Date.UTC(sY, sM - 1, sD, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
+  const end = new Date(Date.UTC(eY, eM - 1, eD, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
+
+  const label = resolvedStartDate === resolvedEndDate ? resolvedStartDate : `${resolvedStartDate} to ${resolvedEndDate}`;
+  return { start, end, label, rawStart: resolvedStartDate, rawEnd: resolvedEndDate };
+}
+
 // ─── TOOL 1: Latest admission ─────────────────────────────────────────────────
 export async function getLatestAdmission(department: string | null) {
   await assertVoiceAccess();
@@ -142,35 +160,12 @@ export async function getMostRecentDischarge(department: string | null) {
 // ─── TOOL 3: Admissions by date ───────────────────────────────────────────────
 export async function getAdmissionsByDate(
   department: string | null,
-  targetDate: string | null,
+  startDate: string | null,
+  endDate: string | null,
   daysBack: number | null
 ) {
   await assertVoiceAccess();
-
-  let start: Date;
-  let end: Date;
-  let dateLabel: string;
-
-  if (targetDate) {
-    const [year, month, day] = targetDate.split('-').map(Number);
-    start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
-    end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
-    dateLabel = targetDate;
-  } else if (daysBack && daysBack > 0) {
-    const todayStr = getPKTDate(0);
-    const [tY, tM, tD] = todayStr.split('-').map(Number);
-    const pastStr = getPKTDate(daysBack);
-    const [pY, pM, pD] = pastStr.split('-').map(Number);
-    start = new Date(Date.UTC(pY, pM - 1, pD, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
-    end = new Date(Date.UTC(tY, tM - 1, tD, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
-    dateLabel = `last ${daysBack} days (${pastStr} to ${todayStr})`;
-  } else {
-    const todayStr = getPKTDate(0);
-    const [tY, tM, tD] = todayStr.split('-').map(Number);
-    start = new Date(Date.UTC(tY, tM - 1, tD, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
-    end = new Date(Date.UTC(tY, tM - 1, tD, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
-    dateLabel = todayStr;
-  }
+  const { start, end, label } = resolveDateRange(startDate, endDate, daysBack);
 
   const collMap: Record<string, string> = {
     rehab: 'rehab_patients',
@@ -218,41 +213,18 @@ export async function getAdmissionsByDate(
     }
   }
 
-  return { date: dateLabel, count: admissions.length, admissions };
+  return { date: label, count: admissions.length, admissions };
 }
 
 // ─── TOOL 9: Discharges by date ───────────────────────────────────────────────
 export async function getDischargesByDate(
   department: string | null,
-  targetDate: string | null,
+  startDate: string | null,
+  endDate: string | null,
   daysBack: number | null
 ) {
   await assertVoiceAccess();
-  
-  let start: Date;
-  let end: Date;
-  let dateLabel: string;
-
-  if (targetDate) {
-    const [year, month, day] = targetDate.split('-').map(Number);
-    start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
-    end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
-    dateLabel = targetDate;
-  } else if (daysBack && daysBack > 0) {
-    const todayStr = getPKTDate(0);
-    const [tY, tM, tD] = todayStr.split('-').map(Number);
-    const pastStr = getPKTDate(daysBack);
-    const [pY, pM, pD] = pastStr.split('-').map(Number);
-    start = new Date(Date.UTC(pY, pM - 1, pD, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
-    end = new Date(Date.UTC(tY, tM - 1, tD, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
-    dateLabel = `last ${daysBack} days (${pastStr} to ${todayStr})`;
-  } else {
-    const todayStr = getPKTDate(0);
-    const [tY, tM, tD] = todayStr.split('-').map(Number);
-    start = new Date(Date.UTC(tY, tM - 1, tD, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
-    end = new Date(Date.UTC(tY, tM - 1, tD, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
-    dateLabel = todayStr;
-  }
+  const { start, end, label } = resolveDateRange(startDate, endDate, daysBack);
 
   const collMap: Record<string, string> = {
     rehab: 'rehab_patients',
@@ -297,41 +269,18 @@ export async function getDischargesByDate(
     }
   }
 
-  return { date: dateLabel, count: discharges.length, discharges };
+  return { date: label, count: discharges.length, discharges };
 }
 
 // ─── TOOL 4: Financial summary ────────────────────────────────────────────────
 export async function getFinancialSummary(
   department: string | null,
-  targetDate: string | null,
+  startDate: string | null,
+  endDate: string | null,
   daysBack: number | null
 ) {
   await assertVoiceAccess();
-  
-  let start: Date;
-  let end: Date;
-  let dateLabel: string;
-
-  if (targetDate) {
-    const [year, month, day] = targetDate.split('-').map(Number);
-    start = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
-    end = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
-    dateLabel = targetDate;
-  } else if (daysBack && daysBack > 0) {
-    const todayStr = getPKTDate(0);
-    const [tY, tM, tD] = todayStr.split('-').map(Number);
-    const pastStr = getPKTDate(daysBack);
-    const [pY, pM, pD] = pastStr.split('-').map(Number);
-    start = new Date(Date.UTC(pY, pM - 1, pD, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
-    end = new Date(Date.UTC(tY, tM - 1, tD, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
-    dateLabel = `last ${daysBack} days (${pastStr} to ${todayStr})`;
-  } else {
-    const todayStr = getPKTDate(0);
-    const [tY, tM, tD] = todayStr.split('-').map(Number);
-    start = new Date(Date.UTC(tY, tM - 1, tD, 0, 0, 0, 0) - 5 * 60 * 60 * 1000);
-    end = new Date(Date.UTC(tY, tM - 1, tD, 23, 59, 59, 999) - 5 * 60 * 60 * 1000);
-    dateLabel = todayStr;
-  }
+  const { start, end, label } = resolveDateRange(startDate, endDate, daysBack);
 
   const txCollMap: Record<string, string> = {
     rehab: 'rehab_transactions',
@@ -380,7 +329,7 @@ export async function getFinancialSummary(
   }
 
   return {
-    date: dateLabel,
+    date: label,
     income: totalIncome,
     expense: totalExpense,
     net: totalIncome - totalExpense,
@@ -490,15 +439,17 @@ export async function searchPersonByName(
 
 // ─── TOOL 7: Attendance summary ───────────────────────────────────────────────
 export async function getAttendanceSummary(
-  targetDate: string | null,
+  startDate: string | null,
+  endDate: string | null,
   daysBack: number | null
 ) {
   await assertVoiceAccess();
-  const date = targetDate || getPKTDate(daysBack || 0);
+  const { rawStart, rawEnd, label } = resolveDateRange(startDate, endDate, daysBack);
 
   try {
     const snap = await adminDb.collection('hq_attendance')
-      .where('date', '==', date)
+      .where('date', '>=', rawStart)
+      .where('date', '<=', rawEnd)
       .get();
 
     const present = snap.docs.filter(d => d.data().status === 'present').length;
@@ -506,7 +457,7 @@ export async function getAttendanceSummary(
     const leave = snap.docs.filter(d => ['leave', 'paid_leave', 'unpaid_leave'].includes(d.data().status)).length;
     const total = snap.docs.length;
 
-    return { date, present, absent, leave, total };
+    return { date: label, present, absent, leave, total };
   } catch (e) {
     console.warn('[voiceTools] getAttendanceSummary error:', e);
     return null;
