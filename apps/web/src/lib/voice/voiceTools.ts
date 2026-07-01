@@ -495,6 +495,23 @@ export async function getAttendanceSummary(
   const leaveStaff: { name: string; role: string; dept: string; status: string }[] = [];
   const lateStaff: { name: string; role: string; dept: string; time?: string }[] = [];
   const noUniformStaff: { name: string; role: string; dept: string; missingItems: string[] }[] = [];
+  const pendingDutyStaff: { name: string; role: string; dept: string; dutyStatus: string; pendingDuties: string[] }[] = [];
+
+  const timeToMinutes = (timeStr?: string) => {
+    if (!timeStr) return null;
+    const clean = timeStr.trim().toUpperCase();
+    const isPM = clean.includes('PM');
+    const isAM = clean.includes('AM');
+    const numeric = clean.replace(/[^0-9:]/g, '');
+    const parts = numeric.split(':');
+    if (parts.length < 2) return null;
+    let h = parseInt(parts[0], 10);
+    let m = parseInt(parts[1], 10);
+    if (isNaN(h) || isNaN(m)) return null;
+    if (isPM && h < 12) h += 12;
+    if (isAM && h === 12) h = 0;
+    return h * 60 + m;
+  };
 
   for (const dept of targetDepts) {
     const config = txCollMap[dept];
@@ -541,13 +558,17 @@ export async function getAttendanceSummary(
 
       if (activeUsers.length === 0) continue;
 
-      // 2. Fetch attendance logs and dress logs
-      const [attSnap, dressSnap] = await Promise.all([
+      // 2. Fetch attendance logs, dress logs, and duty logs
+      const [attSnap, dressSnap, dutySnap] = await Promise.all([
         adminDb.collection(`${config.prefix}_attendance`)
           .where('date', '>=', rawStart)
           .where('date', '<=', rawEnd)
           .get(),
         adminDb.collection(`${config.prefix}_dress_logs`)
+          .where('date', '>=', rawStart)
+          .where('date', '<=', rawEnd)
+          .get(),
+        adminDb.collection(`${config.prefix}_duty_logs`)
           .where('date', '>=', rawStart)
           .where('date', '<=', rawEnd)
           .get()
@@ -595,11 +616,36 @@ export async function getAttendanceSummary(
         dressMap[simpleSid] = data;
       });
 
+      const dutyMap: Record<string, any> = {};
+      dutySnap.docs.forEach(doc => {
+        const data = doc.data();
+        let sid = data.staffId || doc.id;
+        
+        if (!data.staffId && sid.includes('_')) {
+          const parts = sid.split('_');
+          if (parts[parts.length - 1].includes('-') && parts[parts.length - 1].length === 10) {
+            parts.pop(); // remove date suffix
+          }
+          if (parts[0] === config.prefix) {
+            parts.shift(); // remove dept prefix
+          }
+          sid = parts.join('_');
+        }
+
+        const existing = dutyMap[sid];
+        if (!existing || (!existing.duties && data.duties)) {
+          dutyMap[sid] = data;
+          const simpleSid = sid.includes('_') ? sid.split('_').slice(1).join('_') : sid;
+          dutyMap[simpleSid] = data;
+        }
+      });
+
       // 3. Match
       activeUsers.forEach((u: any) => {
         const simpleId = getSimpleId(u.id);
         const att = attMap[u.id] || attMap[simpleId] || attMap[u.customId] || attMap[u.employeeId];
         const dress = dressMap[u.id] || dressMap[simpleId] || dressMap[u.customId] || dressMap[u.employeeId];
+        const duty = dutyMap[u.id] || dutyMap[simpleId] || dutyMap[u.customId] || dutyMap[u.employeeId];
         
         const name = u.name || u.displayName || 'Staff';
         const role = u.designation || u.role || 'Staff';
@@ -607,7 +653,19 @@ export async function getAttendanceSummary(
 
         if (att) {
           const status = String(att.status || '').toLowerCase();
-          const isLate = status === 'late' || att.isLate;
+          const checkIn = att.checkInTime || att.checkinTime || att.time || att.arrivalTime;
+          let isLate = status === 'late' || att.isLate || att.arrivedOnTime === false;
+
+          // Check shift start time if status is present
+          if (status === 'present') {
+            const arrMin = timeToMinutes(checkIn);
+            const startMin = timeToMinutes(u.dutyStartTime);
+            if (arrMin !== null && startMin !== null) {
+              if (arrMin > startMin) {
+                isLate = true;
+              }
+            }
+          }
 
           if (status === 'present' || isLate) {
             presentCount++;
@@ -618,7 +676,7 @@ export async function getAttendanceSummary(
                 name,
                 role,
                 dept: deptLabel,
-                time: att.checkInTime || att.checkinTime || att.time || undefined
+                time: checkIn || undefined
               });
             }
           } else if (status === 'absent') {
@@ -656,6 +714,34 @@ export async function getAttendanceSummary(
             });
           }
         }
+
+        // Check duties if marked present or late
+        if (isPresent) {
+          const dutyConfig = u.dutyConfig && u.dutyConfig.length > 0 ? u.dutyConfig : [
+            { key: 'morning', label: 'Morning Duty' },
+            { key: 'afternoon', label: 'Afternoon Duty' },
+            { key: 'evening', label: 'Evening Duty' }
+          ];
+          const dutyItems = duty?.duties || [];
+          const pendingDuties = dutyConfig.filter((c: any) => {
+            const item = dutyItems.find((d: any) => d.key === c.key);
+            return !item || item.status !== 'done';
+          }).map((c: any) => c.label || c.key);
+
+          const dutyStatus = dutyConfig.length === 0 ? 'na' :
+            (pendingDuties.length === 0 ? 'yes' :
+              (pendingDuties.length === dutyConfig.length ? 'no' : 'incomplete'));
+
+          if (dutyStatus === 'no' || dutyStatus === 'incomplete') {
+            pendingDutyStaff.push({
+              name,
+              role,
+              dept: deptLabel,
+              dutyStatus: dutyStatus === 'no' ? 'No Duties Performed' : 'Incomplete Duties',
+              pendingDuties
+            });
+          }
+        }
       });
     } catch (e) {
       console.warn(`[voiceTools] getAttendanceSummary skipping ${dept}:`, e);
@@ -675,6 +761,7 @@ export async function getAttendanceSummary(
     leaveStaff,
     lateStaff,
     noUniformStaff,
+    pendingDutyStaff,
     department: department || 'all',
   };
 }

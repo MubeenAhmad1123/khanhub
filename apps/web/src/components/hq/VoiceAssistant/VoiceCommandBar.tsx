@@ -264,6 +264,30 @@ export default function VoiceCommandBar() {
                   </div>
                 </div>
               )}
+
+              {data.pendingDutyStaff && data.pendingDutyStaff.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="font-bold text-rose-450 text-[9px] uppercase tracking-widest">Pending Duties</p>
+                  <div className="space-y-1.5">
+                    {data.pendingDutyStaff.map((staff: any, idx: number) => (
+                      <div key={idx} className="bg-slate-950/40 p-2 rounded-lg border border-slate-800 flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-bold text-slate-200">{staff.name}</p>
+                            <p className="text-[9px] text-slate-500 uppercase tracking-wider">{staff.role} • {staff.dept}</p>
+                          </div>
+                          <span className="text-[9px] font-bold text-rose-450 bg-rose-950/30 px-2 py-0.5 rounded-full border border-rose-900/50">
+                            {staff.dutyStatus}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 italic">
+                          Pending: {staff.pendingDuties.join(', ')}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
