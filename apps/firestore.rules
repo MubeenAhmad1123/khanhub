@@ -2095,5 +2095,25 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.token.email == 'mubeenahma1123@gmail.com';
     }
 
+    // ── AI Voice Assistant System Awareness collections ──
+    match /erp_system_knowledge/{moduleId} {
+      allow read: if isAuth();
+      allow write: if isSystemAdmin() || isHqSuperOrManager();
+    }
+
+    match /ai_learned_corrections/{corrId} {
+      allow read: if isAuth();
+      allow write: if isSystemAdmin() || isHqSuperOrManager();
+    }
+
+    match /ai_memory/{memoryId} {
+      allow read, write: if isAuth() && (
+        resource.data.userId == request.auth.uid 
+        || request.resource.data.userId == request.auth.uid 
+        || isSystemAdmin() 
+        || isHqSuperOrManager()
+      );
+    }
+
   }
 }

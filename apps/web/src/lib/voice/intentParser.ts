@@ -1,8 +1,10 @@
 // apps/web/src/lib/voice/intentParser.ts
 'use server';
 
-import { getGroqClient, GROQ_MODEL } from './groqClient';
-import { KHAN_HUB_SYSTEM_AWARENESS } from './systemAwareness';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { readHqSessionCookie } from '@/app/hq/actions/auth';
+import { getCompletion } from './aiProvider';
+import { getModuleKnowledge } from './getData';
 
 export type VoiceTool =
   | 'getLatestAdmission'
@@ -42,16 +44,27 @@ function getTodayPKT(): string {
   return now.toISOString().split('T')[0];
 }
 
-const buildParserPrompt = () => `
-${KHAN_HUB_SYSTEM_AWARENESS}
-
-=== YOUR TASK ===
-You are parsing a voice command from an HQ staff member.
+const buildParserPrompt = (
+  modulesKnowledge: any[],
+  corrections: any[],
+  recentTurns: any[]
+) => `
+=== SYSTEM CONTEXT ===
+You are parsing a voice command from a KhanHub ERP staff member.
 Today's date (Pakistan time): ${getTodayPKT()}
 
-Return ONLY valid JSON — no explanation, no markdown, no extra text.
+Return ONLY a valid JSON object — no explanation, no markdown wrapping, no extra text.
 
-JSON format:
+=== ERP DATABASE SCHEMA & MODULE KNOWLEDGE ===
+${JSON.stringify(modulesKnowledge, null, 2)}
+
+=== LEARNED SYSTEM CORRECTIONS (APPLY STRICTLY!) ===
+${JSON.stringify(corrections, null, 2)}
+
+=== RECENT CONVERSATION (LAST 5 TURNS) ===
+${JSON.stringify(recentTurns, null, 2)}
+
+=== YOUR TARGET JSON FORMAT ===
 {
   "tool": "getLatestAdmission" | "getMostRecentDischarge" | "getAdmissionsByDate" | "getDischargesByDate" | 
           "getFinancialSummary" | "getRemainingFee" | "searchPersonByName" | 
@@ -68,12 +81,12 @@ JSON format:
   "thinkingMessage": short English message shown in UI while fetching (e.g. "Searching Rehab data..." or "Checking patient records...")
 }
 
-Date Range Guidelines:
+=== DATE RANGE GUIDELINES ===
 - If the user specifies a specific day (e.g., "24th of June"), set both "startDate" and "endDate" to that date ("2026-06-24").
 - If the user specifies a date range (e.g., "1st of June till 7th of June" or "first week of June"), calculate the exact dates and set "startDate" to the beginning date ("2026-06-01") and "endDate" to the ending date ("2026-06-07").
 - If the user specifies a relative range (e.g. "last week"), set "daysBack" to 7, and populate "startDate" and "endDate" with null.
 
-Tool selection guide:
+=== TOOL SELECTION GUIDE ===
 - getLatestAdmission     → "latest patient", "last admitted", "recent admission", "naya patient"
 - getMostRecentDischarge → "recently discharged", "last discharge", "most recent discharge", "discharge hua"
 - getAdmissionsByDate    → "how many patients", "admissions on [date]", "count of patients", "new clients"
@@ -85,34 +98,63 @@ Tool selection guide:
 - getStudentsByCourse    → "students in [course]"
 - getPendingTransactions  → "pending approvals", "pending transactions", "transactions waiting for approval", "unapproved transactions", "super admin approvals"
 - navigate               → "open profile", "show me", "profile of" WITH a specific name/ID
-
-Examples:
-"open the profile of last discharge patient" → tool: "getMostRecentDischarge", thinkingMessage: "Finding most recently discharged patient..."
-"tell me from the date range 1st of June till 7th of June how many patient got discharged from rehab" → tool: "getDischargesByDate", departmentCode: "rehab", startDate: "2026-06-01", endDate: "2026-06-07", thinkingMessage: "Checking Rehab discharges..."
-"how much did rehab earn yesterday" → tool: "getFinancialSummary", departmentCode: "rehab", daysBack: 1, thinkingMessage: "Calculating rehab revenue..."
-"how many patient got discharged in the very first week of June" → tool: "getDischargesByDate", startDate: "2026-06-01", endDate: "2026-06-07", thinkingMessage: "Checking discharges..."
 `;
 
 export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceIntent> {
-  const groq = getGroqClient();
-
   try {
-    const completion = await groq.chat.completions.create({
-      model: GROQ_MODEL,
-      messages: [
-        { role: 'system', content: buildParserPrompt() },
-        { role: 'user', content: transcript },
-      ],
+    // 1. Fetch ERP System Knowledge (7 modules)
+    const knowledgeSnap = await adminDb.collection('erp_system_knowledge').get();
+    let modulesKnowledge = knowledgeSnap.docs.map(doc => doc.data());
+    
+    // Auto-seed if empty
+    if (modulesKnowledge.length === 0) {
+      await getModuleKnowledge('hq'); // Triggers auto-seeding of all modules
+      const reSnap = await adminDb.collection('erp_system_knowledge').get();
+      modulesKnowledge = reSnap.docs.map(doc => doc.data());
+    }
+
+    // 2. Fetch Learned Corrections
+    const correctionsSnap = await adminDb.collection('ai_learned_corrections').limit(50).get().catch(() => ({ docs: [] } as any));
+    const corrections = correctionsSnap.docs.map((doc: any) => doc.data());
+
+    // 3. Fetch Session & Last 5 Conversation Turns (No combined orderBy/where to avoid missing index errors)
+    const session = await readHqSessionCookie().catch(() => null);
+    const userId = session?.uid || 'anonymous';
+    
+    const historySnap = await adminDb.collection('ai_memory')
+      .where('userId', '==', userId)
+      .get()
+      .catch(() => ({ docs: [] } as any));
+    
+    const recentTurns = historySnap.docs
+      .map((doc: any) => ({ id: doc.id, ...doc.data() }))
+      .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 5)
+      .map((d: any) => ({
+        query: d.query,
+        parsedIntent: {
+          tool: d.parsedIntent?.tool,
+          entityName: d.parsedIntent?.entityName,
+          entityId: d.parsedIntent?.entityId,
+          departmentCode: d.parsedIntent?.departmentCode,
+        }
+      }))
+      .reverse();
+
+    // 4. Invoke Dual AI Provider Router
+    const prompt = buildParserPrompt(modulesKnowledge, corrections, recentTurns);
+    const response = await getCompletion({
+      systemPrompt: prompt,
+      userMessage: transcript,
       temperature: 0.1,
-      max_tokens: 400,
-      response_format: { type: 'json_object' },
+      jsonMode: true
     });
 
-    const raw = completion.choices[0]?.message?.content || '{}';
-    console.log('[GROQ INTENT]', raw); // Keep this for debugging
+    const raw = response.text || '{}';
+    console.log(`[INTENT PARSER] parsed using ${response.provider}:`, raw);
     const parsed = JSON.parse(raw);
 
-    return {
+    const intentPayload = {
       tool: parsed.tool || 'unknown',
       entityName: parsed.entityName || null,
       entityId: parsed.entityId || null,
@@ -126,6 +168,18 @@ export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceInt
       llmConfidence: parsed.llmConfidence || 0.5,
       thinkingMessage: parsed.thinkingMessage || 'Searching...',
     };
+
+    // 5. Log Query to Memory (runs asynchronously)
+    adminDb.collection('ai_memory').add({
+      userId,
+      query: transcript,
+      parsedIntent: intentPayload,
+      timestamp: new Date().toISOString(),
+      wasCorrect: null,
+      correction: null
+    }).catch(err => console.error('[intentParser] Failed to log memory:', err));
+
+    return intentPayload;
   } catch (err) {
     console.error('[LLM Intent Parser] Error:', err);
     return {
