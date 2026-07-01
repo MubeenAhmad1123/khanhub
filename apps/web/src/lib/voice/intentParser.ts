@@ -14,6 +14,7 @@ export type VoiceTool =
   | 'searchPersonByName'
   | 'getAttendanceSummary'
   | 'getStudentsByCourse'
+  | 'getPendingTransactions'
   | 'navigate'
   | 'unknown';
 
@@ -54,7 +55,7 @@ JSON format:
 {
   "tool": "getLatestAdmission" | "getMostRecentDischarge" | "getAdmissionsByDate" | "getDischargesByDate" | 
           "getFinancialSummary" | "getRemainingFee" | "searchPersonByName" | 
-          "getAttendanceSummary" | "getStudentsByCourse" | "navigate" | "unknown",
+          "getAttendanceSummary" | "getStudentsByCourse" | "getPendingTransactions" | "navigate" | "unknown",
   "entityName": string or null,
   "entityId": string or null (convert word-numbers: "ninety nine" → "99"),
   "entityType": "patient"|"student"|"staff"|"child"|"seeker" or null,
@@ -82,6 +83,7 @@ Tool selection guide:
 - searchPersonByName     → name mentioned + open/profile/find (e.g., "open profile of Raman", "profile of Rehman")
 - getAttendanceSummary   → "attendance", "present", "absent"
 - getStudentsByCourse    → "students in [course]"
+- getPendingTransactions  → "pending approvals", "pending transactions", "transactions waiting for approval", "unapproved transactions", "super admin approvals"
 - navigate               → "open profile", "show me", "profile of" WITH a specific name/ID
 
 Examples:

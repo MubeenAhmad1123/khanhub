@@ -490,3 +490,78 @@ export async function getStudentsByCourse(course: string) {
     return null;
   }
 }
+
+// ─── TOOL 10: Pending transactions ─────────────────────────────────────────────
+export async function getPendingTransactions(department: string | null) {
+  await assertVoiceAccess();
+
+  const txCollMap: Record<string, string> = {
+    rehab: 'rehab_transactions',
+    spims: 'spims_transactions',
+    hospital: 'hospital_transactions',
+    welfare: 'welfare_transactions',
+    'job-center': 'jobcenter_transactions',
+    sukoon: 'sukoon_transactions',
+    'sukoon-center': 'sukoon_transactions',
+  };
+
+  const collections = department && txCollMap[department]
+    ? [{ col: txCollMap[department], dept: department }]
+    : Object.entries(txCollMap).map(([dept, col]) => ({ col, dept }));
+
+  // Keep track of unique collections to avoid double-fetching (e.g. sukoon and sukoon-center map to the same)
+  const uniqueCollections = Array.from(
+    new Map(collections.map(item => [item.col, item])).values()
+  );
+
+  let totalPending = 0;
+  const pendingByDept: Record<string, number> = {};
+  const pendingDetails: { id: string; dept: string; amount: number; category: string; name: string }[] = [];
+  const categoriesBreakdown: Record<string, Record<string, number>> = {};
+
+  for (const { col, dept } of uniqueCollections) {
+    try {
+      const snap = await adminDb.collection(col)
+        .where('status', 'in', ['pending', 'pending_cashier'])
+        .get();
+
+      if (!snap.empty) {
+        const count = snap.size;
+        totalPending += count;
+        pendingByDept[dept] = count;
+        categoriesBreakdown[dept] = {};
+
+        snap.docs.forEach(doc => {
+          const d = doc.data();
+          const amount = Number(d.amount) || 0;
+          const rawCat = d.category || d.feePaymentType || d.type || 'Other';
+          
+          let category = rawCat.replace(/_/g, ' ');
+          category = category.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+
+          categoriesBreakdown[dept][category] = (categoriesBreakdown[dept][category] || 0) + 1;
+
+          const name = d.patientName || d.studentName || d.seekerName || d.staffName || d.name || 'Unknown';
+
+          pendingDetails.push({
+            id: doc.id,
+            dept,
+            amount,
+            category,
+            name,
+          });
+        });
+      }
+    } catch (e) {
+      console.warn(`[voiceTools] getPendingTransactions skipping ${col}:`, e);
+    }
+  }
+
+  return {
+    totalPending,
+    pendingByDept,
+    categoriesBreakdown,
+    transactions: pendingDetails,
+    department: department || 'all',
+  };
+}

@@ -1,7 +1,7 @@
 // apps/web/src/components/hq/VoiceAssistant/VoiceCommandBar.tsx
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useVoiceAssistant } from './VoiceAssistantProvider';
 import { Mic, Loader2, Volume2, AlertCircle, X, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
@@ -11,6 +11,7 @@ export default function VoiceCommandBar() {
     listening,
     capturingCommand,
     liveTranscript,
+    setLiveTranscript,
     processing,
     speaking,
     error,
@@ -19,12 +20,29 @@ export default function VoiceCommandBar() {
     thinkingMessage,
     spokenResponse,
     activeData,
-    closeAssistantCard
+    closeAssistantCard,
+    countdownDuration,
+    countdownTimeLeft,
+    isEditing,
+    setIsEditing,
+    submitManualCommand,
+    startAssistant,
+    stopAssistant
   } = useVoiceAssistant();
+
+  const [editValue, setEditValue] = useState('');
+
+  // Sync editValue with liveTranscript when not actively editing
+  useEffect(() => {
+    if (!isEditing) {
+      setEditValue(liveTranscript);
+    }
+  }, [liveTranscript, isEditing]);
 
   // Determine if we should show the bar
   const isActive = (mode === 'always_on' && capturingCommand) || 
                    (mode === 'push_to_talk' && listening) || 
+                   isEditing ||
                    processing || 
                    speaking || 
                    (error && liveTranscript) ||
@@ -47,6 +65,10 @@ export default function VoiceCommandBar() {
     statusLabel = 'Speaking...';
     statusIcon = <Volume2 size={14} className="text-emerald-500 animate-bounce" />;
     barBorderColor = 'border-emerald-100';
+  } else if (isEditing) {
+    statusLabel = 'Editing...';
+    statusIcon = <Mic size={14} className="text-gray-400" />;
+    barBorderColor = 'border-indigo-200';
   } else if (error) {
     statusLabel = 'Error';
     statusIcon = <AlertCircle size={14} className="text-rose-500" />;
@@ -249,6 +271,55 @@ export default function VoiceCommandBar() {
         );
       }
 
+      case 'pending_transactions': {
+        return (
+          <div className="space-y-3 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-400">Status:</span>
+              <span className="font-bold text-slate-200">Pending Approvals</span>
+            </div>
+            
+            <div className="p-2.5 rounded-xl border border-amber-900/50 bg-amber-950/30 flex items-center justify-between">
+              <span className="font-bold uppercase tracking-wider text-[9px] text-amber-400">Total Pending</span>
+              <span className="text-sm font-black text-amber-400">{data.totalPending}</span>
+            </div>
+
+            {data.pendingByDept && Object.keys(data.pendingByDept).length > 0 && (
+              <div className="space-y-1.5">
+                <p className="font-bold text-slate-400 text-[9px] uppercase tracking-widest">By Department</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(data.pendingByDept).map(([dept, count]: any) => (
+                    <div key={dept} className="bg-slate-950/40 p-2 rounded-lg border border-slate-800 flex items-center justify-between uppercase tracking-wider text-[9px]">
+                      <span className="text-slate-300 font-bold">{dept}</span>
+                      <span className="font-black text-slate-100">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {data.transactions && data.transactions.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="font-bold text-slate-400 text-[9px] uppercase tracking-widest">Recent Pending</p>
+                <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                  {data.transactions.slice(0, 10).map((tx: any, idx: number) => (
+                    <div key={idx} className="bg-slate-950/40 p-2 rounded-lg border border-slate-800 flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <p className="font-bold text-slate-200">{tx.name}</p>
+                        <p className="text-[9px] text-slate-500 uppercase tracking-wider">{tx.category} • {tx.dept}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs font-black text-slate-100">Rs {tx.amount.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
       default:
         return null;
     }
@@ -330,32 +401,111 @@ export default function VoiceCommandBar() {
       )}
 
       {!(voiceState === 'thinking' || voiceState === 'speaking' || spokenResponse || activeData) && (
-        <div className={`bg-white/95 backdrop-blur-md border ${barBorderColor} shadow-2xl rounded-2xl p-4 flex items-center gap-4 transition-all duration-300`}>
-          {/* Status indicator badge */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-50 bg-gray-50/50 text-[9px] font-black uppercase tracking-widest text-gray-500 flex-shrink-0">
-            {statusIcon}
-            <span>{statusLabel}</span>
+        <div className={`bg-white/95 backdrop-blur-md border ${barBorderColor} shadow-2xl rounded-2xl p-4 flex flex-col gap-3 transition-all duration-300`}>
+          <div className="flex items-center gap-4 w-full">
+            {/* Status indicator badge */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-50 bg-gray-50/50 text-[9px] font-black uppercase tracking-widest text-gray-500 flex-shrink-0">
+              {statusIcon}
+              <span>{statusLabel}</span>
+            </div>
+
+            {/* Live transcript text display */}
+            <div className="flex-1 min-w-0">
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      submitManualCommand(editValue);
+                    }
+                  }}
+                  className="w-full text-xs font-bold text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  autoFocus
+                />
+              ) : liveTranscript ? (
+                <p 
+                  onClick={() => {
+                    setEditValue(liveTranscript);
+                    setIsEditing(true);
+                  }}
+                  className="text-xs font-bold text-gray-800 truncate uppercase tracking-wide cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors"
+                  title="Click to edit command"
+                >
+                  {liveTranscript}
+                </p>
+              ) : (
+                <p className="text-xs font-bold text-gray-400 italic">
+                  {mode === 'always_on' ? "Speak, I'm listening..." : 'Speak...'}
+                </p>
+              )}
+            </div>
+
+            {/* Action buttons (Send, Cancel/Clear) or Pulse indicator */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {isEditing ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setIsEditing(false);
+                      startAssistant(); // Resume listening
+                    }}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    title="Cancel edit"
+                  >
+                    <X size={14} />
+                  </button>
+                  <button
+                    onClick={() => submitManualCommand(editValue)}
+                    className="p-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white transition-colors"
+                    title="Send command"
+                  >
+                    <ArrowRight size={14} />
+                  </button>
+                </>
+              ) : liveTranscript ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setLiveTranscript('');
+                      if (mode !== 'always_on') {
+                        stopAssistant();
+                      }
+                    }}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    title="Clear command"
+                  >
+                    <X size={14} />
+                  </button>
+                  <button
+                    onClick={() => submitManualCommand(liveTranscript)}
+                    className="p-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white transition-colors"
+                    title="Send command immediately"
+                  >
+                    <ArrowRight size={14} />
+                  </button>
+                </>
+              ) : (
+                /* Pulse indicator for capturing */
+                (listening || capturingCommand) && !processing && !speaking && (
+                  <div className="flex gap-1 items-center flex-shrink-0">
+                    <span className="w-1.5 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-4 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                )
+              )}
+            </div>
           </div>
 
-          {/* Live transcript text display */}
-          <div className="flex-1 min-w-0">
-            {liveTranscript ? (
-              <p className="text-xs font-bold text-gray-800 truncate uppercase tracking-wide">
-                {liveTranscript}
-              </p>
-            ) : (
-              <p className="text-xs font-bold text-gray-400 italic">
-                {mode === 'always_on' ? "Speak, I'm listening..." : 'Speak...'}
-              </p>
-            )}
-          </div>
-
-          {/* Pulse indicator for capturing */}
-          {(listening || capturingCommand) && !processing && !speaking && (
-            <div className="flex gap-1 items-center flex-shrink-0">
-              <span className="w-1.5 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-1.5 h-4 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-1.5 h-3 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          {/* Countdown indicator bar */}
+          {!isEditing && countdownTimeLeft > 0 && countdownDuration > 0 && (
+            <div className="w-full bg-gray-100 h-1 rounded-full overflow-hidden">
+              <div 
+                className="bg-indigo-500 h-full transition-all duration-100 ease-linear"
+                style={{ width: `${(countdownTimeLeft / countdownDuration) * 100}%` }}
+              />
             </div>
           )}
         </div>

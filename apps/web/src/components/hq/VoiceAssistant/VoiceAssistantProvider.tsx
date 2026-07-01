@@ -22,6 +22,7 @@ import {
   searchPersonByName,
   getAttendanceSummary,
   getStudentsByCourse,
+  getPendingTransactions,
 } from '@/lib/voice/voiceTools';
 import { generateSpokenResponse } from '@/lib/voice/responseFormatter';
 import { speak } from '@/lib/voice/speak';
@@ -32,6 +33,7 @@ interface VoiceAssistantContextType {
   listening: boolean;
   capturingCommand: boolean;
   liveTranscript: string;
+  setLiveTranscript: (text: string) => void;
   processing: boolean;
   speaking: boolean;
   error: string | null;
@@ -46,6 +48,11 @@ interface VoiceAssistantContextType {
   spokenResponse: string | null;
   activeData: { topic: string; data: any } | null;
   closeAssistantCard: () => void;
+  countdownDuration: number;
+  countdownTimeLeft: number;
+  isEditing: boolean;
+  setIsEditing: (editing: boolean) => void;
+  submitManualCommand: (text: string) => void;
 }
 
 const VoiceAssistantContext = createContext<VoiceAssistantContextType | undefined>(undefined);
@@ -100,9 +107,58 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
   const [spokenResponse, setSpokenResponse] = useState<string | null>(null);
   const [activeData, setActiveData] = useState<{ topic: string; data: any } | null>(null);
 
+  const [countdownDuration, setCountdownDuration] = useState(0);
+  const [countdownTimeLeft, setCountdownTimeLeft] = useState(0);
+  const [isEditing, setIsEditingState] = useState(false);
+
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const manualStopRef = useRef(false);
+
+  const startSilenceTimer = (durationMs: number, onComplete: () => void) => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+
+    setCountdownDuration(durationMs);
+    setCountdownTimeLeft(durationMs);
+
+    const startTime = Date.now();
+    const endTime = startTime + durationMs;
+
+    countdownIntervalRef.current = setInterval(() => {
+      const remaining = Math.max(0, endTime - Date.now());
+      setCountdownTimeLeft(remaining);
+      if (remaining <= 0) {
+        if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+        onComplete();
+      }
+    }, 100);
+  };
+
+  const clearSilenceTimer = () => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    setCountdownTimeLeft(0);
+    setCountdownDuration(0);
+  };
+
+  const setIsEditing = (editing: boolean) => {
+    setIsEditingState(editing);
+    if (editing) {
+      clearSilenceTimer();
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) {}
+      }
+    }
+  };
+
+  const submitManualCommand = (text: string) => {
+    clearSilenceTimer();
+    setIsEditingState(false);
+    stopAssistant();
+    handleCommandComplete(text);
+  };
 
   const getScopedDepartments = (): string[] => {
     if (typeof window === 'undefined') return [];
@@ -420,6 +476,12 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           break;
         }
 
+        case 'getPendingTransactions': {
+          data = await getPendingTransactions(departmentCode);
+          topic = 'pending_transactions';
+          break;
+        }
+
         default: {
           setThinkingMessage(null);
           speakUtterance("I did not understand that command. Please say it again or ask differently.");
@@ -613,21 +675,19 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           
           setLiveTranscript(cmdPart.trim());
 
-          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-          silenceTimerRef.current = setTimeout(() => {
+          startSilenceTimer(2500, () => {
             setCapturingCommand(false);
             handleCommandComplete(cmdPart.trim());
-          }, 2500);
+          });
         }
       } else {
         setLiveTranscript(combined);
         
         if (final) {
-          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-          silenceTimerRef.current = setTimeout(() => {
+          startSilenceTimer(2500, () => {
             stopAssistant();
             handleCommandComplete(final.trim());
-          }, 1500);
+          });
         }
       }
     };
@@ -664,10 +724,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     setListening(false);
     setCapturingCommand(false);
     
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
+    clearSilenceTimer();
     
     if (recognitionRef.current) {
       try {
@@ -678,7 +735,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
 
   useEffect(() => {
     return () => {
-      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      clearSilenceTimer();
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch (e) {}
       }
@@ -693,6 +750,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         listening,
         capturingCommand,
         liveTranscript,
+        setLiveTranscript,
         processing,
         speaking,
         error,
@@ -706,7 +764,12 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         thinkingMessage,
         spokenResponse,
         activeData,
-        closeAssistantCard
+        closeAssistantCard,
+        countdownDuration,
+        countdownTimeLeft,
+        isEditing,
+        setIsEditing,
+        submitManualCommand
       }}
     >
       {children}
