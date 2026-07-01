@@ -179,7 +179,13 @@ export async function resolveEntityByName(
     const searchStaff = entityType === null || entityType === 'staff';
 
     const lowercaseName = name ? name.toLowerCase().trim() : '';
-    const searchId = entityId ? entityId.toLowerCase().trim() : '';
+    let searchId = entityId ? entityId.toLowerCase().trim() : '';
+
+    // If searchId is empty but name is a number, treat it as the searchId
+    if (!searchId && /^\d+$/.test(lowercaseName)) {
+      searchId = lowercaseName;
+    }
+
     if (!lowercaseName && !searchId) {
       return { matches: [] };
     }
@@ -237,7 +243,21 @@ export async function resolveEntityByName(
             
             const docName = String(data.name || data.displayName || data.fullName || '').toLowerCase();
             const docCourse = String(data.course || '').toLowerCase();
-            const docCustomId = String(data.customId || data.rollNo || data.studentId || data.employeeId || doc.id || '').toLowerCase();
+            const docCustomId = String(
+              data.customId ||
+              data.serialNumber ||
+              data.inpatientNumber ||
+              data.patientId ||
+              data.rollNo ||
+              data.rollNumber ||
+              data.studentId ||
+              data.employeeId ||
+              data.childId ||
+              data.seekerId ||
+              data.seekerNo ||
+              doc.id ||
+              ''
+            ).toLowerCase();
             const docDiagnosis = String(data.diagnosis || data.disease || data.diseaseName || '').toLowerCase();
             const docDesignation = String(data.designation || data.role || '').toLowerCase();
             
