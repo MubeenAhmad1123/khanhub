@@ -502,17 +502,39 @@ export async function getAttendanceSummary(
       // 1. Fetch active staff users
       const usersSnap = await adminDb.collection(config.col).get();
       const activeUsers = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter((u: any) => {
-        const name = String(u.name || u.displayName || '').toLowerCase();
-        if (name.includes('super') || name.includes('network')) return false;
+        const r = String(u.role || '').toLowerCase();
+        const desig = String(u.designation || '').toLowerCase();
+        const n = String(u.name || u.displayName || '').toLowerCase();
+        const e = String(u.email || '').toLowerCase();
+        
+        if (n.includes('super') || n.includes('network') || e.includes('super') || e.includes('network')) {
+          return false;
+        }
 
         const statusStr = String(u.status || '').toLowerCase().trim();
-        return u.isActive !== false && 
+
+        if (n === 'vacant' || n.includes('vacant') || statusStr === 'vacant' || statusStr === 'active_vacancy') {
+          return false;
+        }
+
+        const nameVal = (u.name || u.displayName || '').trim();
+        if (!nameVal || nameVal === '—' || nameVal === '-') {
+          return false;
+        }
+
+        const EXCLUDED_ROLES = ['patient', 'family', 'student', 'client', 'seeker', 'user', 'superadmin', 'donor', 'child', 'oldage', 'beneficiary', 'orphan'];
+        if (EXCLUDED_ROLES.some(ex => r.includes(ex) || desig.includes(ex))) {
+          return false;
+        }
+
+        const isActive = u.isActive !== false && 
           statusStr !== 'inactive' && 
           statusStr !== 'resigned' && 
           statusStr !== 'terminated' && 
-          statusStr !== 'active_vacancy' &&
-          statusStr !== 'executive' &&
+          statusStr !== 'executive' && 
           statusStr !== 'hide';
+
+        return isActive;
       });
 
       if (activeUsers.length === 0) continue;
