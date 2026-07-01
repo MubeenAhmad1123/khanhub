@@ -31,17 +31,36 @@ export async function getCompletion({ systemPrompt, userMessage, temperature = 0
       String(err?.message || '').toLowerCase().includes('429');
 
     if (isRateLimitOrServerError) {
-      console.warn('[aiProvider] Groq failed, falling back to Gemini...', err);
+      if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== '') {
+        console.warn('[aiProvider] Groq failed, falling back to Gemini...', err);
+        try {
+          const model = gemini.getGenerativeModel({ 
+            model: 'gemini-2.5-flash',
+            ...(jsonMode ? { generationConfig: { responseMimeType: 'application/json' } } : {})
+          });
+          const result = await model.generateContent(`${systemPrompt}\n\nUser request: ${userMessage}`);
+          return { provider: 'gemini-fallback', text: result.response.text() };
+        } catch (geminiErr) {
+          console.error('[aiProvider] Gemini fallback also failed:', geminiErr);
+        }
+      }
+
+      // Secondary fallback to a different Groq model (which has a separate rate-limit pool)
+      console.warn('[aiProvider] Gemini API Key not present or failed. Falling back to secondary Groq model (mixtral-8x7b-32768)...');
       try {
-        const model = gemini.getGenerativeModel({ 
-          model: 'gemini-2.5-flash',
-          ...(jsonMode ? { generationConfig: { responseMimeType: 'application/json' } } : {})
+        const result = await groq.chat.completions.create({
+          model: 'mixtral-8x7b-32768',
+          temperature,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage },
+          ],
+          ...(jsonMode ? { response_format: { type: 'json_object' } } : {})
         });
-        const result = await model.generateContent(`${systemPrompt}\n\nUser request: ${userMessage}`);
-        return { provider: 'gemini-fallback', text: result.response.text() };
-      } catch (geminiErr) {
-        console.error('[aiProvider] Gemini fallback also failed:', geminiErr);
-        throw err; // throw original Groq error if Gemini also fails
+        return { provider: 'groq-fallback', text: result.choices[0].message.content || '' };
+      } catch (fallbackErr) {
+        console.error('[aiProvider] Secondary Groq model fallback failed:', fallbackErr);
+        throw err; // Throw original error if all fallbacks fail
       }
     }
     throw err;
