@@ -460,7 +460,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         }
 
         case 'getAttendanceSummary': {
-          data = await getAttendanceSummary(startDate, endDate, daysBack);
+          data = await getAttendanceSummary(startDate, endDate, daysBack, departmentCode);
           topic = 'attendance_summary';
           break;
         }

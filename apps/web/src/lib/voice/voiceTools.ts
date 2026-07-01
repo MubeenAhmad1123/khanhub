@@ -59,14 +59,19 @@ export async function getLatestAdmission(department: string | null) {
 
   for (const { col, dept } of collections) {
     try {
+      const orderByField = (dept === 'rehab' || dept === 'hospital' || dept === 'spims')
+        ? 'admissionDate'
+        : 'createdAt';
+
       const snap = await adminDb.collection(col)
-        .orderBy('createdAt', 'desc')
+        .orderBy(orderByField, 'desc')
         .limit(1)
         .get();
 
       if (!snap.empty) {
         const d = snap.docs[0].data();
-        if (!latest || (d.createdAt > latest.createdAt)) {
+        const scoreKey = (dept === 'rehab' || dept === 'hospital' || dept === 'spims') ? 'admissionDate' : 'createdAt';
+        if (!latest || (d[scoreKey] > latest[scoreKey])) {
           latest = { id: snap.docs[0].id, ...d };
           latestDept = dept;
         }
@@ -192,9 +197,13 @@ export async function getAdmissionsByDate(
 
   for (const { col, dept } of collections) {
     try {
+      const dateField = (dept === 'rehab' || dept === 'hospital' || dept === 'spims')
+        ? 'admissionDate'
+        : 'createdAt';
+
       const snap = await adminDb.collection(col)
-        .where('createdAt', '>=', start)
-        .where('createdAt', '<=', end)
+        .where(dateField, '>=', start)
+        .where(dateField, '<=', end)
         .get();
 
       const type = typeMap[dept] || 'patient';
@@ -441,27 +450,146 @@ export async function searchPersonByName(
 export async function getAttendanceSummary(
   startDate: string | null,
   endDate: string | null,
-  daysBack: number | null
+  daysBack: number | null,
+  department: string | null = null
 ) {
   await assertVoiceAccess();
   const { rawStart, rawEnd, label } = resolveDateRange(startDate, endDate, daysBack);
 
-  try {
-    const snap = await adminDb.collection('hq_attendance')
-      .where('date', '>=', rawStart)
-      .where('date', '<=', rawEnd)
-      .get();
+  const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
+  const cleanedDept = department ? String(department).toLowerCase().trim() : null;
 
-    const present = snap.docs.filter(d => d.data().status === 'present').length;
-    const absent = snap.docs.filter(d => d.data().status === 'absent').length;
-    const leave = snap.docs.filter(d => ['leave', 'paid_leave', 'unpaid_leave'].includes(d.data().status)).length;
-    const total = snap.docs.length;
+  // Search all depts if department is null, 'hq', or 'all'
+  const targetDepts = (cleanedDept && cleanedDept !== 'hq' && depts.includes(cleanedDept))
+    ? [cleanedDept]
+    : depts;
 
-    return { date: label, present, absent, leave, total };
-  } catch (e) {
-    console.warn('[voiceTools] getAttendanceSummary error:', e);
-    return null;
+  const txCollMap: Record<string, { col: string; prefix: string }> = {
+    hq: { col: 'hq_users', prefix: 'hq' },
+    rehab: { col: 'rehab_users', prefix: 'rehab' },
+    spims: { col: 'spims_users', prefix: 'spims' },
+    hospital: { col: 'hospital_users', prefix: 'hospital' },
+    sukoon: { col: 'sukoon_users', prefix: 'sukoon' },
+    welfare: { col: 'welfare_users', prefix: 'welfare' },
+    'job-center': { col: 'jobcenter_users', prefix: 'jobcenter' },
+    'social-media': { col: 'media_users', prefix: 'media' },
+    it: { col: 'it_users', prefix: 'it' }
+  };
+
+  const getSimpleId = (id: string) => {
+    if (!id) return '';
+    const prefixes = ['hq_', 'rehab_', 'spims_', 'hospital_', 'sukoon_', 'welfare_', 'jobcenter_', 'media_', 'it_'];
+    for (const pref of prefixes) {
+      if (id.startsWith(pref)) return id.substring(pref.length);
+    }
+    return id;
+  };
+
+  let presentCount = 0;
+  let absentCount = 0;
+  let leaveCount = 0;
+  let unmarkedCount = 0;
+
+  const presentStaff: { name: string; role: string; dept: string; status: string }[] = [];
+  const absentStaff: { name: string; role: string; dept: string; status: string }[] = [];
+  const leaveStaff: { name: string; role: string; dept: string; status: string }[] = [];
+
+  for (const dept of targetDepts) {
+    const config = txCollMap[dept];
+    if (!config) continue;
+
+    try {
+      // 1. Fetch active staff users
+      const usersSnap = await adminDb.collection(config.col).get();
+      const activeUsers = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter((u: any) => {
+        const name = String(u.name || u.displayName || '').toLowerCase();
+        if (name.includes('super') || name.includes('network')) return false;
+
+        const statusStr = String(u.status || '').toLowerCase().trim();
+        return u.isActive !== false && 
+          statusStr !== 'inactive' && 
+          statusStr !== 'resigned' && 
+          statusStr !== 'terminated' && 
+          statusStr !== 'active_vacancy' &&
+          statusStr !== 'executive' &&
+          statusStr !== 'hide';
+      });
+
+      if (activeUsers.length === 0) continue;
+
+      // 2. Fetch attendance logs
+      const attSnap = await adminDb.collection(`${config.prefix}_attendance`)
+        .where('date', '>=', rawStart)
+        .where('date', '<=', rawEnd)
+        .get();
+
+      const attMap: Record<string, any> = {};
+      attSnap.docs.forEach(doc => {
+        const data = doc.data();
+        let sid = data.staffId || doc.id;
+        
+        if (!data.staffId && sid.includes('_')) {
+          const parts = sid.split('_');
+          if (parts[parts.length - 1].includes('-') && parts[parts.length - 1].length === 10) {
+            parts.pop(); // remove date suffix
+          }
+          if (parts[0] === config.prefix) {
+            parts.shift(); // remove dept prefix
+          }
+          sid = parts.join('_');
+        }
+
+        attMap[sid] = data;
+        const simpleSid = sid.includes('_') ? sid.split('_').slice(1).join('_') : sid;
+        attMap[simpleSid] = data;
+      });
+
+      // 3. Match
+      activeUsers.forEach((u: any) => {
+        const simpleId = getSimpleId(u.id);
+        const att = attMap[u.id] || attMap[simpleId] || attMap[u.customId] || attMap[u.employeeId];
+        const name = u.name || u.displayName || 'Staff';
+        const role = u.designation || u.role || 'Staff';
+        const deptLabel = dept.toUpperCase();
+
+        if (att) {
+          const status = String(att.status || '').toLowerCase();
+          if (status === 'present' || status === 'late' || att.isLate) {
+            presentCount++;
+            presentStaff.push({ name, role, dept: deptLabel, status: 'Present' });
+          } else if (status === 'absent') {
+            absentCount++;
+            absentStaff.push({ name, role, dept: deptLabel, status: 'Absent' });
+          } else if (['leave', 'paid_leave', 'unpaid_leave'].includes(status)) {
+            leaveCount++;
+            leaveStaff.push({ name, role, dept: deptLabel, status: 'On Leave' });
+          } else {
+            unmarkedCount++;
+            absentStaff.push({ name, role, dept: deptLabel, status: 'Unmarked' });
+          }
+        } else {
+          unmarkedCount++;
+          absentStaff.push({ name, role, dept: deptLabel, status: 'Unmarked' });
+        }
+      });
+    } catch (e) {
+      console.warn(`[voiceTools] getAttendanceSummary skipping ${dept}:`, e);
+    }
   }
+
+  const totalStaff = presentCount + absentCount + leaveCount + unmarkedCount;
+
+  return {
+    date: label,
+    present: presentCount,
+    absent: absentCount + unmarkedCount,
+    leave: leaveCount,
+    total: totalStaff,
+    presentStaff,
+    absentStaff,
+    leaveStaff,
+    department: department || 'all',
+  };
 }
 
 // ─── TOOL 8: Students by course ───────────────────────────────────────────────
