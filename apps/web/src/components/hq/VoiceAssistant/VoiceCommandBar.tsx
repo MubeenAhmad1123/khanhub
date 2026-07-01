@@ -202,24 +202,69 @@ export default function VoiceCommandBar() {
               </div>
             </div>
 
-            {data.absentStaff && data.absentStaff.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="font-bold text-slate-400 text-[9px] uppercase tracking-widest">Absent/Unmarked Staff</p>
-                <div className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1">
-                  {data.absentStaff.map((staff: any, idx: number) => (
-                    <div key={idx} className="bg-slate-950/40 p-2 rounded-lg border border-slate-800 flex items-center justify-between">
-                      <div>
-                        <p className="font-bold text-slate-200">{staff.name}</p>
-                        <p className="text-[9px] text-slate-500 uppercase tracking-wider">{staff.role} • {staff.dept}</p>
+            <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+              {data.absentStaff && data.absentStaff.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="font-bold text-slate-400 text-[9px] uppercase tracking-widest">Absent/Unmarked Staff</p>
+                  <div className="space-y-1.5">
+                    {data.absentStaff.map((staff: any, idx: number) => (
+                      <div key={idx} className="bg-slate-950/40 p-2 rounded-lg border border-slate-800 flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-slate-200">{staff.name}</p>
+                          <p className="text-[9px] text-slate-500 uppercase tracking-wider">{staff.role} • {staff.dept}</p>
+                        </div>
+                        <span className="text-[9px] font-bold text-rose-400 bg-rose-950/30 px-2 py-0.5 rounded-full border border-rose-900/50">
+                          {staff.status}
+                        </span>
                       </div>
-                      <span className="text-[9px] font-bold text-rose-400 bg-rose-950/30 px-2 py-0.5 rounded-full border border-rose-900/50">
-                        {staff.status}
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+
+              {data.lateStaff && data.lateStaff.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="font-bold text-amber-500 text-[9px] uppercase tracking-widest">Late Staff</p>
+                  <div className="space-y-1.5">
+                    {data.lateStaff.map((staff: any, idx: number) => (
+                      <div key={idx} className="bg-slate-950/40 p-2 rounded-lg border border-slate-800 flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-slate-200">{staff.name}</p>
+                          <p className="text-[9px] text-slate-500 uppercase tracking-wider">{staff.role} • {staff.dept}</p>
+                        </div>
+                        <span className="text-[9px] font-bold text-amber-400 bg-amber-950/30 px-2 py-0.5 rounded-full border border-amber-900/50">
+                          {staff.time ? `Check-in: ${staff.time}` : 'Late'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {data.noUniformStaff && data.noUniformStaff.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="font-bold text-rose-400 text-[9px] uppercase tracking-widest">Uniform Violations</p>
+                  <div className="space-y-1.5">
+                    {data.noUniformStaff.map((staff: any, idx: number) => (
+                      <div key={idx} className="bg-slate-950/40 p-2 rounded-lg border border-slate-800 flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-bold text-slate-200">{staff.name}</p>
+                            <p className="text-[9px] text-slate-500 uppercase tracking-wider">{staff.role} • {staff.dept}</p>
+                          </div>
+                          <span className="text-[9px] font-bold text-rose-400 bg-rose-950/30 px-2 py-0.5 rounded-full border border-rose-900/50">
+                            Incorrect Uniform
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 italic">
+                          Missing: {staff.missingItems.join(', ')}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         );
       }

@@ -493,6 +493,8 @@ export async function getAttendanceSummary(
   const presentStaff: { name: string; role: string; dept: string; status: string }[] = [];
   const absentStaff: { name: string; role: string; dept: string; status: string }[] = [];
   const leaveStaff: { name: string; role: string; dept: string; status: string }[] = [];
+  const lateStaff: { name: string; role: string; dept: string; time?: string }[] = [];
+  const noUniformStaff: { name: string; role: string; dept: string; missingItems: string[] }[] = [];
 
   for (const dept of targetDepts) {
     const config = txCollMap[dept];
@@ -539,11 +541,17 @@ export async function getAttendanceSummary(
 
       if (activeUsers.length === 0) continue;
 
-      // 2. Fetch attendance logs
-      const attSnap = await adminDb.collection(`${config.prefix}_attendance`)
-        .where('date', '>=', rawStart)
-        .where('date', '<=', rawEnd)
-        .get();
+      // 2. Fetch attendance logs and dress logs
+      const [attSnap, dressSnap] = await Promise.all([
+        adminDb.collection(`${config.prefix}_attendance`)
+          .where('date', '>=', rawStart)
+          .where('date', '<=', rawEnd)
+          .get(),
+        adminDb.collection(`${config.prefix}_dress_logs`)
+          .where('date', '>=', rawStart)
+          .where('date', '<=', rawEnd)
+          .get()
+      ]);
 
       const attMap: Record<string, any> = {};
       attSnap.docs.forEach(doc => {
@@ -566,19 +574,53 @@ export async function getAttendanceSummary(
         attMap[simpleSid] = data;
       });
 
+      const dressMap: Record<string, any> = {};
+      dressSnap.docs.forEach(doc => {
+        const data = doc.data();
+        let sid = data.staffId || doc.id;
+        
+        if (!data.staffId && sid.includes('_')) {
+          const parts = sid.split('_');
+          if (parts[parts.length - 1].includes('-') && parts[parts.length - 1].length === 10) {
+            parts.pop(); // remove date suffix
+          }
+          if (parts[0] === config.prefix) {
+            parts.shift(); // remove dept prefix
+          }
+          sid = parts.join('_');
+        }
+
+        dressMap[sid] = data;
+        const simpleSid = sid.includes('_') ? sid.split('_').slice(1).join('_') : sid;
+        dressMap[simpleSid] = data;
+      });
+
       // 3. Match
       activeUsers.forEach((u: any) => {
         const simpleId = getSimpleId(u.id);
         const att = attMap[u.id] || attMap[simpleId] || attMap[u.customId] || attMap[u.employeeId];
+        const dress = dressMap[u.id] || dressMap[simpleId] || dressMap[u.customId] || dressMap[u.employeeId];
+        
         const name = u.name || u.displayName || 'Staff';
         const role = u.designation || u.role || 'Staff';
         const deptLabel = dept.toUpperCase();
 
         if (att) {
           const status = String(att.status || '').toLowerCase();
-          if (status === 'present' || status === 'late' || att.isLate) {
+          const isLate = status === 'late' || att.isLate;
+
+          if (status === 'present' || isLate) {
             presentCount++;
-            presentStaff.push({ name, role, dept: deptLabel, status: 'Present' });
+            presentStaff.push({ name, role, dept: deptLabel, status: isLate ? 'Late' : 'Present' });
+            
+            if (isLate) {
+              lateStaff.push({
+                name,
+                role,
+                dept: deptLabel,
+                time: att.checkInTime || att.checkinTime || att.time || undefined
+              });
+            }
           } else if (status === 'absent') {
             absentCount++;
             absentStaff.push({ name, role, dept: deptLabel, status: 'Absent' });
@@ -592,6 +634,27 @@ export async function getAttendanceSummary(
         } else {
           unmarkedCount++;
           absentStaff.push({ name, role, dept: deptLabel, status: 'Unmarked' });
+        }
+
+        // Check dress code / uniform status if marked present or late
+        const isPresent = att && (String(att.status || '').toLowerCase() === 'present' || String(att.status || '').toLowerCase() === 'late' || att.isLate);
+        const dressCodeConfig = u.dressCodeConfig || [];
+
+        if (isPresent && dressCodeConfig.length > 0) {
+          const uniformItems = dress?.items || [];
+          const missingItems = dressCodeConfig.filter((c: any) => {
+            const item = uniformItems.find((i: any) => i.key === c.key);
+            return !item || item.status === 'no';
+          }).map((c: any) => c.label || c.key);
+
+          if (missingItems.length > 0) {
+            noUniformStaff.push({
+              name,
+              role,
+              dept: deptLabel,
+              missingItems
+            });
+          }
         }
       });
     } catch (e) {
@@ -610,6 +673,8 @@ export async function getAttendanceSummary(
     presentStaff,
     absentStaff,
     leaveStaff,
+    lateStaff,
+    noUniformStaff,
     department: department || 'all',
   };
 }
