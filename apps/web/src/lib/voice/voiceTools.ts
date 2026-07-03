@@ -513,19 +513,36 @@ export async function getRemainingFee(entityId: string | null, department: strin
             const dis = pData.dischargeDate;
             
             if (adm) {
-              admissionDate = adm.toDate ? adm.toDate().toISOString().split('T')[0] : String(adm);
-              
-              const admDate = adm.toDate ? adm.toDate() : new Date(adm);
-              const endDate = dis ? (dis.toDate ? dis.toDate() : new Date(dis)) : new Date();
-              const diffTimeMs = endDate.getTime() - admDate.getTime();
-              stayDurationDays = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
-              
-              const diffToday = new Date().getTime() - admDate.getTime();
-              const daysAdmitted = diffToday > 0 ? Math.floor(diffToday / (1000 * 60 * 60 * 24)) : 0;
-              remainingDays = Math.max(0, 100 - daysAdmitted);
+              try {
+                const d = adm.toDate ? adm.toDate() : new Date(adm);
+                if (!isNaN(d.getTime())) {
+                  admissionDate = d.toISOString().split('T')[0];
+                  const endDate = dis ? (dis.toDate ? dis.toDate() : new Date(dis)) : new Date();
+                  if (!isNaN(endDate.getTime())) {
+                    const diffTimeMs = endDate.getTime() - d.getTime();
+                    stayDurationDays = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
+                  }
+                  const diffToday = new Date().getTime() - d.getTime();
+                  const daysAdmitted = diffToday > 0 ? Math.floor(diffToday / (1000 * 60 * 60 * 24)) : 0;
+                  remainingDays = Math.max(0, 100 - daysAdmitted);
+                } else {
+                  admissionDate = String(adm);
+                }
+              } catch (e) {
+                admissionDate = String(adm);
+              }
             }
             if (dis) {
-              dischargeDate = dis.toDate ? dis.toDate().toISOString().split('T')[0] : String(dis);
+              try {
+                const d = dis.toDate ? dis.toDate() : new Date(dis);
+                if (!isNaN(d.getTime())) {
+                  dischargeDate = d.toISOString().split('T')[0];
+                } else {
+                  dischargeDate = String(dis);
+                }
+              } catch (e) {
+                dischargeDate = String(dis);
+              }
             }
           }
         }

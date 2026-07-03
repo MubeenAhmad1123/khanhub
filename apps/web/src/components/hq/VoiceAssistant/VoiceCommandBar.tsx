@@ -399,7 +399,69 @@ export default function VoiceCommandBar() {
       }
 
       case 'remaining_fee': {
-        const paidPercent = data.totalAmount > 0 ? (data.amountPaid / data.totalAmount) * 100 : 0;
+        if (data.type === 'department_summary') {
+          const countVal = data.patientCount ?? data.studentCount ?? 0;
+          const outstandingVal = data.totalOutstanding ?? 0;
+          return (
+            <div className="space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-400">Department:</span>
+                <span className="font-bold text-slate-200 uppercase tracking-wide">{data.department}</span>
+              </div>
+              
+              <div className="p-3 rounded-xl border border-rose-900/50 bg-rose-950/20 flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <p className="font-bold uppercase tracking-wider text-[9px] text-rose-400">Total Outstanding Amount</p>
+                  <p className="text-lg font-black text-rose-400">Rs {outstandingVal.toLocaleString()}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[9px] text-slate-400 uppercase tracking-wider">Count</p>
+                  <p className="text-sm font-bold text-slate-200">{countVal}</p>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        if (data.type === 'all_summary') {
+          const outstandingVal = data.totalOutstanding ?? 0;
+          const rehabTotal = data.rehabTotal ?? 0;
+          const hospitalTotal = data.hospitalTotal ?? 0;
+          const spimsTotal = data.spimsTotal ?? 0;
+          return (
+            <div className="space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-400">Scope:</span>
+                <span className="font-bold text-slate-200 uppercase tracking-wide">All Departments</span>
+              </div>
+
+              <div className="p-3 rounded-xl border border-rose-900/50 bg-rose-950/20 mb-2">
+                <p className="font-bold uppercase tracking-wider text-[9px] text-rose-400">Grand Total Outstanding</p>
+                <p className="text-lg font-black text-rose-400">Rs {outstandingVal.toLocaleString()}</p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800">
+                  <p className="text-slate-400 font-bold text-[8px] uppercase tracking-wider mb-0.5">Rehab</p>
+                  <p className="text-xs font-black text-slate-200">Rs {rehabTotal.toLocaleString()}</p>
+                </div>
+                <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800">
+                  <p className="text-slate-400 font-bold text-[8px] uppercase tracking-wider mb-0.5">Hospital</p>
+                  <p className="text-xs font-black text-slate-200">Rs {hospitalTotal.toLocaleString()}</p>
+                </div>
+                <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800">
+                  <p className="text-slate-400 font-bold text-[8px] uppercase tracking-wider mb-0.5">SPIMS</p>
+                  <p className="text-xs font-black text-slate-200">Rs {spimsTotal.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        const amountPaid = data.amountPaid ?? 0;
+        const amountRemaining = data.amountRemaining ?? 0;
+        const totalAmount = data.totalAmount ?? 0;
+        const paidPercent = totalAmount > 0 ? (amountPaid / totalAmount) * 100 : 0;
         return (
           <div className="space-y-3 text-xs">
             <div className="flex items-center justify-between">
@@ -409,15 +471,15 @@ export default function VoiceCommandBar() {
             
             <div className="space-y-1 bg-slate-950/40 p-3 rounded-xl border border-slate-800">
               <div className="flex justify-between font-bold text-slate-400 text-[10px] uppercase mb-1">
-                <span>Paid (Rs {data.amountPaid.toLocaleString()})</span>
-                <span>Remaining (Rs {data.amountRemaining.toLocaleString()})</span>
+                <span>Paid (Rs {amountPaid.toLocaleString()})</span>
+                <span>Remaining (Rs {amountRemaining.toLocaleString()})</span>
               </div>
               <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden flex">
                 <div className="bg-emerald-400 h-full" style={{ width: `${paidPercent}%` }} />
                 <div className="bg-rose-400 h-full" style={{ width: `${100 - paidPercent}%` }} />
               </div>
               <div className="flex justify-between text-[9px] text-slate-500 mt-1">
-                <span>Total Package: Rs {data.totalAmount.toLocaleString()}</span>
+                <span>Total Package: Rs {totalAmount.toLocaleString()}</span>
                 <span>Dept: {data.department}</span>
               </div>
             </div>
