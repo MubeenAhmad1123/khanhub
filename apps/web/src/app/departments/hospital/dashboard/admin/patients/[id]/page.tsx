@@ -198,20 +198,30 @@ export default function PatientDetailPage() {
       // 4. Videos
       const videosQ = query(
         collection(db, 'hospital_videos'),
-        where('patientId', '==', patientId),
-        orderBy('createdAt', 'desc')
+        where('patientId', '==', patientId)
       );
       const vidSnap = await getDocs(videosQ);
-      setVideos(vidSnap.docs.map(v => ({ id: v.id, ...v.data() })));
+      const mappedVideos = vidSnap.docs.map(v => ({ id: v.id, ...v.data() }));
+      mappedVideos.sort((a: any, b: any) => {
+        const tA = a.createdAt?.toDate?.()?.getTime() || a.createdAt?.seconds * 1000 || new Date(a.createdAt).getTime() || 0;
+        const tB = b.createdAt?.toDate?.()?.getTime() || b.createdAt?.seconds * 1000 || new Date(b.createdAt).getTime() || 0;
+        return tB - tA;
+      });
+      setVideos(mappedVideos);
 
       // 5. Visits
       const visitsQ = query(
         collection(db, 'hospital_visits'),
-        where('patientId', '==', patientId),
-        orderBy('date', 'desc')
+        where('patientId', '==', patientId)
       );
       const visitSnap = await getDocs(visitsQ);
-      setVisits(visitSnap.docs.map(v => ({ id: v.id, ...v.data() })));
+      const mappedVisits = visitSnap.docs.map(v => ({ id: v.id, ...v.data() }));
+      mappedVisits.sort((a: any, b: any) => {
+        const dA = a.date?.toDate?.()?.getTime() || a.date?.seconds * 1000 || new Date(a.date).getTime() || 0;
+        const dB = b.date?.toDate?.()?.getTime() || b.date?.seconds * 1000 || new Date(b.date).getTime() || 0;
+        return dB - dA;
+      });
+      setVisits(mappedVisits);
 
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -569,9 +579,15 @@ export default function PatientDetailPage() {
       setVideoTitle('');
       setSelectedFile(null);
       // Refresh videos
-      const videosQ = query(collection(db, 'hospital_videos'), where('patientId', '==', patientId), orderBy('createdAt', 'desc'));
+      const videosQ = query(collection(db, 'hospital_videos'), where('patientId', '==', patientId));
       const vidSnap = await getDocs(videosQ);
-      setVideos(vidSnap.docs.map(v => ({ id: v.id, ...v.data() })));
+      const mappedVideos = vidSnap.docs.map(v => ({ id: v.id, ...v.data() }));
+      mappedVideos.sort((a: any, b: any) => {
+        const tA = a.createdAt?.toDate?.()?.getTime() || a.createdAt?.seconds * 1000 || new Date(a.createdAt).getTime() || 0;
+        const tB = b.createdAt?.toDate?.()?.getTime() || b.createdAt?.seconds * 1000 || new Date(b.createdAt).getTime() || 0;
+        return tB - tA;
+      });
+      setVideos(mappedVideos);
       
     } catch (error) {
       console.error("Upload error", error);
@@ -628,9 +644,15 @@ export default function PatientDetailPage() {
       setVDate(new Date().toISOString().split('T')[0]);
 
       // Refresh visits
-      const visitsQ = query(collection(db, 'hospital_visits'), where('patientId', '==', patientId), orderBy('date', 'desc'));
+      const visitsQ = query(collection(db, 'hospital_visits'), where('patientId', '==', patientId));
       const visitSnap = await getDocs(visitsQ);
-      setVisits(visitSnap.docs.map(v => ({ id: v.id, ...v.data() })));
+      const mappedVisits = visitSnap.docs.map(v => ({ id: v.id, ...v.data() }));
+      mappedVisits.sort((a: any, b: any) => {
+        const dA = a.date?.toDate?.()?.getTime() || a.date?.seconds * 1000 || new Date(a.date).getTime() || 0;
+        const dB = b.date?.toDate?.()?.getTime() || b.date?.seconds * 1000 || new Date(b.date).getTime() || 0;
+        return dB - dA;
+      });
+      setVisits(mappedVisits);
 
     } catch (error) {
       console.error("Add visit error", error);
@@ -677,9 +699,15 @@ export default function PatientDetailPage() {
 
       toast.success('Visit updated ✓');
       setEditVisitModal(null);
-      const visitsQ = query(collection(db, 'hospital_visits'), where('patientId', '==', patientId), orderBy('date', 'desc'));
+      const visitsQ = query(collection(db, 'hospital_visits'), where('patientId', '==', patientId));
       const visitSnap = await getDocs(visitsQ);
-      setVisits(visitSnap.docs.map(v => ({ id: v.id, ...v.data() })));
+      const mappedVisits = visitSnap.docs.map(v => ({ id: v.id, ...v.data() }));
+      mappedVisits.sort((a: any, b: any) => {
+        const dA = a.date?.toDate?.()?.getTime() || a.date?.seconds * 1000 || new Date(a.date).getTime() || 0;
+        const dB = b.date?.toDate?.()?.getTime() || b.date?.seconds * 1000 || new Date(b.date).getTime() || 0;
+        return dB - dA;
+      });
+      setVisits(mappedVisits);
     } catch (error) {
       console.error("Update visit error", error);
       toast.error('Failed to update visit');
@@ -717,16 +745,16 @@ export default function PatientDetailPage() {
           
           <div className="relative z-10">
             {patient.photoUrl ? (
-              <img src={patient.photoUrl} alt={patient.name} className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md bg-gray-100" />
+              <img src={patient.photoUrl} alt={patient.name || 'Patient'} className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md bg-gray-100" />
             ) : (
               <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-4xl border-4 border-white shadow-md">
-                {patient.name.charAt(0).toUpperCase()}
+                {(patient.name || 'Patient').charAt(0).toUpperCase()}
               </div>
             )}
           </div>
           
           <div className="relative z-10 flex-1 text-center">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{patient.name}</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{patient.name || 'Patient'}</h1>
             <div className="flex flex-wrap justify-center gap-2 text-sm text-gray-500 mb-4">
               <span className="flex items-center justify-center gap-1">
                 <Calendar className="w-4 h-4" /> 
