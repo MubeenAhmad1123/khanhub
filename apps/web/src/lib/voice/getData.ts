@@ -13,6 +13,13 @@ interface GetDataParams {
     department?: string;
     entityIdField?: string;
   };
+  aggregate?: {
+    type: 'rank' | 'count' | 'sum' | 'avg';
+    field: string;
+    groupBy?: string;
+    order?: 'asc' | 'desc';
+    topN?: number;
+  };
   limit?: number;
 }
 
@@ -37,6 +44,9 @@ const DEFAULT_KNOWLEDGE: Record<string, any> = {
       audit: 'rehab_audit'
     },
     financialPattern: 'fees+transactions',
+    rankableMetrics: [
+      { label: 'staff performance ranking', collectionKey: 'growthPoints', field: 'totalPoints', groupBy: 'staffId' }
+    ],
     rules: [
       'Financial queries (remaining fee, payments, dues) must read BOTH rehab_fees and rehab_transactions and combine — never answer from one alone',
       "Only count rehab_transactions where status == 'approved' as actual paid amount",
@@ -63,6 +73,9 @@ const DEFAULT_KNOWLEDGE: Record<string, any> = {
       salaryRecords: 'spims_salary_records'
     },
     financialPattern: 'fees+transactions',
+    rankableMetrics: [
+      { label: 'student pass count', collectionKey: 'tests', field: 'result', filters: { result: 'pass' }, aggregateType: 'count' }
+    ],
     rules: [
       'Two separate attendance collections: spims_attendance (staff) vs spims_student_attendance (students) — never confuse',
       'Financial queries must read BOTH spims_fees and spims_transactions and combine',
@@ -213,7 +226,19 @@ export async function getModuleKnowledge(moduleId: string): Promise<any> {
     const snap = await docRef.get();
     
     if (snap.exists) {
-      return snap.data();
+      const data = snap.data();
+      // Force update if local schema has rankableMetrics but Firestore doesn't
+      if (DEFAULT_KNOWLEDGE[cleanId]?.rankableMetrics && !data?.rankableMetrics) {
+        console.log(`[ERP Knowledge] Force seeding module knowledge for "${cleanId}" (local updates)...`);
+        const batch = adminDb.batch();
+        for (const [mid, d] of Object.entries(DEFAULT_KNOWLEDGE)) {
+          const ref = adminDb.collection('erp_system_knowledge').doc(mid);
+          batch.set(ref, d);
+        }
+        await batch.commit();
+        return DEFAULT_KNOWLEDGE[cleanId];
+      }
+      return data;
     }
     
     // Seed database if this document (or database) does not exist
@@ -231,6 +256,54 @@ export async function getModuleKnowledge(moduleId: string): Promise<any> {
     // Fallback to default local config to prevent crashes
     return DEFAULT_KNOWLEDGE[cleanId] || null;
   }
+}
+
+function runAggregationLocally(docs: any[], agg: NonNullable<GetDataParams['aggregate']>) {
+  if (agg.type === 'count') {
+    return { result: docs.length };
+  }
+
+  if (agg.groupBy) {
+    const groups: Record<string, any[]> = {};
+    for (const doc of docs) {
+      const key = doc[agg.groupBy] || 'unknown';
+      (groups[key] ||= []).push(doc);
+    }
+
+    const rows = Object.entries(groups).map(([key, group]) => {
+      const values = group.map(d => Number(d[agg.field] ?? d.data?.[agg.field] ?? 0));
+      const total = values.reduce((a, b) => a + b, 0);
+      return {
+        [agg.groupBy!]: key,
+        total,
+        avg: group.length > 0 ? total / group.length : 0,
+        count: group.length,
+        docs: group
+      };
+    });
+
+    if (agg.type === 'sum') {
+      return { result: rows };
+    }
+    if (agg.type === 'avg') {
+      return { result: rows };
+    }
+    if (agg.type === 'rank') {
+      const order = agg.order || 'desc';
+      const sorted = rows.sort((a, b) => (order === 'asc' ? a.total - b.total : b.total - a.total));
+      return { result: sorted.slice(0, agg.topN ?? 5) };
+    }
+  }
+
+  // General aggregation without groupBy
+  const values = docs.map(d => Number(d[agg.field] ?? d.data?.[agg.field] ?? 0));
+  const total = values.reduce((a, b) => a + b, 0);
+  const avg = docs.length > 0 ? total / docs.length : 0;
+
+  if (agg.type === 'sum') return { result: total };
+  if (agg.type === 'avg') return { result: avg };
+
+  return { result: docs };
 }
 
 export async function getData(params: GetDataParams): Promise<any> {
@@ -254,6 +327,16 @@ export async function getData(params: GetDataParams): Promise<any> {
       runQuery(entry.twin, params.filters, params.limit)
     ]);
     const merged = mergeAndDedupe(primaryRes.docs, twinRes.docs);
+
+    if (params.aggregate) {
+      const aggResult = runAggregationLocally(merged, params.aggregate);
+      return {
+        collectionsUsed: [entry.primary, entry.twin],
+        count: merged.length,
+        ...aggResult
+      };
+    }
+
     return {
       collectionsUsed: [entry.primary, entry.twin],
       count: merged.length,
@@ -263,10 +346,21 @@ export async function getData(params: GetDataParams): Promise<any> {
 
   // Single-prefix lookup
   const result = await runQuery(entry, params.filters, params.limit);
+  const docs = result.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  if (params.aggregate) {
+    const aggResult = runAggregationLocally(docs, params.aggregate);
+    return {
+      collectionUsed: entry,
+      count: docs.length,
+      ...aggResult
+    };
+  }
+
   return {
     collectionUsed: entry,
-    count: result.docs.length,
-    data: result.docs.map(d => ({ id: d.id, ...d.data() }))
+    count: docs.length,
+    data: docs
   };
 }
 

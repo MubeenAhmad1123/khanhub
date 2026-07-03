@@ -36,6 +36,7 @@ export interface ParsedVoiceIntent {
   rawTranscript: string;
   llmConfidence: number;
   thinkingMessage: string;  // What to show in UI while processing
+  memoryDocId: string | null;
 }
 
 // Today's date in PKT for injection into prompt
@@ -156,7 +157,36 @@ export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceInt
     console.log(`[INTENT PARSER] parsed using ${response.provider}:`, raw);
     const parsed = JSON.parse(raw);
 
-    const intentPayload = {
+    let memoryDocId = null;
+    try {
+      const docRef = await adminDb.collection('ai_memory').add({
+        userId,
+        query: transcript,
+        parsedIntent: {
+          tool: parsed.tool || 'unknown',
+          entityName: parsed.entityName || null,
+          entityId: parsed.entityId || null,
+          entityType: parsed.entityType || null,
+          departmentCode: parsed.departmentCode || null,
+          startDate: parsed.startDate || null,
+          endDate: parsed.endDate || null,
+          daysBack: typeof parsed.daysBack === 'number' ? parsed.daysBack : null,
+          course: parsed.course || null,
+          rawTranscript: transcript,
+          llmConfidence: parsed.llmConfidence || 0.5,
+          thinkingMessage: parsed.thinkingMessage || 'Searching...',
+        },
+        timestamp: new Date().toISOString(),
+        wasCorrect: null,
+        correction: null,
+        resultSummary: null
+      });
+      memoryDocId = docRef.id;
+    } catch (err) {
+      console.error('[intentParser] Failed to log memory:', err);
+    }
+
+    return {
       tool: parsed.tool || 'unknown',
       entityName: parsed.entityName || null,
       entityId: parsed.entityId || null,
@@ -169,19 +199,8 @@ export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceInt
       rawTranscript: transcript,
       llmConfidence: parsed.llmConfidence || 0.5,
       thinkingMessage: parsed.thinkingMessage || 'Searching...',
+      memoryDocId,
     };
-
-    // 5. Log Query to Memory (runs asynchronously)
-    adminDb.collection('ai_memory').add({
-      userId,
-      query: transcript,
-      parsedIntent: intentPayload,
-      timestamp: new Date().toISOString(),
-      wasCorrect: null,
-      correction: null
-    }).catch(err => console.error('[intentParser] Failed to log memory:', err));
-
-    return intentPayload;
   } catch (err) {
     console.error('[LLM Intent Parser] Error:', err);
     return {
@@ -197,6 +216,7 @@ export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceInt
       rawTranscript: transcript,
       llmConfidence: 0,
       thinkingMessage: 'Searching...',
+      memoryDocId: null,
     };
   }
 }

@@ -3,8 +3,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useVoiceAssistant } from './VoiceAssistantProvider';
-import { Mic, Loader2, Volume2, AlertCircle, X, ArrowRight } from 'lucide-react';
+import { Mic, Loader2, Volume2, AlertCircle, X, ArrowRight, ThumbsUp, ThumbsDown, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
+import { saveVoiceMemoryFeedback, saveVoiceMemoryCorrection } from '@/lib/voice/voiceTools';
 
 export default function VoiceCommandBar() {
   const {
@@ -27,10 +28,16 @@ export default function VoiceCommandBar() {
     setIsEditing,
     submitManualCommand,
     startAssistant,
-    stopAssistant
+    stopAssistant,
+    activeMemoryDocId,
+    lastSubmittedCommand
   } = useVoiceAssistant();
 
   const [editValue, setEditValue] = useState('');
+  const [feedbackState, setFeedbackState] = useState<'like' | 'dislike' | null>(null);
+  const [correctionText, setCorrectionText] = useState('');
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [viewportBottomOffset, setViewportBottomOffset] = useState(24);
 
   // Sync editValue with liveTranscript when not actively editing
   useEffect(() => {
@@ -38,6 +45,65 @@ export default function VoiceCommandBar() {
       setEditValue(liveTranscript);
     }
   }, [liveTranscript, isEditing]);
+
+  // Reset feedback state when active memory doc ID changes
+  useEffect(() => {
+    setFeedbackState(null);
+    setCorrectionText('');
+  }, [activeMemoryDocId]);
+
+  // Handle virtual viewport keyboard resizing for mobile
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+
+    const handleResize = () => {
+      const vv = window.visualViewport;
+      if (!vv) return;
+      const offset = window.innerHeight - vv.height;
+      setViewportBottomOffset(Math.max(24, offset + 12));
+    };
+
+    window.visualViewport.addEventListener('resize', handleResize);
+    window.visualViewport.addEventListener('scroll', handleResize);
+    handleResize();
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleResize);
+      window.visualViewport?.removeEventListener('scroll', handleResize);
+    };
+  }, []);
+
+  const handleLikeFeedback = async () => {
+    if (!activeMemoryDocId) return;
+    setFeedbackState('like');
+    try {
+      await saveVoiceMemoryFeedback(activeMemoryDocId, true);
+    } catch (e) {
+      console.error('Failed to save like feedback:', e);
+    }
+  };
+
+  const handleSaveCorrection = async () => {
+    if (!activeMemoryDocId || !correctionText.trim()) return;
+    setSubmittingFeedback(true);
+    try {
+      await saveVoiceMemoryCorrection(activeMemoryDocId, correctionText);
+      setFeedbackState(null);
+      setCorrectionText('');
+    } catch (e) {
+      console.error('Failed to save correction:', e);
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  };
+
+  const handleRetry = () => {
+    if (lastSubmittedCommand) {
+      submitManualCommand(lastSubmittedCommand);
+      setFeedbackState(null);
+      setCorrectionText('');
+    }
+  };
 
   // Determine if we should show the bar
   const isActive = (mode === 'always_on' && capturingCommand) || 
@@ -183,7 +249,7 @@ export default function VoiceCommandBar() {
               <span className="font-mono text-slate-200">{data.date}</span>
             </div>
             
-            <div className="grid grid-cols-4 gap-2 text-center">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
               <div className="bg-emerald-950/20 p-2 rounded-lg border border-emerald-900/30">
                 <p className="text-emerald-400 font-bold text-[8px] uppercase tracking-wider mb-0.5">Present</p>
                 <p className="text-base font-black text-emerald-400">{data.present}</p>
@@ -408,6 +474,45 @@ export default function VoiceCommandBar() {
         );
       }
 
+      case 'staff_ranking': {
+        return (
+          <div className="space-y-3 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-400">Date Range:</span>
+              <span className="font-mono text-slate-200">{data.dateRange}</span>
+            </div>
+
+            <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+              {data.ranking && data.ranking.length > 0 ? (
+                data.ranking.map((s: any) => (
+                  <div key={s.rank} className="bg-slate-950/40 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-bold text-indigo-400">#{s.rank}</span>
+                      <div>
+                        <p className="font-bold text-slate-200">{s.name}</p>
+                        <p className="text-[9px] text-slate-500 uppercase tracking-wider">{s.designation} • {s.department}</p>
+                      </div>
+                    </div>
+                    <div className="text-right flex items-center gap-3">
+                      <div className="text-[9px] text-slate-400 text-left shrink-0">
+                        <span className="block">Pres: {s.presents} | Abs: {s.absents}</span>
+                        {s.fines > 0 && <span className="block text-rose-400 font-semibold">Fine: Rs {s.fines}</span>}
+                      </div>
+                      <div className="bg-indigo-950/40 border border-indigo-900/50 px-1.5 py-0.5 rounded text-center min-w-[40px] shrink-0">
+                        <p className="text-[7px] text-indigo-400 uppercase tracking-widest leading-none mb-0.5">Points</p>
+                        <p className="text-[11px] font-black text-indigo-300 leading-none">{s.totalPoints}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-slate-500 italic text-center py-4">No staff ranking data found.</p>
+              )}
+            </div>
+          </div>
+        );
+      }
+
       default:
         return null;
     }
@@ -437,7 +542,10 @@ export default function VoiceCommandBar() {
   }
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-xl px-4 animate-in slide-in-from-bottom-5 duration-300 space-y-2">
+    <div 
+      className="fixed left-1/2 -translate-x-1/2 z-50 w-[min(92vw,480px)] sm:w-full sm:max-w-xl animate-in slide-in-from-bottom-5 duration-300 space-y-2"
+      style={{ bottom: `${viewportBottomOffset}px` }}
+    >
       {voiceState === 'thinking' && thinkingMessage && (
         <div className="flex items-center gap-3 px-4 py-3 bg-blue-950 border border-blue-700 rounded-xl shadow-2xl">
           {/* Animated dots */}
@@ -451,38 +559,95 @@ export default function VoiceCommandBar() {
       )}
 
       {(spokenResponse || activeData) && (
-        <div className="bg-slate-900/95 border border-slate-800/80 shadow-2xl rounded-2xl p-5 pr-12 relative animate-in fade-in zoom-in-95 duration-200 text-slate-100 max-h-[380px] overflow-y-auto space-y-4">
-          <button 
-            onClick={closeAssistantCard}
-            className="absolute top-3.5 right-3.5 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-all"
-            title="Close Assistant Card"
-          >
-            <X size={16} />
-          </button>
-          
-          {/* Mubi Spoken Response */}
-          {spokenResponse && (
-            <div className="flex items-start gap-2.5">
-              <div className="flex gap-0.5 items-center shrink-0 mt-1">
-                {[1, 2, 3, 2, 1].map((h, i) => (
-                  <span
-                    key={i}
-                    className={`w-0.5 bg-emerald-400 rounded-full ${voiceState === 'speaking' ? 'animate-pulse' : ''}`}
-                    style={{ height: `${h * 4}px`, animationDelay: `${i * 80}ms` }}
-                  />
-                ))}
+        <div className="bg-slate-900/95 border border-slate-800/80 shadow-2xl rounded-2xl p-5 relative animate-in fade-in zoom-in-95 duration-200 text-slate-100 max-h-[50vh] sm:max-h-[380px] overflow-y-auto flex flex-col justify-between">
+          <div className="pr-8 relative space-y-4">
+            <button 
+              onClick={closeAssistantCard}
+              className="absolute top-0 right-0 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-all min-w-[32px] min-h-[32px] flex items-center justify-center"
+              title="Close Assistant Card"
+            >
+              <X size={16} />
+            </button>
+            
+            {/* Mubi Spoken Response */}
+            {spokenResponse && (
+              <div className="flex items-start gap-2.5">
+                <div className="flex gap-0.5 items-center shrink-0 mt-1">
+                  {[1, 2, 3, 2, 1].map((h, i) => (
+                    <span
+                      key={i}
+                      className={`w-0.5 bg-emerald-400 rounded-full ${voiceState === 'speaking' ? 'animate-pulse' : ''}`}
+                      style={{ height: `${h * 4}px`, animationDelay: `${i * 80}ms` }}
+                    />
+                  ))}
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-0.5">Mubi Assistant</p>
+                  <p className="text-sm font-semibold leading-relaxed text-slate-100">{spokenResponse}</p>
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-0.5">Mubi Assistant</p>
-                <p className="text-sm font-semibold leading-relaxed text-slate-100">{spokenResponse}</p>
+            )}
+
+            {/* Visual Data Content */}
+            {activeData && (
+              <div className="border-t border-slate-800/80 pt-4 mt-2">
+                {renderActiveDataCard(activeData.topic, activeData.data)}
               </div>
+            )}
+          </div>
+
+          {/* Feedback & Actions Footer */}
+          {activeMemoryDocId && (
+            <div className="flex items-center justify-between border-t border-slate-800/80 pt-3 mt-4 text-[11px] text-slate-400 flex-shrink-0">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <span>Was this correct?</span>
+                <button 
+                  onClick={handleLikeFeedback}
+                  className={`p-1 rounded hover:bg-slate-800 transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center ${feedbackState === 'like' ? 'text-emerald-400 bg-slate-800' : 'hover:text-emerald-400'}`}
+                  title="Yes, correct"
+                >
+                  <ThumbsUp size={14} />
+                </button>
+                <button 
+                  onClick={() => setFeedbackState(feedbackState === 'dislike' ? null : 'dislike')}
+                  className={`p-1 rounded hover:bg-slate-800 transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center ${feedbackState === 'dislike' ? 'text-rose-400 bg-slate-800' : 'hover:text-rose-400'}`}
+                  title="No, wrong"
+                >
+                  <ThumbsDown size={14} />
+                </button>
+              </div>
+              
+              <button 
+                onClick={handleRetry}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors min-h-[36px]"
+                title="Retry command"
+              >
+                <RefreshCw size={12} />
+                <span>Retry</span>
+              </button>
             </div>
           )}
 
-          {/* Visual Data Content */}
-          {activeData && (
-            <div className="border-t border-slate-800/80 pt-4 mt-2">
-              {renderActiveDataCard(activeData.topic, activeData.data)}
+          {/* Correction input panel */}
+          {feedbackState === 'dislike' && (
+            <div className="border-t border-slate-800/80 pt-3 mt-2 space-y-2 flex-shrink-0">
+              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">What should it have shown instead?</label>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={correctionText}
+                  onChange={(e) => setCorrectionText(e.target.value)}
+                  placeholder="e.g. Show staff ranking, not finance"
+                  className="flex-1 text-xs bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-100 focus:outline-none focus:border-indigo-500"
+                />
+                <button 
+                  onClick={handleSaveCorrection}
+                  disabled={submittingFeedback}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white text-xs font-semibold rounded transition-colors min-h-[36px] flex items-center justify-center shrink-0"
+                >
+                  {submittingFeedback ? 'Saving...' : 'Save'}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -537,16 +702,16 @@ export default function VoiceCommandBar() {
                   <button
                     onClick={() => {
                       setIsEditing(false);
-                      startAssistant(); // Resume listening
+                      startAssistant();
                     }}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
                     title="Cancel edit"
                   >
                     <X size={14} />
                   </button>
                   <button
                     onClick={() => submitManualCommand(editValue)}
-                    className="p-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white transition-colors"
+                    className="p-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
                     title="Send command"
                   >
                     <ArrowRight size={14} />
@@ -561,14 +726,14 @@ export default function VoiceCommandBar() {
                         stopAssistant();
                       }
                     }}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
                     title="Clear command"
                   >
                     <X size={14} />
                   </button>
                   <button
                     onClick={() => submitManualCommand(liveTranscript)}
-                    className="p-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white transition-colors"
+                    className="p-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
                     title="Send command immediately"
                   >
                     <ArrowRight size={14} />

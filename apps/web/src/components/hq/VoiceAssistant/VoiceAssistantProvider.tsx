@@ -24,6 +24,7 @@ import {
   getStudentsByCourse,
   getPendingTransactions,
   getStaffRanking,
+  updateVoiceMemoryResult,
 } from '@/lib/voice/voiceTools';
 import { generateSpokenResponse } from '@/lib/voice/responseFormatter';
 import { speak } from '@/lib/voice/speak';
@@ -54,6 +55,8 @@ interface VoiceAssistantContextType {
   isEditing: boolean;
   setIsEditing: (editing: boolean) => void;
   submitManualCommand: (text: string) => void;
+  activeMemoryDocId: string | null;
+  lastSubmittedCommand: string;
 }
 
 const VoiceAssistantContext = createContext<VoiceAssistantContextType | undefined>(undefined);
@@ -107,6 +110,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
   const [thinkingMessage, setThinkingMessage] = useState<string | null>(null);
   const [spokenResponse, setSpokenResponse] = useState<string | null>(null);
   const [activeData, setActiveData] = useState<{ topic: string; data: any } | null>(null);
+  const [activeMemoryDocId, setActiveMemoryDocId] = useState<string | null>(null);
+  const [lastSubmittedCommand, setLastSubmittedCommand] = useState('');
 
   const [countdownDuration, setCountdownDuration] = useState(0);
   const [countdownTimeLeft, setCountdownTimeLeft] = useState(0);
@@ -261,7 +266,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
 
       const parsed = await parseLlmIntent(commandText);
       console.log('[VOICE INTENT RESULT]', JSON.stringify(parsed, null, 2));
-
+      setActiveMemoryDocId(parsed.memoryDocId);
+      setLastSubmittedCommand(commandText);
       await dispatchVoiceTool(parsed);
     } catch (err: any) {
       console.error('[VoiceAssistant] Command execution failed:', err);
@@ -512,9 +518,22 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       setActiveData({ topic, data });
       speakUtterance(spokenText);
 
+      if (intent.memoryDocId) {
+        updateVoiceMemoryResult(intent.memoryDocId, data).catch(err => 
+          console.error('[VoiceAssistant] Failed to update voice memory:', err)
+        );
+      }
+
     } catch (err: any) {
       console.error('[Voice Dispatch] Error:', err);
       setThinkingMessage(null);
+
+      if (intent.memoryDocId) {
+        updateVoiceMemoryResult(intent.memoryDocId, { error: err?.message || 'Unknown error' }).catch(e => 
+          console.error('[VoiceAssistant] Failed to update voice memory with error:', e)
+        );
+      }
+
       if (err?.status === 429 || err?.message?.includes('429') || err?.message?.includes('rate limit')) {
         speakUtterance("I am a bit busy, please try again in 10 seconds.");
       } else {
@@ -587,6 +606,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
   const closeAssistantCard = () => {
     setSpokenResponse(null);
     setActiveData(null);
+    setActiveMemoryDocId(null);
     if (voiceState === 'speaking') {
       setVoiceState('idle');
     }
@@ -786,7 +806,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         countdownTimeLeft,
         isEditing,
         setIsEditing,
-        submitManualCommand
+        submitManualCommand,
+        activeMemoryDocId
       }}
     >
       {children}

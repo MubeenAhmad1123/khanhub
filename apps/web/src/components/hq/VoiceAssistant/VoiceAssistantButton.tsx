@@ -26,7 +26,7 @@ export default function VoiceAssistantButton() {
       <div className="relative group">
         <button
           disabled
-          className="p-2.5 rounded-xl border border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed shadow-sm"
+          className="p-2.5 rounded-xl border border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed shadow-sm min-w-[44px] min-h-[44px] flex items-center justify-center"
           title="Voice assistant not supported in this browser"
         >
           <MicOff size={18} />
@@ -47,7 +47,7 @@ export default function VoiceAssistantButton() {
   };
 
   // Determine button styles based on state
-  let buttonClasses = 'p-2.5 rounded-xl border transition-all duration-300 relative ';
+  let buttonClasses = 'p-2.5 rounded-xl border transition-all duration-300 relative min-w-[44px] min-h-[44px] flex items-center justify-center ';
   let icon = <Mic size={18} />;
 
   if (processing) {
@@ -80,7 +80,7 @@ export default function VoiceAssistantButton() {
       {/* Settings Toggle Button */}
       <button
         onClick={() => setSettingsOpen(!settingsOpen)}
-        className={`p-2.5 rounded-xl border border-gray-100 bg-white text-gray-400 hover:text-gray-600 transition-all hover:bg-gray-50 active:scale-95 shadow-sm ${
+        className={`p-2.5 rounded-xl border border-gray-100 bg-white text-gray-400 hover:text-gray-600 transition-all hover:bg-gray-50 active:scale-95 shadow-sm min-w-[44px] min-h-[44px] flex items-center justify-center ${
           settingsOpen ? 'border-gray-200 text-gray-600' : ''
         }`}
         title="Voice Settings"

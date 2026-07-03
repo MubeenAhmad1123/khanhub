@@ -1282,3 +1282,61 @@ export async function getStaffRanking(
     })).slice(0, 15)
   };
 }
+
+// ─── MEMORY & FEEDBACK SERVER ACTIONS ──────────────────────────────────────────
+export async function updateVoiceMemoryResult(memoryDocId: string, resultData: any) {
+  try {
+    await assertVoiceAccess();
+    if (!memoryDocId) return;
+
+    let summary = 'No data';
+    if (resultData) {
+      if (Array.isArray(resultData)) {
+        summary = `${resultData.length} records`;
+      } else if (typeof resultData === 'object') {
+        if (resultData.count !== undefined) {
+          summary = `${resultData.count} records`;
+        } else if (resultData.result !== undefined) {
+          summary = Array.isArray(resultData.result) ? `${resultData.result.length} aggregated rows` : String(resultData.result);
+        } else {
+          summary = JSON.stringify(resultData).substring(0, 100);
+        }
+      } else {
+        summary = String(resultData);
+      }
+    }
+
+    await adminDb.collection('ai_memory').doc(memoryDocId).update({
+      resultSummary: summary
+    });
+  } catch (err) {
+    console.error('[updateVoiceMemoryResult] Failed to update memory:', err);
+  }
+}
+
+export async function saveVoiceMemoryCorrection(memoryDocId: string, correctionText: string) {
+  try {
+    await assertVoiceAccess();
+    if (!memoryDocId) return;
+
+    await adminDb.collection('ai_memory').doc(memoryDocId).update({
+      wasCorrect: false,
+      correction: correctionText
+    });
+  } catch (err) {
+    console.error('[saveVoiceMemoryCorrection] Failed to save correction:', err);
+  }
+}
+
+export async function saveVoiceMemoryFeedback(memoryDocId: string, wasCorrect: boolean) {
+  try {
+    await assertVoiceAccess();
+    if (!memoryDocId) return;
+
+    await adminDb.collection('ai_memory').doc(memoryDocId).update({
+      wasCorrect
+    });
+  } catch (err) {
+    console.error('[saveVoiceMemoryFeedback] Failed to save feedback:', err);
+  }
+}
