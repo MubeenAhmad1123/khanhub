@@ -1014,3 +1014,271 @@ export async function getPendingTransactions(department: string | null) {
     department: department || 'all',
   };
 }
+
+// ─── TOOL 12: Staff performance ranking ──────────────────────────────────────────
+export async function getStaffRanking(
+  department: string | null,
+  startDate: string | null,
+  endDate: string | null,
+  daysBack: number | null
+) {
+  await assertVoiceAccess();
+  const { start, end, label } = resolveDateRange(startDate, endDate, daysBack);
+
+  const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
+  const cleanedDept = department ? String(department).toLowerCase().trim() : null;
+  const targetDepts = (cleanedDept && cleanedDept !== 'hq' && depts.includes(cleanedDept))
+    ? [cleanedDept]
+    : depts;
+
+  const txCollMap: Record<string, { col: string; prefix: string }> = {
+    hq: { col: 'hq_users', prefix: 'hq' },
+    rehab: { col: 'rehab_users', prefix: 'rehab' },
+    spims: { col: 'spims_users', prefix: 'spims' },
+    hospital: { col: 'hospital_users', prefix: 'hospital' },
+    sukoon: { col: 'sukoon_users', prefix: 'sukoon' },
+    welfare: { col: 'welfare_users', prefix: 'welfare' },
+    'job-center': { col: 'jobcenter_users', prefix: 'jobcenter' },
+    'social-media': { col: 'media_users', prefix: 'media' },
+    it: { col: 'it_users', prefix: 'it' }
+  };
+
+  const getSimpleId = (id: string) => {
+    if (!id) return '';
+    const prefixes = ['hq_', 'rehab_', 'spims_', 'hospital_', 'sukoon_', 'welfare_', 'jobcenter_', 'media_', 'it_'];
+    for (const pref of prefixes) {
+      if (id.startsWith(pref)) return id.substring(pref.length);
+    }
+    return id;
+  };
+
+  const getSeniorityRank = (seniority: string, desig: string) => {
+    const s = String(seniority || '').toLowerCase();
+    const d = String(desig || '').toLowerCase();
+    if (s.includes('senior') || d.includes('senior') || d.includes('executive') || d.includes('director') || d.includes('head') || d.includes('admin') || d.includes('administrator')) return 10;
+    if (d.includes('manager') || s.includes('managerial') || s.includes('lead') || d.includes('lead')) return 9;
+    if (d.includes('supervisor') || s.includes('mid') || s.includes('supervisor')) return 8;
+    if (d.includes('doctor') || d.includes('clinical') || d.includes('physiotherapist')) return 7;
+    if (d.includes('nurse') || d.includes('teacher') || d.includes('lecturer') || d.includes('counselor') || d.includes('personnel')) return 6;
+    if (d.includes('worker') || d.includes('junior') || s.includes('junior')) return 5;
+    if (d.includes('contract')) return 4;
+    if (d.includes('trial')) return 3;
+    if (d.includes('internee') || d.includes('intern') || s.includes('internee') || s.includes('fresher')) return 2;
+    if (d.includes('volunteer') || s.includes('volunteer')) return 1;
+    return 5;
+  };
+
+  const daysToProcess: string[] = [];
+  const dt = new Date(start);
+  const endDt = new Date(end);
+  while (dt <= endDt) {
+    daysToProcess.push(dt.toISOString().split('T')[0]);
+    dt.setDate(dt.getDate() + 1);
+  }
+
+  const allStaff: any[] = [];
+  
+  // Maps to store logs
+  const attMap = new Map<string, any>();
+  const dressMap = new Map<string, any>();
+  const dutyMap = new Map<string, any>();
+  const growthPointsMap = new Map<string, any>();
+  const fineMap = new Map<string, any[]>();
+
+  // Fetch all in parallel
+  await Promise.all(targetDepts.map(async (dept) => {
+    const config = txCollMap[dept];
+    if (!config) return;
+
+    try {
+      const usersSnap = await adminDb.collection(config.col).get();
+      const activeUsers = usersSnap.docs.map(doc => ({ id: doc.id, department: dept, ...doc.data() })).filter((u: any) => {
+        const r = String(u.role || '').toLowerCase();
+        const desig = String(u.designation || '').toLowerCase();
+        const n = String(u.name || u.displayName || '').toLowerCase();
+        const e = String(u.email || '').toLowerCase();
+        if (n.includes('super') || n.includes('network') || e.includes('super') || e.includes('network')) return false;
+        const statusStr = String(u.status || '').toLowerCase().trim();
+        if (n === 'vacant' || n.includes('vacant') || statusStr === 'vacant' || statusStr === 'active_vacancy') return false;
+        const nameVal = (u.name || u.displayName || '').trim();
+        if (!nameVal || nameVal === '—' || nameVal === '-') return false;
+        const EXCLUDED_ROLES = ['patient', 'family', 'student', 'client', 'seeker', 'user', 'superadmin', 'donor', 'child', 'oldage', 'beneficiary', 'orphan'];
+        if (EXCLUDED_ROLES.some(ex => r.includes(ex) || desig.includes(ex))) return false;
+        return u.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated' && statusStr !== 'executive' && statusStr !== 'hide';
+      });
+
+      allStaff.push(...activeUsers);
+
+      const [attSnap, dressSnap, dutySnap, gpSnap, fineSnap] = await Promise.all([
+        adminDb.collection(`${config.prefix}_attendance`).where('date', '>=', start).where('date', '<=', end).get(),
+        adminDb.collection(`${config.prefix}_dress_logs`).where('date', '>=', start).where('date', '<=', end).get(),
+        adminDb.collection(`${config.prefix}_duty_logs`).where('date', '>=', start).where('date', '<=', end).get(),
+        adminDb.collection(`${config.prefix}_growth_points`).get(),
+        adminDb.collection(`${config.prefix}_fines`).where('date', '>=', start).where('date', '<=', end).get()
+      ]);
+
+      // Populate logs maps
+      attSnap.docs.forEach(doc => {
+        const d = doc.data();
+        let sid = d.staffId || doc.id;
+        const date = d.date;
+        if (!d.staffId && sid.endsWith(`_${date}`)) sid = sid.slice(0, -(date.length + 1));
+        const simpleSid = getSimpleId(sid);
+        attMap.set(`${simpleSid}_${date}`, d);
+      });
+
+      dressSnap.docs.forEach(doc => {
+        const d = doc.data();
+        let sid = d.staffId || doc.id;
+        const date = d.date;
+        if (!d.staffId && sid.endsWith(`_${date}`)) sid = sid.slice(0, -(date.length + 1));
+        const simpleSid = getSimpleId(sid);
+        dressMap.set(`${simpleSid}_${date}`, d);
+      });
+
+      dutySnap.docs.forEach(doc => {
+        const d = doc.data();
+        let sid = d.staffId || doc.id;
+        const date = d.date;
+        if (!d.staffId && sid.endsWith(`_${date}`)) sid = sid.slice(0, -(date.length + 1));
+        const simpleSid = getSimpleId(sid);
+        dutyMap.set(`${simpleSid}_${date}`, d);
+      });
+
+      // Filter growth points by selected month (e.g. "2026-06")
+      const monthStr = start.substring(0, 7);
+      gpSnap.docs.forEach(doc => {
+        const d = doc.data();
+        if (d.month === monthStr) {
+          const sid = d.staffId;
+          const simpleSid = getSimpleId(sid);
+          growthPointsMap.set(sid, d);
+          growthPointsMap.set(simpleSid, d);
+        }
+      });
+
+      fineSnap.docs.forEach(doc => {
+        const d = doc.data();
+        let sid = d.staffId || doc.id;
+        const date = d.date;
+        if (!d.staffId && sid.endsWith(`_${date}`)) sid = sid.slice(0, -(date.length + 1));
+        const simpleSid = getSimpleId(sid);
+        const key = `${simpleSid}_${date}`;
+        const existing = fineMap.get(key) || [];
+        fineMap.set(key, [...existing, d]);
+      });
+    } catch (e) {
+      console.warn(`[voiceTools] getStaffRanking skipping dept ${dept}:`, e);
+    }
+  }));
+
+  const staffRankedList = allStaff.map(member => {
+    const simpleSid = getSimpleId(member.id);
+    const gpDoc = growthPointsMap.get(simpleSid) || growthPointsMap.get(member.id);
+    const extraPoints = gpDoc ? Number(gpDoc.extra || 0) : 0;
+
+    let presents = 0;
+    let absents = 0;
+    let lates = 0;
+    let leaves = 0;
+    let unmarked = 0;
+    let finesTotal = 0;
+    let totalDailyPointsSum = 0;
+
+    daysToProcess.forEach(date => {
+      const logKey = `${simpleSid}_${date}`;
+      const att = attMap.get(logKey);
+      const dress = dressMap.get(logKey);
+      const duty = dutyMap.get(logKey);
+      const fines = fineMap.get(logKey) || [];
+
+      // Day Fines
+      finesTotal += fines.reduce((acc, f) => acc + (Number(f.amount) || 0), 0);
+
+      // Attendance
+      let attStatus = 'unmarked';
+      let isLate = false;
+      if (att) {
+        attStatus = att.status || 'unmarked';
+        isLate = att.isLate === true || attStatus === 'late';
+      }
+
+      let attendanceStatus = 'unmarked';
+      if (attStatus === 'paid_leave' || attStatus === 'unpaid_leave' || attStatus === 'leave') {
+        attendanceStatus = 'leave';
+      } else if (['present', 'absent', 'late', 'unmarked', 'leave'].includes(attStatus)) {
+        attendanceStatus = attStatus;
+      }
+      if (isLate && attendanceStatus === 'present') {
+        attendanceStatus = 'late';
+      }
+
+      if (attendanceStatus === 'present') presents++;
+      else if (attendanceStatus === 'late') lates++;
+      else if (attendanceStatus === 'absent') absents++;
+      else if (attendanceStatus === 'leave') leaves++;
+      else unmarked++;
+
+      const onLeave = attendanceStatus === 'leave';
+
+      // Dress
+      let uniformStatus = 'no';
+      if (onLeave) uniformStatus = 'na';
+      else if (dress) uniformStatus = dress.status || 'no';
+      else uniformStatus = 'unmarked';
+
+      // Duty
+      let dutyStatus = 'no';
+      if (onLeave) dutyStatus = 'na';
+      else if (duty) dutyStatus = duty.status || 'no';
+      else dutyStatus = 'unmarked';
+
+      // Daily points sum
+      const attPoint = (attendanceStatus === 'present' || attendanceStatus === 'late') ? 1 : 0;
+      const uniformPoint = (!onLeave && uniformStatus === 'yes') ? 1 : 0;
+      const dutyPoint = (!onLeave && dutyStatus === 'yes') ? 1 : 0;
+      totalDailyPointsSum += (attPoint + uniformPoint + dutyPoint);
+    });
+
+    const maxDailyPoints = daysToProcess.length * 3;
+    const normalizedDaily = maxDailyPoints > 0 ? Math.round((totalDailyPointsSum / maxDailyPoints) * 90) : 0;
+    const totalPoints = Math.min(100, normalizedDaily + extraPoints);
+
+    return {
+      id: member.id,
+      name: member.name || member.displayName || 'Staff Member',
+      department: member.department,
+      designation: member.designation || 'Staff',
+      seniority: member.seniority || '',
+      presents,
+      absents,
+      lates,
+      leaves,
+      finesTotal,
+      extraPoints,
+      totalPoints
+    };
+  });
+
+  // Sort by points descending, then seniority descending, then name alphabetically
+  staffRankedList.sort((a, b) => 
+    b.totalPoints - a.totalPoints ||
+    getSeniorityRank(b.seniority, b.designation) - getSeniorityRank(a.seniority, a.designation) ||
+    a.name.localeCompare(b.name)
+  );
+
+  return {
+    dateRange: label,
+    ranking: staffRankedList.map((s, index) => ({
+      rank: index + 1,
+      name: s.name,
+      department: s.department,
+      designation: s.designation,
+      totalPoints: s.totalPoints,
+      presents: s.presents,
+      absents: s.absents,
+      lates: s.lates,
+      fines: s.finesTotal
+    })).slice(0, 15)
+  };
+}

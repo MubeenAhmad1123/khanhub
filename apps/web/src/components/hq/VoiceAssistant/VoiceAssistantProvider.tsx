@@ -23,6 +23,7 @@ import {
   getAttendanceSummary,
   getStudentsByCourse,
   getPendingTransactions,
+  getStaffRanking,
 } from '@/lib/voice/voiceTools';
 import { generateSpokenResponse } from '@/lib/voice/responseFormatter';
 import { speak } from '@/lib/voice/speak';
@@ -348,6 +349,12 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         case 'getFinancialSummary': {
           data = await getFinancialSummary(departmentCode, startDate, endDate, daysBack);
           topic = 'financial_summary';
+          break;
+        }
+
+        case 'getStaffRanking': {
+          data = await getStaffRanking(departmentCode, startDate, endDate, daysBack);
+          topic = 'staff_ranking';
           break;
         }
 

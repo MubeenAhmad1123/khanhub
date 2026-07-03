@@ -17,6 +17,7 @@ export type VoiceTool =
   | 'getAttendanceSummary'
   | 'getStudentsByCourse'
   | 'getPendingTransactions'
+  | 'getStaffRanking'
   | 'navigate'
   | 'unknown';
 
@@ -68,7 +69,7 @@ ${JSON.stringify(recentTurns, null, 2)}
 {
   "tool": "getLatestAdmission" | "getMostRecentDischarge" | "getAdmissionsByDate" | "getDischargesByDate" | 
           "getFinancialSummary" | "getRemainingFee" | "searchPersonByName" | 
-          "getAttendanceSummary" | "getStudentsByCourse" | "getPendingTransactions" | "navigate" | "unknown",
+          "getAttendanceSummary" | "getStudentsByCourse" | "getPendingTransactions" | "getStaffRanking" | "navigate" | "unknown",
   "entityName": string or null,
   "entityId": string or null (convert word-numbers: "ninety nine" → "99"),
   "entityType": "patient"|"student"|"staff"|"child"|"seeker" or null,
@@ -97,6 +98,7 @@ ${JSON.stringify(recentTurns, null, 2)}
 - getAttendanceSummary   → "attendance", "present", "absent"
 - getStudentsByCourse    → "students in [course]"
 - getPendingTransactions  → "pending approvals", "pending transactions", "transactions waiting for approval", "unapproved transactions", "super admin approvals"
+- getStaffRanking        → "staff ranking", "monthly ranking of staff", "staff performance", "performance score", "best staff of the month", "who is on top in staff", "staff points"
 - navigate               → "open profile", "show me", "profile of" WITH a specific name/ID
 `;
 
