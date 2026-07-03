@@ -57,6 +57,7 @@ interface VoiceAssistantContextType {
   submitManualCommand: (text: string) => void;
   activeMemoryDocId: string | null;
   lastSubmittedCommand: string;
+  suggestedFollowUps: string[];
 }
 
 const VoiceAssistantContext = createContext<VoiceAssistantContextType | undefined>(undefined);
@@ -112,6 +113,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
   const [activeData, setActiveData] = useState<{ topic: string; data: any } | null>(null);
   const [activeMemoryDocId, setActiveMemoryDocId] = useState<string | null>(null);
   const [lastSubmittedCommand, setLastSubmittedCommand] = useState('');
+  const [suggestedFollowUps, setSuggestedFollowUps] = useState<string[]>([]);
 
   const [countdownDuration, setCountdownDuration] = useState(0);
   const [countdownTimeLeft, setCountdownTimeLeft] = useState(0);
@@ -229,6 +231,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     setLiveTranscript(commandText);
     setSpokenResponse(null);
     setActiveData(null);
+    setSuggestedFollowUps([]);
     
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch (e) {}
@@ -369,10 +372,11 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
             // General query for total remaining balance of a department / all
             data = await getRemainingFee(null, departmentCode);
             topic = 'remaining_fee';
-            const spokenText = await generateSpokenResponse(topic, data);
+            const res = await generateSpokenResponse(topic, data);
             setThinkingMessage(null);
             setActiveData({ topic, data });
-            speakUtterance(spokenText);
+            setSuggestedFollowUps(res.suggestedFollowUps);
+            speakUtterance(res.spokenText);
             return;
           }
           if (!entityId) {
@@ -386,10 +390,11 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
             if (results.length === 1) {
               data = await getRemainingFee(results[0].id, results[0].department);
               topic = 'remaining_fee';
-              const spokenText = await generateSpokenResponse(topic, data, results[0].name);
+              const res = await generateSpokenResponse(topic, data, results[0].name);
               setThinkingMessage(null);
               setActiveData({ topic, data: { ...data, name: results[0].name } });
-              speakUtterance(spokenText);
+              setSuggestedFollowUps(res.suggestedFollowUps);
+              speakUtterance(res.spokenText);
               return;
             }
             // Multiple matches — disambiguate
@@ -513,10 +518,11 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       }
 
       // Generate AI spoken response
-      const spokenText = await generateSpokenResponse(topic, data, entityName || undefined);
+      const res = await generateSpokenResponse(topic, data, entityName || undefined);
       setThinkingMessage(null);
       setActiveData({ topic, data });
-      speakUtterance(spokenText);
+      setSuggestedFollowUps(res.suggestedFollowUps);
+      speakUtterance(res.spokenText);
 
       if (intent.memoryDocId) {
         updateVoiceMemoryResult(intent.memoryDocId, data).catch(err => 
@@ -607,6 +613,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
   const closeAssistantCard = () => {
     setSpokenResponse(null);
     setActiveData(null);
+    setSuggestedFollowUps([]);
     setActiveMemoryDocId(null);
     if (voiceState === 'speaking') {
       setVoiceState('idle');
@@ -809,7 +816,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         setIsEditing,
         submitManualCommand,
         activeMemoryDocId,
-        lastSubmittedCommand
+        lastSubmittedCommand,
+        suggestedFollowUps
       }}
     >
       {children}

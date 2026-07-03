@@ -30,7 +30,8 @@ export default function VoiceCommandBar() {
     startAssistant,
     stopAssistant,
     activeMemoryDocId,
-    lastSubmittedCommand
+    lastSubmittedCommand,
+    suggestedFollowUps
   } = useVoiceAssistant();
 
   const [editValue, setEditValue] = useState('');
@@ -419,6 +420,33 @@ export default function VoiceCommandBar() {
                   <p className="text-sm font-bold text-slate-200">{countVal}</p>
                 </div>
               </div>
+
+              {data.list && data.list.length > 0 && (
+                <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                  <p className="font-bold text-slate-400 text-[9px] uppercase tracking-widest">Outstanding Details</p>
+                  {data.list.map((item: any) => {
+                    const profilePath = buildItemProfilePath(item.department, item.type, item.id);
+                    return (
+                      <div key={item.id} className="bg-slate-950/40 p-2 rounded-lg border border-slate-800 flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-slate-200">{item.name}</p>
+                          <p className="text-[9px] text-slate-500 uppercase tracking-wider">{item.type} • {item.department}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-black text-rose-400">Rs {item.remaining.toLocaleString()}</span>
+                          <Link 
+                            href={profilePath}
+                            onClick={closeAssistantCard}
+                            className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 hover:underline flex items-center gap-0.5"
+                          >
+                            Profile <ArrowRight size={10} />
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         }
@@ -440,7 +468,7 @@ export default function VoiceCommandBar() {
                 <p className="text-lg font-black text-rose-400">Rs {outstandingVal.toLocaleString()}</p>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="grid grid-cols-3 gap-2 text-center mb-3">
                 <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800">
                   <p className="text-slate-400 font-bold text-[8px] uppercase tracking-wider mb-0.5">Rehab</p>
                   <p className="text-xs font-black text-slate-200">Rs {rehabTotal.toLocaleString()}</p>
@@ -454,6 +482,33 @@ export default function VoiceCommandBar() {
                   <p className="text-xs font-black text-slate-200">Rs {spimsTotal.toLocaleString()}</p>
                 </div>
               </div>
+
+              {data.list && data.list.length > 0 && (
+                <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                  <p className="font-bold text-slate-400 text-[9px] uppercase tracking-widest">Outstanding Details</p>
+                  {data.list.map((item: any) => {
+                    const profilePath = buildItemProfilePath(item.department, item.type, item.id);
+                    return (
+                      <div key={`${item.department}_${item.id}`} className="bg-slate-950/40 p-2 rounded-lg border border-slate-800 flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-slate-200">{item.name}</p>
+                          <p className="text-[9px] text-slate-500 uppercase tracking-wider">{item.type} • {item.department}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-black text-rose-400">Rs {item.remaining.toLocaleString()}</span>
+                          <Link 
+                            href={profilePath}
+                            onClick={closeAssistantCard}
+                            className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 hover:underline flex items-center gap-0.5"
+                          >
+                            Profile <ArrowRight size={10} />
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         }
@@ -712,6 +767,21 @@ export default function VoiceCommandBar() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {(spokenResponse || activeData) && suggestedFollowUps && suggestedFollowUps.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 px-1 justify-center max-w-full">
+          {suggestedFollowUps.map((question, idx) => (
+            <button
+              key={idx}
+              onClick={() => submitManualCommand(question)}
+              className="px-2.5 py-1 bg-slate-900/80 backdrop-blur border border-slate-800 hover:bg-slate-800 hover:border-slate-700 text-indigo-300 hover:text-indigo-200 text-[10px] font-medium rounded-full shadow transition-all truncate max-w-full"
+              style={{ minHeight: '32px' }}
+            >
+              {question}
+            </button>
+          ))}
         </div>
       )}
 

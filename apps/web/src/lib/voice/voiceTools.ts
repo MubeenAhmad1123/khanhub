@@ -360,6 +360,10 @@ export async function getRemainingFee(entityId: string | null, department: strin
     let spimsTotal = 0;
     let spimsCount = 0;
 
+    const rehabList: any[] = [];
+    const hospitalList: any[] = [];
+    const spimsList: any[] = [];
+
     const deptStr = department ? String(department).toLowerCase().trim() : 'all';
 
     if (deptStr === 'all' || deptStr === 'rehab') {
@@ -372,6 +376,13 @@ export async function getRemainingFee(entityId: string | null, department: strin
             if (rem > 0) {
               rehabTotal += rem;
               rehabCount++;
+              rehabList.push({
+                id: doc.id,
+                name: d.name || d.displayName || 'Unnamed Patient',
+                remaining: rem,
+                department: 'rehab',
+                type: 'patient'
+              });
             }
           }
         });
@@ -389,6 +400,13 @@ export async function getRemainingFee(entityId: string | null, department: strin
           if (rem > 0) {
             hospitalTotal += rem;
             hospitalCount++;
+            hospitalList.push({
+              id: doc.id,
+              name: d.name || d.displayName || 'Unnamed Patient',
+              remaining: rem,
+              department: 'hospital',
+              type: 'patient'
+            });
           }
         });
       } catch (e) {
@@ -407,6 +425,13 @@ export async function getRemainingFee(entityId: string | null, department: strin
             if (rem > 0) {
               spimsTotal += rem;
               spimsCount++;
+              spimsList.push({
+                id: doc.id,
+                name: d.name || d.displayName || 'Unnamed Student',
+                remaining: rem,
+                department: 'spims',
+                type: 'student'
+              });
             }
           }
         });
@@ -421,6 +446,7 @@ export async function getRemainingFee(entityId: string | null, department: strin
         patientCount: rehabCount,
         department: 'rehab',
         type: 'department_summary',
+        list: rehabList
       };
     } else if (deptStr === 'hospital') {
       return {
@@ -428,6 +454,7 @@ export async function getRemainingFee(entityId: string | null, department: strin
         patientCount: hospitalCount,
         department: 'hospital',
         type: 'department_summary',
+        list: hospitalList
       };
     } else if (deptStr === 'spims') {
       return {
@@ -435,6 +462,7 @@ export async function getRemainingFee(entityId: string | null, department: strin
         studentCount: spimsCount,
         department: 'spims',
         type: 'department_summary',
+        list: spimsList
       };
     } else {
       return {
@@ -444,6 +472,7 @@ export async function getRemainingFee(entityId: string | null, department: strin
         spimsTotal,
         department: 'all',
         type: 'all_summary',
+        list: [...rehabList, ...hospitalList, ...spimsList]
       };
     }
   }
