@@ -1040,7 +1040,7 @@ export async function getStaffRanking(
   daysBack: number | null
 ) {
   await assertVoiceAccess();
-  const { start, end, label } = resolveDateRange(startDate, endDate, daysBack);
+  const { start, end, label, rawStart, rawEnd } = resolveDateRange(startDate, endDate, daysBack);
 
   const depts = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
   const cleanedDept = department ? String(department).toLowerCase().trim() : null;
@@ -1086,8 +1086,8 @@ export async function getStaffRanking(
   };
 
   const daysToProcess: string[] = [];
-  const dt = new Date(start);
-  const endDt = new Date(end);
+  const dt = new Date(rawStart);
+  const endDt = new Date(rawEnd);
   while (dt <= endDt) {
     daysToProcess.push(dt.toISOString().split('T')[0]);
     dt.setDate(dt.getDate() + 1);
@@ -1127,11 +1127,11 @@ export async function getStaffRanking(
       allStaff.push(...activeUsers);
 
       const [attSnap, dressSnap, dutySnap, gpSnap, fineSnap] = await Promise.all([
-        adminDb.collection(`${config.prefix}_attendance`).where('date', '>=', start).where('date', '<=', end).get(),
-        adminDb.collection(`${config.prefix}_dress_logs`).where('date', '>=', start).where('date', '<=', end).get(),
-        adminDb.collection(`${config.prefix}_duty_logs`).where('date', '>=', start).where('date', '<=', end).get(),
+        adminDb.collection(`${config.prefix}_attendance`).where('date', '>=', rawStart).where('date', '<=', rawEnd).get(),
+        adminDb.collection(`${config.prefix}_dress_logs`).where('date', '>=', rawStart).where('date', '<=', rawEnd).get(),
+        adminDb.collection(`${config.prefix}_duty_logs`).where('date', '>=', rawStart).where('date', '<=', rawEnd).get(),
         adminDb.collection(`${config.prefix}_growth_points`).get(),
-        adminDb.collection(`${config.prefix}_fines`).where('date', '>=', start).where('date', '<=', end).get()
+        adminDb.collection(`${config.prefix}_fines`).where('date', '>=', rawStart).where('date', '<=', rawEnd).get()
       ]);
 
       // Populate logs maps
@@ -1163,7 +1163,7 @@ export async function getStaffRanking(
       });
 
       // Filter growth points by selected month (e.g. "2026-06")
-      const monthStr = start.substring(0, 7);
+      const monthStr = rawStart.substring(0, 7);
       gpSnap.docs.forEach(doc => {
         const d = doc.data();
         if (d.month === monthStr) {
