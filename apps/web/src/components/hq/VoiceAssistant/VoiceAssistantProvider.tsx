@@ -592,7 +592,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       course: null,
       rawTranscript: '',
       llmConfidence: 1.0,
-      thinkingMessage: 'Opening profile...'
+      thinkingMessage: 'Opening profile...',
+      memoryDocId: null
     };
     
     await dispatchVoiceTool(resolvedIntent);
