@@ -352,6 +352,16 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         }
 
         case 'getRemainingFee': {
+          if (!entityId && !entityName) {
+            // General query for total remaining balance of a department / all
+            data = await getRemainingFee(null, departmentCode);
+            topic = 'remaining_fee';
+            const spokenText = await generateSpokenResponse(topic, data);
+            setThinkingMessage(null);
+            setActiveData({ topic, data });
+            speakUtterance(spokenText);
+            return;
+          }
           if (!entityId) {
             // Need to search by name first
             const results = await searchPersonByName(entityName, null, entityType, departmentCode);

@@ -91,8 +91,8 @@ ${JSON.stringify(recentTurns, null, 2)}
 - getMostRecentDischarge → "recently discharged", "last discharge", "most recent discharge", "discharge hua"
 - getAdmissionsByDate    → "how many patients", "admissions on [date]", "count of patients", "new clients"
 - getDischargesByDate    → "how many discharges", "discharges last week", "discharged from rehab last week", "discharged in the first week of June"
-- getFinancialSummary    → "income", "expense", "earnings", "revenue", "loss", "kamaya", "kharch", "stats of 24 of June"
-- getRemainingFee        → "remaining", "balance", "fee left"
+- getFinancialSummary    → "income", "expense", "earnings", "revenue", "loss", "kamaya", "kharch", "stats of 24 of June" (Use ONLY for income/expense/profit/loss queries, NOT for outstanding/remaining fees/left patient amounts)
+- getRemainingFee        → "remaining", "balance", "fee left", "left amount of patients", "outstanding patient amount", "outstanding amount in hospital", "total remaining amount"
 - searchPersonByName     → name mentioned + open/profile/find (e.g., "open profile of Raman", "profile of Rehman")
 - getAttendanceSummary   → "attendance", "present", "absent"
 - getStudentsByCourse    → "students in [course]"

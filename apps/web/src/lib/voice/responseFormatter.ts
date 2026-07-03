@@ -34,7 +34,7 @@ export async function generateSpokenResponse(
   const groq = getGroqClient();
 
   const userPrompt = `Topic: ${topic}
-Entity: ${entityName || 'N/A'}
+Entity: ${entityName || data?.name || 'N/A'}
 Data: ${JSON.stringify(data, null, 2)}
 Generate natural spoken English response.`;
 

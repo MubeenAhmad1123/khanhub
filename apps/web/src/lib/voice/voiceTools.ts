@@ -349,8 +349,104 @@ export async function getFinancialSummary(
 }
 
 // ─── TOOL 5: Remaining fee ────────────────────────────────────────────────────
-export async function getRemainingFee(entityId: string, department: string | null) {
+export async function getRemainingFee(entityId: string | null, department: string | null) {
   await assertVoiceAccess();
+
+  if (!entityId) {
+    let rehabTotal = 0;
+    let rehabCount = 0;
+    let hospitalTotal = 0;
+    let hospitalCount = 0;
+    let spimsTotal = 0;
+    let spimsCount = 0;
+
+    const deptStr = department ? String(department).toLowerCase().trim() : 'all';
+
+    if (deptStr === 'all' || deptStr === 'rehab') {
+      try {
+        const snap = await adminDb.collection('rehab_patients').get();
+        snap.docs.forEach(doc => {
+          const d = doc.data();
+          if (d.isActive !== false) {
+            const rem = Number(d.remaining ?? d.overallRemaining ?? d.remainingAmount ?? d.amountRemaining ?? 0);
+            if (rem > 0) {
+              rehabTotal += rem;
+              rehabCount++;
+            }
+          }
+        });
+      } catch (e) {
+        console.warn('[voiceTools] Error getting rehab outstanding:', e);
+      }
+    }
+
+    if (deptStr === 'all' || deptStr === 'hospital') {
+      try {
+        const snap = await adminDb.collection('hospital_patients').get();
+        snap.docs.forEach(doc => {
+          const d = doc.data();
+          const rem = Number(d.remaining ?? d.remainingAmount ?? 0);
+          if (rem > 0) {
+            hospitalTotal += rem;
+            hospitalCount++;
+          }
+        });
+      } catch (e) {
+        console.warn('[voiceTools] Error getting hospital outstanding:', e);
+      }
+    }
+
+    if (deptStr === 'all' || deptStr === 'spims') {
+      try {
+        const snap = await adminDb.collection('spims_students').get();
+        snap.docs.forEach(doc => {
+          const d = doc.data();
+          const status = (d.status || '').toLowerCase();
+          if (status !== 'left' && status !== 'pass' && status !== 'fail' && status !== 'terminated') {
+            const rem = Number(d.remaining ?? d.remainingBalance ?? 0);
+            if (rem > 0) {
+              spimsTotal += rem;
+              spimsCount++;
+            }
+          }
+        });
+      } catch (e) {
+        console.warn('[voiceTools] Error getting spims outstanding:', e);
+      }
+    }
+
+    if (deptStr === 'rehab') {
+      return {
+        totalOutstanding: rehabTotal,
+        patientCount: rehabCount,
+        department: 'rehab',
+        type: 'department_summary',
+      };
+    } else if (deptStr === 'hospital') {
+      return {
+        totalOutstanding: hospitalTotal,
+        patientCount: hospitalCount,
+        department: 'hospital',
+        type: 'department_summary',
+      };
+    } else if (deptStr === 'spims') {
+      return {
+        totalOutstanding: spimsTotal,
+        studentCount: spimsCount,
+        department: 'spims',
+        type: 'department_summary',
+      };
+    } else {
+      return {
+        totalOutstanding: rehabTotal + hospitalTotal + spimsTotal,
+        rehabTotal,
+        hospitalTotal,
+        spimsTotal,
+        department: 'all',
+        type: 'all_summary',
+      };
+    }
+  }
 
   const feeCollMap: Record<string, string> = {
     rehab: 'rehab_fees',
