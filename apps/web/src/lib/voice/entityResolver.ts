@@ -196,7 +196,7 @@ export async function resolveEntityByName(
     // Add patient/student targets
     if (searchPatients) {
       for (const dept of permittedDepts) {
-        if (entityType === 'patient' && !['rehab', 'hospital', 'sukoon'].includes(dept)) continue;
+        if (entityType === 'patient' && dept !== 'rehab') continue;
         if (entityType === 'student' && dept !== 'spims') continue;
         if (entityType === 'child' && dept !== 'welfare') continue;
         if (entityType === 'seeker' && dept !== 'job-center') continue;
