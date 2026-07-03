@@ -183,17 +183,17 @@ export default function ManagerStaffPage() {
       const getSeniorityRank = (seniority: string, desig: string) => {
         const s = String(seniority || '').toLowerCase();
         const d = String(desig || '').toLowerCase();
-        if (s.includes('senior') || d.includes('executive') || d.includes('director') || d.includes('head')) return 10;
-        if (d.includes('manager')) return 9;
-        if (d.includes('supervisor') || s.includes('mid')) return 8;
+        if (s.includes('senior') || d.includes('senior') || d.includes('executive') || d.includes('director') || d.includes('head') || d.includes('admin') || d.includes('administrator')) return 10;
+        if (d.includes('manager') || s.includes('managerial') || s.includes('lead') || d.includes('lead')) return 9;
+        if (d.includes('supervisor') || s.includes('mid') || s.includes('supervisor')) return 8;
         if (d.includes('doctor') || d.includes('clinical') || d.includes('physiotherapist')) return 7;
         if (d.includes('nurse') || d.includes('teacher') || d.includes('lecturer') || d.includes('counselor') || d.includes('personnel')) return 6;
         if (d.includes('worker') || d.includes('junior') || s.includes('junior')) return 5;
         if (d.includes('contract')) return 4;
         if (d.includes('trial')) return 3;
-        if (d.includes('internee') || d.includes('intern') || s.includes('internee')) return 2;
-        if (d.includes('volunteer')) return 1;
-        return 0;
+        if (d.includes('internee') || d.includes('intern') || s.includes('internee') || s.includes('fresher')) return 2;
+        if (d.includes('volunteer') || s.includes('volunteer')) return 1;
+        return 5; // Default to 5 so standard staff is ranked above interns/volunteers/trial/contract
       };
       result = [...result].sort((a, b) => {
         const rankA = getSeniorityRank(a.seniority || '', a.designation || '');

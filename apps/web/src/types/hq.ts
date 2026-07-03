@@ -54,6 +54,7 @@ export interface HqStaff {
   isActive: boolean;
   createdAt: string;
   loginUserId?: string;
+  seniority?: string;
   basicInfoExtras?: Record<string, string>; // For "any custom field as well"
 }
 
