@@ -389,6 +389,51 @@ export async function getRemainingFee(entityId: string, department: string | nul
 
       if (!snap.empty) {
         const d = snap.docs[0].data();
+
+        // Fetch patient details from parent collection
+        const patientCollMap: Record<string, string> = {
+          rehab: 'rehab_patients',
+          hospital: 'hospital_patients',
+          sukoon: 'sukoon_patients',
+        };
+        
+        let admissionDate = null;
+        let dischargeDate = null;
+        let stayDurationDays = null;
+        let remainingDays = null;
+        let isActive = null;
+        let name = null;
+        
+        const patientCol = patientCollMap[dept];
+        if (patientCol) {
+          const pDoc = await adminDb.collection(patientCol).doc(entityId).get();
+          if (pDoc.exists) {
+            const pData = pDoc.data()!;
+            name = pData.name || pData.displayName || null;
+            isActive = pData.isActive !== false;
+            
+            // Dates
+            const adm = pData.admissionDate;
+            const dis = pData.dischargeDate;
+            
+            if (adm) {
+              admissionDate = adm.toDate ? adm.toDate().toISOString().split('T')[0] : String(adm);
+              
+              const admDate = adm.toDate ? adm.toDate() : new Date(adm);
+              const endDate = dis ? (dis.toDate ? dis.toDate() : new Date(dis)) : new Date();
+              const diffTimeMs = endDate.getTime() - admDate.getTime();
+              stayDurationDays = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
+              
+              const diffToday = new Date().getTime() - admDate.getTime();
+              const daysAdmitted = diffToday > 0 ? Math.floor(diffToday / (1000 * 60 * 60 * 24)) : 0;
+              remainingDays = Math.max(0, 100 - daysAdmitted);
+            }
+            if (dis) {
+              dischargeDate = dis.toDate ? dis.toDate().toISOString().split('T')[0] : String(dis);
+            }
+          }
+        }
+
         return {
           amountRemaining: d.amountRemaining || 0,
           amountPaid: d.amountPaid || 0,
@@ -396,6 +441,12 @@ export async function getRemainingFee(entityId: string, department: string | nul
           lastPaymentDate: d.lastPaymentDate || null,
           lastPaymentAmount: d.lastPaymentAmount || null,
           department: dept,
+          admissionDate,
+          dischargeDate,
+          stayDurationDays,
+          remainingDays,
+          isActive,
+          name,
         };
       }
     } catch (e) {
