@@ -808,7 +808,8 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         isEditing,
         setIsEditing,
         submitManualCommand,
-        activeMemoryDocId
+        activeMemoryDocId,
+        lastSubmittedCommand
       }}
     >
       {children}
