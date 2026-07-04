@@ -295,6 +295,9 @@ export default function DailyReportPage() {
     };
 
     transactions.forEach(tx => {
+      // ONLY process approved transactions for summary stats!
+      if (tx.status !== 'approved') return;
+
       const amt = Number(tx.amount) || 0;
       const type = tx.type || 'income';
       const catKey = tx.categoryName || tx.category || 'Uncategorized';
@@ -322,7 +325,7 @@ export default function DailyReportPage() {
         summary.deptTotals[deptName].expense += amt;
       }
 
-      if (tx.paymentMethod === 'cash' && tx.status === 'approved') {
+      if (tx.paymentMethod === 'cash') {
         summary.cashExpected += (type === 'income' ? amt : -amt);
       }
       

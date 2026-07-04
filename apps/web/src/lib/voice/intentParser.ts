@@ -133,7 +133,7 @@ ${JSON.stringify(recentTurns, null, 2)}
                              - "/hq/dashboard/manager/salary" (manager salary)
                              - "/hq/dashboard/manager/users" (manager users)
                              - "/hq/dashboard/cashier" (cashier dashboard, main cashier, cashier page)
-                             - "/hq/dashboard/cashier/daily-report" (cashier daily report)
+                             - "/hq/dashboard/cashier/daily-report" (cashier daily report, daily report, generate daily report, open daily report, daily report page)
                              - "/hq/dashboard/cashier/day-close" (cashier day close)
                              - "/hq/dashboard/cashier/pending" (cashier pending approvals)
                              - "/hq/dashboard/cashier/reconciliation" (cashier reconciliation)

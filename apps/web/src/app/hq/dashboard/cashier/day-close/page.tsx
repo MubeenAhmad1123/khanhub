@@ -150,6 +150,8 @@ export default function DayClosePage() {
       cashExpected: 0
     };
     transactions.forEach(tx => {
+      if (tx.status !== 'approved') return;
+
       const amt = Number(tx.amount) || 0;
       if (tx.type === 'income') s.income += amt;
       else s.expense += amt;
