@@ -58,6 +58,8 @@ interface VoiceAssistantContextType {
   activeMemoryDocId: string | null;
   lastSubmittedCommand: string;
   suggestedFollowUps: string[];
+  inputLanguage: 'en' | 'ur';
+  setInputLanguage: (lang: 'en' | 'ur') => void;
 }
 
 const VoiceAssistantContext = createContext<VoiceAssistantContextType | undefined>(undefined);
@@ -114,6 +116,15 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
   const [activeMemoryDocId, setActiveMemoryDocId] = useState<string | null>(null);
   const [lastSubmittedCommand, setLastSubmittedCommand] = useState('');
   const [suggestedFollowUps, setSuggestedFollowUps] = useState<string[]>([]);
+  const [inputLanguage, setInputLanguageState] = useState<'en' | 'ur'>('en');
+
+  const setInputLanguage = (lang: 'en' | 'ur') => {
+    setInputLanguageState(lang);
+    if (listening) {
+      stopAssistant();
+      setTimeout(() => startAssistant(), 200);
+    }
+  };
 
   const [countdownDuration, setCountdownDuration] = useState(0);
   const [countdownTimeLeft, setCountdownTimeLeft] = useState(0);
@@ -644,12 +655,21 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
   const speakUtterance = (text: string) => {
     setSpokenResponse(text);
     setVoiceState('speaking');
-    speak(text);
+    setSpeaking(true);
+
+    const hasUrduScript = /[\u0600-\u06FF]/.test(text);
+    const synthLang = hasUrduScript ? 'ur-PK' : 'en-US';
+
+    speak(text, synthLang);
     
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      let isEnded = false;
       const checkEnd = () => {
+        if (isEnded) return;
         if (!window.speechSynthesis.speaking) {
+          isEnded = true;
           setSpeaking(false);
+          setVoiceState('idle');
           if ((mode === 'always_on' || pendingIntent) && !manualStopRef.current) {
             startRecognitionInstance();
           }
@@ -657,7 +677,22 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           setTimeout(checkEnd, 200);
         }
       };
-      setTimeout(checkEnd, 400);
+      setTimeout(checkEnd, 450);
+
+      // Safety timeout: force-end after 8 seconds if stuck
+      setTimeout(() => {
+        if (!isEnded) {
+          isEnded = true;
+          setSpeaking(false);
+          setVoiceState('idle');
+          if ((mode === 'always_on' || pendingIntent) && !manualStopRef.current) {
+            startRecognitionInstance();
+          }
+        }
+      }, 8000);
+    } else {
+      setVoiceState('idle');
+      setSpeaking(false);
     }
   };
 
@@ -671,7 +706,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
     }
 
     const rec = new SpeechRecognition();
-    rec.lang = 'en-US';
+    rec.lang = inputLanguage === 'ur' ? 'ur-PK' : 'en-US';
     rec.interimResults = true;
     rec.continuous = (mode === 'always_on');
 
@@ -838,7 +873,9 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         submitManualCommand,
         activeMemoryDocId,
         lastSubmittedCommand,
-        suggestedFollowUps
+        suggestedFollowUps,
+        inputLanguage,
+        setInputLanguage
       }}
     >
       {children}

@@ -139,6 +139,26 @@ ${JSON.stringify(recentTurns, null, 2)}
 
 `;
 
+function cleanAndParseJson(raw: string): any {
+  let cleaned = raw.trim();
+  
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*/i, '');
+    cleaned = cleaned.replace(/\s*```$/, '');
+  }
+  
+  cleaned = cleaned.trim();
+  
+  const startIdx = cleaned.indexOf('{');
+  const endIdx = cleaned.lastIndexOf('}');
+  
+  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+    cleaned = cleaned.substring(startIdx, endIdx + 1);
+  }
+  
+  return JSON.parse(cleaned);
+}
+
 export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceIntent> {
   try {
     // 1. Fetch ERP System Knowledge (7 modules)
@@ -191,7 +211,7 @@ export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceInt
 
     const raw = response.text || '{}';
     console.log(`[INTENT PARSER] parsed using ${response.provider}:`, raw);
-    const parsed = JSON.parse(raw);
+    const parsed = cleanAndParseJson(raw);
 
     let memoryDocId = null;
     try {

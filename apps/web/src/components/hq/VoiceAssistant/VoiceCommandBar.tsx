@@ -31,7 +31,9 @@ export default function VoiceCommandBar() {
     stopAssistant,
     activeMemoryDocId,
     lastSubmittedCommand,
-    suggestedFollowUps
+    suggestedFollowUps,
+    inputLanguage,
+    setInputLanguage
   } = useVoiceAssistant();
 
   const [editValue, setEditValue] = useState('');
@@ -792,6 +794,22 @@ export default function VoiceCommandBar() {
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-50 bg-gray-50/50 text-[9px] font-black uppercase tracking-widest text-gray-500 flex-shrink-0">
               {statusIcon}
               <span>{statusLabel}</span>
+            </div>
+
+            {/* Language Switcher */}
+            <div className="flex bg-slate-100 p-0.5 rounded-xl border border-slate-200/60 shrink-0 text-[9px] font-bold">
+              <button
+                onClick={() => setInputLanguage('en')}
+                className={`px-2 py-1 rounded-lg transition-all ${inputLanguage === 'en' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+              >
+                EN
+              </button>
+              <button
+                onClick={() => setInputLanguage('ur')}
+                className={`px-2 py-1 rounded-lg transition-all ${inputLanguage === 'ur' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+              >
+                اردو
+              </button>
             </div>
 
             {/* Live transcript text display */}

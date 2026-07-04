@@ -1,7 +1,7 @@
 // apps/web/src/lib/voice/responseFormatter.ts
 'use server';
 
-import { getGroqClient, GROQ_MODEL } from './groqClient';
+import { getGroqClient } from './groqClient';
 
 export interface FormattedVoiceResponse {
   spokenText: string;
@@ -10,7 +10,7 @@ export interface FormattedVoiceResponse {
 
 const SPOKEN_RESPONSE_PROMPT = `You are Mubi, the voice assistant for Khan Hub ERP in Pakistan.
 Detect the language of the "User Voice Query".
-- If the query is in Urdu or Roman Urdu (Urdu written in English/Latin letters, e.g. "hospital ka remaining balance kya hai", "income kitni hai", "attendence dikhao"), you MUST generate the JSON "spokenText" and "suggestedFollowUps" in natural, warm spoken Roman Urdu (e.g. "June ke month mein hospital ka total remaining balance 25,000 rupees hai").
+- If the query is in Urdu or Roman Urdu (Urdu written in English/Latin letters, e.g. "hospital ka remaining balance kya hai", "income kitni hai", "attendence dikhao", "attendance check karo"), you MUST generate the JSON "spokenText" and "suggestedFollowUps" in natural, warm spoken Roman Urdu (e.g. "June ke month mein hospital ka total remaining balance 25,000 rupees hai").
 - If the query is in English, generate them in clear, fluent English.
 
 Generate a JSON response containing:
@@ -85,6 +85,28 @@ const STATIC_FOLLOW_UPS: Record<string, string[]> = {
   ]
 };
 
+function cleanAndParseJson(raw: string): any {
+  let cleaned = raw.trim();
+  
+  // Remove markdown code blocks if present
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*/i, '');
+    cleaned = cleaned.replace(/\s*```$/, '');
+  }
+  
+  cleaned = cleaned.trim();
+  
+  // Find first { and last } to extract only the JSON object
+  const startIdx = cleaned.indexOf('{');
+  const endIdx = cleaned.lastIndexOf('}');
+  
+  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+    cleaned = cleaned.substring(startIdx, endIdx + 1);
+  }
+  
+  return JSON.parse(cleaned);
+}
+
 export async function generateSpokenResponse(
   topic: string,
   data: any,
@@ -107,7 +129,7 @@ Generate JSON response with spokenText and suggestedFollowUps.`;
 
   try {
     const completion = await groq.chat.completions.create({
-      model: GROQ_MODEL,
+      model: 'llama-3.3-70b-versatile', // Use the smarter 70B model for high quality translation & JSON Mode
       messages: [
         { role: 'system', content: SPOKEN_RESPONSE_PROMPT },
         { role: 'user', content: userPrompt },
@@ -118,7 +140,7 @@ Generate JSON response with spokenText and suggestedFollowUps.`;
     });
 
     const content = completion.choices[0]?.message?.content?.trim() || '';
-    const parsed = JSON.parse(content);
+    const parsed = cleanAndParseJson(content);
 
     return {
       spokenText: parsed.spokenText || 'I found the data you requested.',
