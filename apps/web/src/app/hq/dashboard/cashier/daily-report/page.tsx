@@ -75,7 +75,15 @@ export default function DailyReportPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
   
-  const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
+  const getLocalDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [reportDate, setReportDate] = useState(getLocalDateString());
   const [viewMode, setViewMode] = useState<'summary' | 'detail'>('summary');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,9 +104,9 @@ export default function DailyReportPage() {
     setError(null);
     try {
       const allTxs: Transaction[] = [];
-      const reportDateObj = new Date(reportDate);
-      const startOfDay = new Date(reportDateObj.setHours(0, 0, 0, 0));
-      const endOfDay = new Date(reportDateObj.setHours(23, 59, 59, 999));
+      const [year, month, day] = reportDate.split('-').map(Number);
+      const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+      const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
       
       const startTimestamp = Timestamp.fromDate(startOfDay);
       const endTimestamp = Timestamp.fromDate(endOfDay);
@@ -140,7 +148,9 @@ export default function DailyReportPage() {
           return snap.docs
             .map(doc => ({ id: doc.id, departmentCode: dept.code, departmentName: dept.label, ...doc.data() }))
             .filter((t: any) => {
-              const d = toDate(t.date || t.transactionDate || t.createdAt);
+              const dateVal = t.date || t.transactionDate;
+              if (!dateVal) return false;
+              const d = toDate(dateVal);
               return d && d >= startOfDay && d <= endOfDay;
             }) as Transaction[];
         }
@@ -387,7 +397,12 @@ export default function DailyReportPage() {
                 onChange={(e) => setReportDate(e.target.value)}
                 onBlur={(e) => {
                   const parsed = parseDateDMY(e.target.value);
-                  if (parsed) setReportDate(parsed.toISOString().split('T')[0]);
+                  if (parsed) {
+                    const year = parsed.getFullYear();
+                    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+                    const day = String(parsed.getDate()).padStart(2, '0');
+                    setReportDate(`${year}-${month}-${day}`);
+                  }
                 }}
                 className="pl-9 pr-4 py-2.5 bg-transparent focus:bg-zinc-50 border-none rounded-2xl text-sm font-bold text-zinc-900 outline-none transition-all cursor-pointer relative z-0 w-full"
               />
