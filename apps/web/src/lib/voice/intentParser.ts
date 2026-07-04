@@ -37,6 +37,7 @@ export interface ParsedVoiceIntent {
   llmConfidence: number;
   thinkingMessage: string;  // What to show in UI while processing
   memoryDocId: string | null;
+  routePath?: string | null;
 }
 
 // Today's date in PKT for injection into prompt
@@ -79,6 +80,7 @@ ${JSON.stringify(recentTurns, null, 2)}
   "endDate": "YYYY-MM-DD" or null,
   "daysBack": number or null,
   "course": exact course name from SPIMS list or null,
+  "routePath": string or null (the resolved static route if tool is "navigate"),
   "llmConfidence": 0.0 to 1.0,
   "thinkingMessage": short English message shown in UI while fetching (e.g. "Searching Rehab data..." or "Checking patient records...")
 }
@@ -100,7 +102,41 @@ ${JSON.stringify(recentTurns, null, 2)}
 - getStudentsByCourse    → "students in [course]"
 - getPendingTransactions  → "pending approvals", "pending transactions", "transactions waiting for approval", "unapproved transactions", "super admin approvals"
 - getStaffRanking        → "staff ranking", "monthly ranking of staff", "staff performance", "performance score", "best staff of the month", "who is on top in staff", "staff points"
-- navigate               → "open profile", "show me", "profile of" WITH a specific name/ID
+- navigate               → user wants to open, go to, show, visit, load a static dashboard/page. Match the command to the correct static route from this list:
+                           * HQ Pages:
+                             - "/hq/dashboard/superadmin" (super admin dashboard, main super admin, superadmin main)
+                             - "/hq/dashboard/superadmin/analytics" (superadmin analytics)
+                             - "/hq/dashboard/superadmin/approvals" (superadmin approvals)
+                             - "/hq/dashboard/superadmin/finance" (superadmin finance)
+                             - "/hq/dashboard/superadmin/overview" (superadmin overview)
+                             - "/hq/dashboard/superadmin/reconciliation" (superadmin reconciliation)
+                             - "/hq/dashboard/superadmin/staff" (superadmin staff list/management)
+                             - "/hq/dashboard/superadmin/users" (superadmin users management)
+                             - "/hq/dashboard/manager" (manager dashboard, manager home)
+                             - "/hq/dashboard/manager/approvals" (manager approvals)
+                             - "/hq/dashboard/manager/attendance" (manager attendance)
+                             - "/hq/dashboard/manager/staff" (manager staff list)
+                             - "/hq/dashboard/manager/reports" (manager reports)
+                             - "/hq/dashboard/manager/reports/daily" (manager daily reports)
+                             - "/hq/dashboard/manager/salary" (manager salary)
+                             - "/hq/dashboard/cashier" (cashier dashboard, main cashier, cashier page)
+                             - "/hq/dashboard/cashier/daily-report" (cashier daily report)
+                             - "/hq/dashboard/cashier/day-close" (cashier day close)
+                             - "/hq/dashboard/cashier/pending" (cashier pending approvals)
+                             - "/hq/dashboard/cashier/reconciliation" (cashier reconciliation)
+                             - "/hq/dashboard/cashier/history" (cashier history)
+                             - "/hq/dashboard/staff" (hq staff dashboard)
+                           * Department Dashboards (rehab, spims, hospital, sukoon, welfare, job-center):
+                             - "/departments/[dept]/dashboard" (e.g. "rehab dashboard", "rehabilitation dashboard" → "/departments/rehab/dashboard")
+                             - "/departments/[dept]/dashboard/admin" (e.g. "rehab admin", "rehabilitation admin" → "/departments/rehab/dashboard/admin")
+                             - "/departments/[dept]/dashboard/cashier" (e.g. "rehab cashier", "rehabilitation cashier" → "/departments/rehab/dashboard/cashier")
+                             - "/departments/[dept]/dashboard/staff" (e.g. "rehab staff", "rehabilitation staff" → "/departments/rehab/dashboard/staff")
+                             - "/departments/[dept]/dashboard/superadmin" (e.g. "rehab superadmin", "rehabilitation superadmin" → "/departments/rehab/dashboard/superadmin")
+                             - "/departments/[dept]/dashboard/worker" (e.g. "rehab worker", "rehabilitation worker" → "/departments/rehab/dashboard/worker")
+                           * General Pages:
+                             - "/profile" (my profile, settings, edit profile)
+                             - "/developer" (developer tab, developer dashboard, logs)
+
 `;
 
 export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceIntent> {
@@ -172,6 +208,7 @@ export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceInt
           endDate: parsed.endDate || null,
           daysBack: typeof parsed.daysBack === 'number' ? parsed.daysBack : null,
           course: parsed.course || null,
+          routePath: parsed.routePath || null,
           rawTranscript: transcript,
           llmConfidence: parsed.llmConfidence || 0.5,
           thinkingMessage: parsed.thinkingMessage || 'Searching...',
@@ -196,6 +233,7 @@ export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceInt
       endDate: parsed.endDate || null,
       daysBack: typeof parsed.daysBack === 'number' ? parsed.daysBack : null,
       course: parsed.course || null,
+      routePath: parsed.routePath || null,
       rawTranscript: transcript,
       llmConfidence: parsed.llmConfidence || 0.5,
       thinkingMessage: parsed.thinkingMessage || 'Searching...',
@@ -213,6 +251,7 @@ export async function parseLlmIntent(transcript: string): Promise<ParsedVoiceInt
       endDate: null,
       daysBack: null,
       course: null,
+      routePath: null,
       rawTranscript: transcript,
       llmConfidence: 0,
       thinkingMessage: 'Searching...',

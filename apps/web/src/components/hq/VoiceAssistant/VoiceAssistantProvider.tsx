@@ -510,6 +510,27 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           break;
         }
 
+        case 'navigate': {
+          if (!intent.routePath) {
+            setThinkingMessage(null);
+            speakUtterance("I could not resolve which page or dashboard you want to open. Please specify more clearly.");
+            return;
+          }
+          setThinkingMessage(null);
+          let routeName = intent.routePath;
+          if (routeName.startsWith('/departments/')) {
+            routeName = routeName.replace('/departments/', '');
+          }
+          if (routeName.startsWith('/hq/dashboard/')) {
+            routeName = routeName.replace('/hq/dashboard/', '');
+          }
+          const cleanLabel = routeName.split('/').filter(Boolean).join(' ').replace(/-/g, ' ');
+          speakUtterance(`Opening the ${cleanLabel} page.`);
+          closeAssistantCard();
+          router.push(intent.routePath);
+          return;
+        }
+
         default: {
           setThinkingMessage(null);
           speakUtterance("I did not understand that command. Please say it again or ask differently.");
