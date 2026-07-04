@@ -537,7 +537,6 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
           }
           const cleanLabel = routeName.split('/').filter(Boolean).join(' ').replace(/-/g, ' ');
           speakUtterance(`Opening the ${cleanLabel} page.`);
-          closeAssistantCard();
           router.push(intent.routePath);
           return;
         }

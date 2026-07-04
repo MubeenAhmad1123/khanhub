@@ -102,23 +102,36 @@ ${JSON.stringify(recentTurns, null, 2)}
 - getStudentsByCourse    → "students in [course]"
 - getPendingTransactions  → "pending approvals", "pending transactions", "transactions waiting for approval", "unapproved transactions", "super admin approvals"
 - getStaffRanking        → "staff ranking", "monthly ranking of staff", "staff performance", "performance score", "best staff of the month", "who is on top in staff", "staff points"
-- navigate               → user wants to open, go to, show, visit, load a static dashboard/page. Match the command to the correct static route from this list:
+- navigate               → user wants to open, go to, show, visit, load a static dashboard/page. Match the command to the correct static route from this list (specific sub-routes take absolute priority over parent directories when keywords like "passwords", "finance", "analytics", "daily report" etc. are present):
                            * HQ Pages:
                              - "/hq/dashboard/superadmin" (super admin dashboard, main super admin, superadmin main)
                              - "/hq/dashboard/superadmin/analytics" (superadmin analytics)
                              - "/hq/dashboard/superadmin/approvals" (superadmin approvals)
+                             - "/hq/dashboard/superadmin/categories" (superadmin categories, manage categories)
+                             - "/hq/dashboard/superadmin/departments" (superadmin departments, manage departments)
+                             - "/hq/dashboard/superadmin/fee-requests" (superadmin fee requests, fee requests page)
                              - "/hq/dashboard/superadmin/finance" (superadmin finance)
                              - "/hq/dashboard/superadmin/overview" (superadmin overview)
+                             - "/hq/dashboard/superadmin/passwords" (superadmin passwords, super admin password page, password list)
                              - "/hq/dashboard/superadmin/reconciliation" (superadmin reconciliation)
+                             - "/hq/dashboard/superadmin/rehab/finance" (superadmin rehab finance)
+                             - "/hq/dashboard/superadmin/rehab/patients" (superadmin rehab patients)
+                             - "/hq/dashboard/superadmin/settings" (superadmin settings)
+                             - "/hq/dashboard/superadmin/spims" (superadmin spims)
+                             - "/hq/dashboard/superadmin/spims/students" (superadmin spims students)
                              - "/hq/dashboard/superadmin/staff" (superadmin staff list/management)
                              - "/hq/dashboard/superadmin/users" (superadmin users management)
                              - "/hq/dashboard/manager" (manager dashboard, manager home)
                              - "/hq/dashboard/manager/approvals" (manager approvals)
                              - "/hq/dashboard/manager/attendance" (manager attendance)
+                             - "/hq/dashboard/manager/growth-ideas" (manager growth ideas)
+                             - "/hq/dashboard/manager/passwords" (manager passwords, manager password page)
+                             - "/hq/dashboard/manager/profile" (manager profile)
                              - "/hq/dashboard/manager/staff" (manager staff list)
                              - "/hq/dashboard/manager/reports" (manager reports)
                              - "/hq/dashboard/manager/reports/daily" (manager daily reports)
                              - "/hq/dashboard/manager/salary" (manager salary)
+                             - "/hq/dashboard/manager/users" (manager users)
                              - "/hq/dashboard/cashier" (cashier dashboard, main cashier, cashier page)
                              - "/hq/dashboard/cashier/daily-report" (cashier daily report)
                              - "/hq/dashboard/cashier/day-close" (cashier day close)
