@@ -372,7 +372,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
             // General query for total remaining balance of a department / all
             data = await getRemainingFee(null, departmentCode);
             topic = 'remaining_fee';
-            const res = await generateSpokenResponse(topic, data);
+            const res = await generateSpokenResponse(topic, data, undefined, intent.rawTranscript);
             setThinkingMessage(null);
             setActiveData({ topic, data });
             setSuggestedFollowUps(res.suggestedFollowUps);
@@ -390,7 +390,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
             if (results.length === 1) {
               data = await getRemainingFee(results[0].id, results[0].department);
               topic = 'remaining_fee';
-              const res = await generateSpokenResponse(topic, data, results[0].name);
+              const res = await generateSpokenResponse(topic, data, results[0].name, intent.rawTranscript);
               setThinkingMessage(null);
               setActiveData({ topic, data: { ...data, name: results[0].name } });
               setSuggestedFollowUps(res.suggestedFollowUps);
@@ -539,7 +539,7 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
       }
 
       // Generate AI spoken response
-      const res = await generateSpokenResponse(topic, data, entityName || undefined);
+      const res = await generateSpokenResponse(topic, data, entityName || undefined, intent.rawTranscript);
       setThinkingMessage(null);
       setActiveData({ topic, data });
       setSuggestedFollowUps(res.suggestedFollowUps);
