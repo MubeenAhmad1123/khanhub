@@ -27,6 +27,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: 'Transactions', href: '/departments/hospital/dashboard/admin/patients', icon: FileText, roles: ['admin', 'superadmin'] },
   { title: 'Reports & Logs', href: '/departments/hospital/dashboard/admin/reports', icon: ClipboardList, roles: ['admin'] },
   { title: 'HQ Reports', href: '/departments/hospital/dashboard/superadmin/reports', icon: ClipboardList, roles: ['superadmin'] },
+  { title: 'HQ Analytics', href: '/departments/hospital/dashboard/superadmin/analytics', icon: TrendingUp, roles: ['superadmin'] },
   { title: 'Daily Audit', href: '/hq/dashboard/manager/reports/daily', icon: ShieldCheck, roles: ['admin', 'superadmin'] },
   { title: 'My Duty', href: '/departments/hospital/dashboard/staff', icon: Activity, roles: ['staff'] },
   { title: 'Daily Report', href: '/departments/hospital/dashboard/staff/report', icon: ClipboardList, roles: ['staff'] },
