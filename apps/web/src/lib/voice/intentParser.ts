@@ -19,6 +19,7 @@ export type VoiceTool =
   | 'getPendingTransactions'
   | 'getStaffRanking'
   | 'navigate'
+  | 'runCustomQuery'
   | 'unknown';
 
 export type EntityType = 'patient' | 'student' | 'staff' | 'child' | 'seeker' | null;
@@ -71,7 +72,7 @@ ${JSON.stringify(recentTurns, null, 2)}
 {
   "tool": "getLatestAdmission" | "getMostRecentDischarge" | "getAdmissionsByDate" | "getDischargesByDate" | 
           "getFinancialSummary" | "getRemainingFee" | "searchPersonByName" | 
-          "getAttendanceSummary" | "getStudentsByCourse" | "getPendingTransactions" | "getStaffRanking" | "navigate" | "unknown",
+          "getAttendanceSummary" | "getStudentsByCourse" | "getPendingTransactions" | "getStaffRanking" | "navigate" | "runCustomQuery" | "unknown",
   "entityName": string or null,
   "entityId": string or null (convert word-numbers: "ninety nine" → "99"),
   "entityType": "patient"|"student"|"staff"|"child"|"seeker" or null,
@@ -95,13 +96,14 @@ ${JSON.stringify(recentTurns, null, 2)}
 - getMostRecentDischarge → "recently discharged", "last discharge", "most recent discharge", "discharge hua"
 - getAdmissionsByDate    → "how many patients", "admissions on [date]", "count of patients", "new clients"
 - getDischargesByDate    → "how many discharges", "discharges last week", "discharged from rehab last week", "discharged in the first week of June"
-- getFinancialSummary    → "income", "expense", "earnings", "revenue", "loss", "kamaya", "kharch", "stats of 24 of June" (Use ONLY for income/expense/profit/loss queries, NOT for outstanding/remaining fees/left patient amounts)
+- getFinancialSummary    → "income", "expense", "earnings", "revenue", "loss", "kamaya", "kharch" (Use ONLY for income/expense/profit/loss queries, NOT for outstanding/remaining fees/left patient amounts, and NOT for general stats/counts)
 - getRemainingFee        → "remaining", "balance", "fee left", "left amount of patients", "outstanding patient amount", "outstanding amount in hospital", "total remaining amount"
 - searchPersonByName     → name mentioned + open/profile/find (e.g., "open profile of Raman", "profile of Rehman")
 - getAttendanceSummary   → "attendance", "present", "absent"
 - getStudentsByCourse    → "students in [course]"
 - getPendingTransactions  → "pending approvals", "pending transactions", "transactions waiting for approval", "unapproved transactions", "super admin approvals"
 - getStaffRanking        → "staff ranking", "monthly ranking of staff", "staff performance", "performance score", "best staff of the month", "who is on top in staff", "staff points"
+- runCustomQuery          → Use this for general statistics, patient/admitted/discharged counts, test counts, medical test results, number of test tubes, stats comparisons, or complex queries that require fetching from collections like hospital_daily_stats, hospital_patients, etc., rather than narrow financial details. (e.g., "hospital stats for 4th July", "how many test tubes/tests done", "marij count", "patients count", "status of hospital")
 - navigate               → user wants to open, go to, show, visit, load a static dashboard/page. Match the command to the correct static route from this list (specific sub-routes take absolute priority over parent directories when keywords like "passwords", "finance", "analytics", "daily report" etc. are present):
                            * HQ Pages:
                              - "/hq/dashboard/superadmin" (super admin dashboard, main super admin, superadmin main)

@@ -25,6 +25,7 @@ import {
   getPendingTransactions,
   getStaffRanking,
   updateVoiceMemoryResult,
+  runCustomQuery,
 } from '@/lib/voice/voiceTools';
 import { generateSpokenResponse } from '@/lib/voice/responseFormatter';
 import { speak } from '@/lib/voice/speak';
@@ -369,6 +370,12 @@ export default function VoiceAssistantProvider({ children }: { children: React.R
         case 'getFinancialSummary': {
           data = await getFinancialSummary(departmentCode, startDate, endDate, daysBack);
           topic = 'financial_summary';
+          break;
+        }
+
+        case 'runCustomQuery': {
+          data = await runCustomQuery(intent.rawTranscript, departmentCode, startDate, endDate, daysBack);
+          topic = 'custom_query';
           break;
         }
 

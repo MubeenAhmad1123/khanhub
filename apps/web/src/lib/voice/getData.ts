@@ -23,7 +23,7 @@ interface GetDataParams {
   limit?: number;
 }
 
-const DEFAULT_KNOWLEDGE: Record<string, any> = {
+export const DEFAULT_KNOWLEDGE: Record<string, any> = {
   rehab: {
     moduleId: 'rehab',
     displayName: 'Rehab Department',

@@ -4,6 +4,8 @@
 import { adminDb } from '@/lib/firebaseAdmin';
 import { readHqSessionCookie } from '@/app/hq/actions/auth';
 import { resolveEntityByName } from './entityResolver';
+import { getCompletion } from './aiProvider';
+import { DEFAULT_KNOWLEDGE } from './getData';
 
 async function assertVoiceAccess() {
   const session = await readHqSessionCookie();
@@ -1384,5 +1386,142 @@ export async function saveVoiceMemoryFeedback(memoryDocId: string, wasCorrect: b
     });
   } catch (err) {
     console.error('[saveVoiceMemoryFeedback] Failed to save feedback:', err);
+  }
+}
+
+export async function runCustomQuery(
+  transcript: string,
+  department: string | null,
+  startDate: string | null,
+  endDate: string | null,
+  daysBack: number | null
+) {
+  await assertVoiceAccess();
+  const resolvedDateRange = resolveDateRange(startDate, endDate, daysBack);
+
+  const prompt = `You are a database query generator for a Firebase Firestore database in the KhanHub ERP system.
+Your job is to convert a user's natural language voice query into a structured array of Firestore queries.
+
+Today's date context:
+- Start Date: ${resolvedDateRange.start.toISOString()}
+- End Date: ${resolvedDateRange.end.toISOString()}
+- Date Label: ${resolvedDateRange.label}
+- Target Department: ${department || 'All / Not specified'}
+
+Collection Schema mapping:
+${JSON.stringify(DEFAULT_KNOWLEDGE, null, 2)}
+
+You can generate one or more query objects to fetch the necessary data.
+Return ONLY a valid JSON object matching this schema:
+{
+  "queries": [
+    {
+      "collection": "collection_name",
+      "where": [
+        ["field", "==" | ">=" | "<=" | "array-contains", "value"]
+      ],
+      "orderBy": ["field", "asc" | "desc"],
+      "limit": number
+    }
+  ]
+}
+
+Guidelines:
+- Match collection names exactly from the schema mapping.
+- If a collection has twin collections (e.g. primary vs twin), you can output queries for both.
+- If the user asks about "yesterday's patients" or "patient count" in the hospital, query "hospital_patients" and/or "hospital_daily_stats" or other relevant collections based on the schema mapping.
+- Make sure date filters are correct. If filtering by date, if the field is a Timestamp in Firestore, you can use Firestore query date range.
+- Return ONLY JSON. Do not write any explanations or markdown formatting.`;
+
+  try {
+    const response = await getCompletion({
+      systemPrompt: prompt,
+      userMessage: transcript,
+      temperature: 0.1,
+      jsonMode: true
+    });
+
+    const raw = response.text || '{}';
+    console.log(`[CUSTOM QUERY GENERATOR] parsed using ${response.provider}:`, raw);
+    
+    // helper to extract and clean JSON
+    let cleaned = raw.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:json)?\s*/i, '');
+      cleaned = cleaned.replace(/\s*```$/, '');
+    }
+    cleaned = cleaned.trim();
+    const startIdx = cleaned.indexOf('{');
+    const endIdx = cleaned.lastIndexOf('}');
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      cleaned = cleaned.substring(startIdx, endIdx + 1);
+    }
+    const parsed = JSON.parse(cleaned);
+
+    const queries = parsed.queries || [];
+    const results: any[] = [];
+
+    // Helper to parse dates in query values
+    const parseQueryValue = (value: any): any => {
+      if (typeof value === 'string') {
+        if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
+          return new Date(value);
+        }
+        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+          const [y, m, d] = value.split('-').map(Number);
+          return new Date(Date.UTC(y, m - 1, d));
+        }
+      }
+      return value;
+    };
+
+    for (const q of queries) {
+      if (!q.collection) continue;
+      try {
+        let queryRef: any = adminDb.collection(q.collection);
+        if (q.where && Array.isArray(q.where)) {
+          for (const condition of q.where) {
+            if (Array.isArray(condition) && condition.length === 3) {
+              const [field, op, val] = condition;
+              queryRef = queryRef.where(field, op, parseQueryValue(val));
+            }
+          }
+        }
+        if (q.orderBy && Array.isArray(q.orderBy) && q.orderBy.length >= 1) {
+          const [field, direction] = q.orderBy;
+          queryRef = queryRef.orderBy(field, direction || 'asc');
+        }
+        if (typeof q.limit === 'number') {
+          queryRef = queryRef.limit(Math.min(q.limit, 50));
+        } else {
+          queryRef = queryRef.limit(20); // safety limit
+        }
+
+        const snap = await queryRef.get();
+        const docs = snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+        results.push({
+          collection: q.collection,
+          documents: docs
+        });
+      } catch (err: any) {
+        console.error(`[runCustomQuery] Failed to query ${q.collection}:`, err);
+        results.push({
+          collection: q.collection,
+          error: err.message || String(err)
+        });
+      }
+    }
+
+    return {
+      query: transcript,
+      dateLabel: resolvedDateRange.label,
+      results
+    };
+  } catch (err) {
+    console.error('[runCustomQuery] LLM generation or execution failed:', err);
+    return {
+      query: transcript,
+      error: 'Failed to process custom system query.'
+    };
   }
 }
