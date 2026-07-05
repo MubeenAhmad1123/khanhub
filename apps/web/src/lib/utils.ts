@@ -177,6 +177,7 @@ interface ExportPngOptions {
   quality?: number;
   backgroundColor?: string;
   filter?: (node: HTMLElement) => boolean;
+  style?: any;
 }
 
 /**
@@ -194,6 +195,7 @@ export async function downloadElementAsPng(
     pixelRatio: options.scale ?? 2,
     backgroundColor: options.backgroundColor ?? '#ffffff',
     filter: options.filter as any,
+    style: options.style,
     cacheBust: true,
   });
   

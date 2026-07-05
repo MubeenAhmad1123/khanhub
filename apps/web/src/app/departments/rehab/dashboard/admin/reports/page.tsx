@@ -384,7 +384,11 @@ export default function AdminReportsPage() {
       const filename = `rehab-report-${reportFocus}-${reportType}-${Date.now()}.png`;
       await downloadElementAsPng(printRef.current, filename, {
         scale: 2,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        style: {
+          width: '1280px',
+          maxWidth: 'none',
+        }
       });
     } catch (err) {
       console.error('Image export failed:', err);
@@ -396,16 +400,51 @@ export default function AdminReportsPage() {
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <style>{`
         @media print {
-          body * { visibility: hidden; }
-          #rehab-report-print, #rehab-report-print * { visibility: visible; }
-          #rehab-report-print { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
+          aside,
+          header,
+          .no-print,
+          .pointer-events-none {
+            display: none !important;
+          }
+          
+          html, body,
+          div[class*="min-h-screen"],
+          div[class*="lg:ml-"],
+          main,
+          div[class*="max-w-"] {
+            margin: 0 !important;
+            padding: 0 !important;
+            min-height: 0 !important;
+            height: auto !important;
+            background: white !important;
+            box-shadow: none !important;
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+
+          .overflow-x-auto {
+            overflow: visible !important;
+            overflow-x: visible !important;
+          }
+
+          #rehab-report-print {
+            position: relative !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            padding: 24px !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+            display: block !important;
+          }
         }
       `}</style>
 
       <div className="max-w-5xl mx-auto space-y-6">
 
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <FileBarChart className="w-6 h-6 text-teal-600" /> Financial Reports
@@ -425,7 +464,7 @@ export default function AdminReportsPage() {
         </div>
 
         {/* Controls */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6 no-print">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h2 className="font-bold text-gray-800 flex items-center gap-2"><Calendar className="w-5 h-5 text-teal-500" /> Select Period</h2>
             {/* View Toggle */}
