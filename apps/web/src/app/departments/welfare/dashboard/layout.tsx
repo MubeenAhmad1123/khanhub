@@ -75,6 +75,7 @@ const DEPT_INFO: Record<string, { label: string; adminUrl: string; color: string
 
 const HQ_NAV_ITEMS = [
   { label: 'HQ Overview', href: '/hq/dashboard/superadmin', icon: <LayoutDashboard size={16} /> },
+  { label: 'Analytics', href: '/hq/dashboard/superadmin/analytics', icon: <TrendingUp size={16} /> },
   { label: 'Approvals', href: '/hq/dashboard/superadmin/approvals', icon: <CheckCircle size={16} /> },
   { label: 'Finance', href: '/hq/dashboard/superadmin/finance', icon: <TrendingUp size={16} /> },
   { label: 'All Users', href: '/hq/dashboard/superadmin/users', icon: <Users size={16} /> },
