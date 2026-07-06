@@ -37,7 +37,7 @@ export function getEntityTypeFromCollection(collectionInput: string): 'staff' | 
   if (input === 'staff' || input.includes('users') || input.includes('staff')) {
     return 'staff';
   }
-  if (input === 'patients' || input === 'patient' || input.includes('patients') || input.includes('guests')) {
+  if (input === 'patients' || input === 'patient' || input.includes('patients') || input.includes('guests') || input.includes('children')) {
     return 'patient';
   }
   if (input === 'students' || input === 'student' || input.includes('students')) {

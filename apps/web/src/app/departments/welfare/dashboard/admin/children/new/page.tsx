@@ -137,8 +137,21 @@ export default function NewChildAdmissionPage() {
       setSubmitting(true);
       setSubmitStatus('processing');
       
+      // Get highest serial number to increment
+      const q = query(collection(db, 'welfare_children'), orderBy('serialNumber', 'desc'), limit(1));
+      const snap = await getDocs(q);
+      let nextSerial = 1;
+      if (!snap.empty) {
+        const lastSerial = snap.docs[0].data().serialNumber || 0;
+        nextSerial = lastSerial + 1;
+      }
+      const generatedAdmissionNumber = `WLF-${String(nextSerial).padStart(3, '0')}`;
+      
       const docRef = await addDoc(collection(db, 'welfare_children'), {
         ...formData,
+        name: formData.fullName, // Sync name with fullName
+        admissionNumber: generatedAdmissionNumber,
+        serialNumber: nextSerial,
         admissionType, // Include the selected type
         createdAt: serverTimestamp(),
         createdBy: session.uid,

@@ -18,6 +18,8 @@ import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
 import { SuperAdminPortalToolbar } from '@/components/hq/superadmin/SuperAdminPortalToolbar';
+import VisibilityManager from '@/components/shared/VisibilityManager';
+import { saveVisibleSections } from '@/lib/visibilityManager';
 
 import dynamic from 'next/dynamic';
 
@@ -135,6 +137,7 @@ export default function ChildDetailPage() {
         return;
       }
       const data = pDoc.data();
+      const resolvedName = data.name || data.fullName || '';
       
       // Calculate Remaining Days
       let remainingDays = 0;
@@ -147,10 +150,10 @@ export default function ChildDetailPage() {
         remainingDays = Math.max(0, 100 - daysAdmitted);
       }
 
-      setChild({ id: pDoc.id, ...data, remainingDays, daysAdmitted });
+      setChild({ id: pDoc.id, ...data, name: resolvedName, remainingDays, daysAdmitted });
       setEditForm({
-        name: data.name || '',
-        background: data.background || data.diagnosis || '',
+        name: resolvedName,
+        background: data.background || data.remarks || '',
         packageAmount: data.packageAmount || 0,
         photoUrl: data.photoUrl || ''
       });
@@ -848,7 +851,21 @@ export default function ChildDetailPage() {
           
           {/* TAB: PROFILE */}
           {activeTab === 'profile' && (
-            <div className="space-y-8 w-full">
+            <div className="space-y-8 w-full animate-in fade-in duration-500">
+              
+              {session && (session.role === 'admin' || session.role === 'superadmin') && !isEditing && (
+                <VisibilityManager
+                  entityType="patient"
+                  entityId={childId}
+                  department="welfare"
+                  currentSections={child?.visibleSections || {}}
+                  onSave={async (updated) => {
+                    await saveVisibleSections('welfare', 'welfare_children', childId, updated);
+                    setChild((prev: any) => prev ? { ...prev, visibleSections: updated } : null);
+                  }}
+                />
+              )}
+
               <div className="flex items-center justify-between w-full border-b border-gray-100 pb-4">
                 <h3 className="text-lg font-bold text-gray-800">Basic Details</h3>
                 {!isEditing ? (

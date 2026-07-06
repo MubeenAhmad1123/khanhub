@@ -89,15 +89,15 @@ export default function ChildrenListPage() {
 
         return {
           id: d.id,
-          name: data.name || '',
+          name: data.name || data.fullName || '',
           fatherName: data.fatherName || '',
           photoUrl: data.photoUrl || null,
           admissionDate,
           packageAmount: Number(data.packageAmount) || 0,
           durationMonths: data.durationMonths || 1,
-          admissionNumber: data.admissionNumber || '',
+          admissionNumber: data.admissionNumber || d.id.substring(0, 6).toUpperCase(),
           serialNumber: data.serialNumber || 0,
-          category: data.category || data.substanceOfAddiction || '',
+          category: data.category || data.admissionCategory || '',
           isActive: data.isActive !== false,
           contactNumber: data.contactNumber || '',
           remaining,
@@ -108,6 +108,8 @@ export default function ChildrenListPage() {
           daysSinceAdmission,
           totalDays,
           createdAt: toDate(data.createdAt),
+          sponsorDonorId: data.sponsorDonorId || null,
+          sponsorDonorName: data.sponsorDonorName || null,
         };
       })
       .sort((a, b) => b.serialNumber - a.serialNumber);
@@ -336,13 +338,13 @@ export default function ChildrenListPage() {
                                 : 'No date'
                             }
                         </div>
-                        {child.remaining > 0 ? (
-                          <span className="text-[10px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-lg flex items-center gap-1">
-                            <AlertCircle size={10} />₨{child.remaining.toLocaleString()}
+                        {child.sponsorDonorId ? (
+                          <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                            <CheckCircle size={10} /> Sponsored
                           </span>
                         ) : (
-                          <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-lg flex items-center gap-1">
-                            <CheckCircle size={10} /> Paid
+                          <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                            <AlertCircle size={10} /> Awaiting Sponsor
                           </span>
                         )}
                     </div>

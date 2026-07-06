@@ -73,12 +73,15 @@ export interface Child {
   admissionNumber: string;          // e.g. "WLF-058"
   serialNumber: number;
   name: string;
+  fullName?: string;                // alternative name field
   fatherName: string;
   motherName?: string;
   dateOfBirth?: string;             // "YYYY-MM-DD"
   age?: number;
   gender: 'male' | 'female';
   photoUrl?: string;
+  bFormNumber?: string;
+  nationality?: string;
 
   // Background
   religion?: string;
@@ -91,6 +94,10 @@ export interface Child {
   educationLevel?: 'none' | 'primary' | 'middle' | 'secondary' | 'higher_secondary' | 'other';
   currentClass?: string;            // e.g. "Class 5"
   school?: string;
+  admissionClassRequested?: string;
+  previousSchoolName?: string;
+  previousClass?: string;
+  previousClassResult?: string;
 
   // Parent / Guardian Status
   fatherStatus: 'alive' | 'deceased' | 'unknown';
@@ -98,6 +105,38 @@ export interface Child {
   parentsSeparated?: boolean;
   guardianName?: string;
   guardianRelationship?: string;   // e.g. "Uncle", "Maternal Aunt"
+  fatherCnic?: string;
+  fatherOccupation?: string;
+  fatherContact?: string;
+  motherCnic?: string;
+  motherOccupation?: string;
+  status?: string;                  // living status Together/Deceased etc
+  guardianContact?: string;
+  guardianAddress?: string;
+
+  // Financial Context
+  siblingsCount?: string;
+  dependentsCount?: string;
+  houseStatus?: string;
+  incomeSource?: string;
+  monthlyIncome?: string;
+  remarks?: string;
+
+  // Health
+  chronicIllness?: string;
+  allergies?: string;
+
+  // Documents
+  documents?: {
+    bForm?: boolean;
+    fatherCnic?: boolean;
+    motherCnic?: boolean;
+    guardianCnic?: boolean;
+    incomeCertificate?: boolean;
+    schoolLeavingCertificate?: boolean;
+    photos?: boolean;
+  };
+  admissionType?: 'orphan' | 'old_age';
   contactNumber: string;
   whatsappNumber?: string;
 
