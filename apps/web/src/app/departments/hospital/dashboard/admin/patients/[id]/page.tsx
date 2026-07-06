@@ -17,6 +17,7 @@ import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, parseDateDMY } from '@/lib/utils';
 import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
+import { LogoLoader } from '@/components/ui';
 
 import dynamic from 'next/dynamic';
 
@@ -719,7 +720,7 @@ export default function PatientDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        <LogoLoader size="lg" />
       </div>
     );
   }

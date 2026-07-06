@@ -12,6 +12,7 @@ import {
   BarChart3, TrendingUp, TrendingDown, Users
 } from 'lucide-react';
 import { Patient } from '@/types/rehab';
+import { LogoLoader } from '@/components/ui';
 
 function toDate(val: any): Date {
   if (!val) return new Date();
@@ -298,7 +299,7 @@ export default function PatientsListPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <LogoLoader size="lg" />
       </div>
     );
   }

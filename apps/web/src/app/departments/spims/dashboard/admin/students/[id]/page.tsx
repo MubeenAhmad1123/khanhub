@@ -16,6 +16,7 @@ import { db } from '@/lib/firebase';
 import { formatDateDMY, toDate, downloadElementAsPng } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
 import type { SpimsStudent, SpimsStudentActivity } from '@/types/spims';
+import { LogoLoader } from '@/components/ui';
 import dynamic from 'next/dynamic';
 
 import { subscribeStudentTests, type SpimsTest } from '@/lib/spims/tests';
@@ -476,8 +477,8 @@ export default function AdminStudentProfilePage() {
 
   if (!session || loading || !student) {
     return (
-      <div className="min-h-[50vh] flex items-center justify-center">
-        <Loader2 className="w-9 h-9 animate-spin text-[#1D9E75]" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <LogoLoader size="lg" />
       </div>
     );
   }

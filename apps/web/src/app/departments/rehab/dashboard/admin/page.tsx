@@ -14,6 +14,7 @@ import {
   BarChart3, Plus, AlertCircle
 } from 'lucide-react';
 import { formatDateDMY, toDate } from '@/lib/utils';
+import { LogoLoader } from '@/components/ui';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -91,8 +92,8 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <LogoLoader size="lg" />
       </div>
     );
   }

@@ -8,6 +8,7 @@ import { Loader2, Plus, Search, GraduationCap, ArrowRight } from 'lucide-react';
 import { listUnifiedStudents } from '@/lib/spims/students';
 import type { SpimsStudent } from '@/types/spims';
 import { formatDateDMY } from '@/lib/utils';
+import { LogoLoader } from '@/components/ui';
 
 export default function SpimsStudentsListPage() {
   const router = useRouter();
@@ -181,11 +182,8 @@ export default function SpimsStudentsListPage() {
 
   if (!session || loading) {
     return (
-      <div className="min-h-[50vh] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-9 h-9 animate-spin text-[#1D9E75]" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#1D9E75]/60 animate-pulse">Fetching Students...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <LogoLoader size="lg" />
       </div>
     );
   }

@@ -18,6 +18,7 @@ import {
   AreaChart, Area
 } from 'recharts';
 import { toast } from 'react-hot-toast';
+import { LogoLoader } from '@/components/ui';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -555,8 +556,8 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <LogoLoader size="lg" />
       </div>
     );
   }

@@ -14,6 +14,7 @@ import dynamic from 'next/dynamic';
 import { formatDateDMY } from '@/lib/utils';
 import { getCached, setCached } from '@/lib/queryCache';
 import { useVisibleSections } from '@/hooks/useVisibleSections';
+import { LogoLoader } from '@/components/ui';
 
 // Dynamically import components to bypass any monorepo/library React Node type mismatches
 const DailySheetTab = dynamic(() => import('@/components/hospital/patient-profile/DailySheetTab'), { ssr: false }) as any;
@@ -146,10 +147,7 @@ export default function HospitalPatientViewPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Loading patient profile...</p>
-        </div>
+        <LogoLoader size="lg" />
       </div>
     );
   }

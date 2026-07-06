@@ -18,7 +18,7 @@ import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 import { syncRehabPatientFinance } from '@/app/hq/actions/approvals';
 import { formatDateDMY, parseDateDMY, toDate, downloadElementAsPng } from '@/lib/utils';
-import { BrutalistCalendar } from '@/components/ui';
+import { BrutalistCalendar, LogoLoader } from '@/components/ui';
 
 import type { MonthRecord, Payment as PaymentType } from '@/components/rehab/patient-profile/FinanceHistory';
 import dynamic from 'next/dynamic';
@@ -2198,7 +2198,7 @@ export default function PatientDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FCFAF2] transition-colors duration-300">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <LogoLoader size="lg" />
       </div>
     );
   }

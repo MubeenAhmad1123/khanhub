@@ -11,6 +11,7 @@ import { formatDateDMY } from '@/lib/utils';
 import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
 import { CsvExportButton } from '@/components/shared/CsvExportButton';
 import { cn } from '@/lib/utils';
+import { LogoLoader } from '@/components/ui';
 
 export default function FinanceLogPage() {
   const router = useRouter();
@@ -164,7 +165,7 @@ export default function FinanceLogPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <LogoLoader size="lg" />
       </div>
     );
   }

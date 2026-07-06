@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import { Loader2, User, AlertCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { LogoLoader } from '@/components/ui';
 
 export default function FamilyDashboardIndex() {
   const router = useRouter();
@@ -23,11 +24,8 @@ export default function FamilyDashboardIndex() {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-teal-600" />
-        <p className="text-gray-400 text-sm font-black uppercase tracking-widest animate-pulse">
-          Link to Patient...
-        </p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <LogoLoader size="lg" />
       </div>
     );
   }

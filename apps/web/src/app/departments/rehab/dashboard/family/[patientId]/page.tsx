@@ -18,6 +18,7 @@ import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
 import AdmissionTab from '@/components/rehab/patient-profile/AdmissionTab';
 import { formatDateDMY } from '@/lib/utils';
 import { Patient } from '@/types/rehab';
+import { LogoLoader } from '@/components/ui';
 import { useVisibleSections } from '@/hooks/useVisibleSections';
 
 function toDate(val: any): Date {
@@ -223,10 +224,7 @@ export default function FamilyPatientViewPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center gap-3 animate-pulse">
-          <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
-          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Loading patient profile...</p>
-        </div>
+        <LogoLoader size="lg" />
       </div>
     );
   }
