@@ -12,6 +12,7 @@ import {
   Banknote, Search, Heart, Plus, Loader2, ArrowRight, X, User, Copy, CheckCircle2, AlertTriangle, ShieldCheck, Trash2
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { LogoLoader } from '@/components/ui';
 
 export default function DonorsRegistryPage() {
   const router = useRouter();
@@ -97,7 +98,7 @@ export default function DonorsRegistryPage() {
   if (loading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <LogoLoader size="lg" />
       </div>
     );
   }

@@ -13,6 +13,7 @@ import {
   Users, ChevronRight, Activity, Loader2,
   Plus, BarChart3
 } from 'lucide-react';
+import { LogoLoader } from '@/components/ui';
 import { formatDateDMY } from '@/lib/utils';
 
 function getGreeting() {
@@ -76,7 +77,7 @@ export default function AdminDashboardPage() {
   if (loading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+        <LogoLoader size="lg" />
       </div>
     );
   }

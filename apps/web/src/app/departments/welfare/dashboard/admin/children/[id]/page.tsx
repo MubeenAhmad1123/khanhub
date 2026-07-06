@@ -20,6 +20,7 @@ import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
 import { SuperAdminPortalToolbar } from '@/components/hq/superadmin/SuperAdminPortalToolbar';
 import VisibilityManager from '@/components/shared/VisibilityManager';
 import { saveVisibleSections } from '@/lib/visibilityManager';
+import { LogoLoader } from '@/components/ui';
 
 import dynamic from 'next/dynamic';
 
@@ -686,7 +687,7 @@ export default function ChildDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <LogoLoader size="lg" />
       </div>
     );
   }

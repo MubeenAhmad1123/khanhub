@@ -10,6 +10,7 @@ import {
   Heart, Plus, Search, ChevronRight, User, Calendar, Loader2, 
   Phone, DollarSign, CheckCircle, AlertCircle, X
 } from 'lucide-react';
+import { LogoLoader } from '@/components/ui';
 
 function toDate(val: any): Date {
   if (!val) return new Date();
@@ -141,7 +142,7 @@ export default function ChildrenListPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        <LogoLoader size="lg" />
       </div>
     );
   }

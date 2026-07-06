@@ -12,6 +12,7 @@ import { cn, formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { markHqNotificationRead, markAllHqNotificationsRead, subscribeHqNotifications, sendHqPushNotification } from '@/lib/hqNotifications';
 import { toast } from 'react-hot-toast';
+import { LogoLoader } from '@/components/ui';
 import { getCached, setCached } from '@/lib/queryCache';
 import type { HospitalTxCategory, HospitalTxMeta, LabTestMeta, OperationMeta, OpdReceptionMeta } from '@/types/hospital';
 import { BrutalistCalendar } from '@/components/ui';
@@ -1374,7 +1375,7 @@ export default function CashierStationPage() {
   if (sessionLoading || !mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FCFBF8]">
-        <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+        <LogoLoader size="lg" />
       </div>
     );
   }
@@ -3982,7 +3983,7 @@ function EntityProfileModal({
         <div className="flex-1 overflow-y-auto no-scrollbar p-4 md:p-0">
           {loading ? (
             <div className="flex items-center justify-center h-48">
-              <Loader2 size={32} className="animate-spin text-indigo-600" />
+              <LogoLoader size="sm" />
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 gap-4">

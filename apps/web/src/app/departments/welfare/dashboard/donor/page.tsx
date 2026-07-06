@@ -13,6 +13,7 @@ import {
   Users, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { LogoLoader } from '@/components/ui';
 
 export default function DonorDashboardPage() {
   const router = useRouter();
@@ -92,8 +93,7 @@ export default function DonorDashboardPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <Loader2 className="w-12 h-12 text-teal-500 animate-spin mb-4" />
-        <p className="text-gray-500 font-medium">Loading your dashboard...</p>
+        <LogoLoader size="lg" />
       </div>
     );
   }

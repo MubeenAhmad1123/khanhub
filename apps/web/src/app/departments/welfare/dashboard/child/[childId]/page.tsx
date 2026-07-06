@@ -15,6 +15,7 @@ import ProgressTab from '@/components/welfare/child-profile/ProgressTab';
 import TherapyTab from '@/components/welfare/child-profile/TherapyTab';
 import MedicationTab from '@/components/welfare/child-profile/MedicationTab';
 import { formatDateDMY } from '@/lib/utils';
+import { LogoLoader } from '@/components/ui';
 
 function toDate(val: any): Date {
   if (!val) return new Date();
@@ -126,10 +127,7 @@ export default function FamilyChildViewPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
-          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Loading resident profile...</p>
-        </div>
+        <LogoLoader size="lg" />
       </div>
     );
   }
