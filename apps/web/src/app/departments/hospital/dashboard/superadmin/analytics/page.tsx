@@ -9,6 +9,7 @@ import {
   TrendingUp, TrendingDown, Users, Calendar, Activity,
   Clock, DollarSign, Filter, RefreshCw, BarChart2, Heart, ShieldCheck
 } from 'lucide-react';
+import { LogoLoader } from '@/components/ui';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, BarChart, Bar, Legend, PieChart, Pie, Cell, LineChart, Line
@@ -86,10 +87,7 @@ export default function HospitalAnalyticsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center space-y-4">
-          <RefreshCw className="w-10 h-10 animate-spin text-teal-600 mx-auto" />
-          <p className="text-sm font-semibold text-gray-500">Loading Hospital Analytics...</p>
-        </div>
+        <LogoLoader size="lg" />
       </div>
     );
   }

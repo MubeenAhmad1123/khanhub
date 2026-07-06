@@ -9,6 +9,7 @@ import {
   TrendingUp, TrendingDown, Users, Calendar, Activity,
   GraduationCap, DollarSign, Filter, RefreshCw, BarChart2
 } from 'lucide-react';
+import { LogoLoader } from '@/components/ui';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, BarChart, Bar, Legend, PieChart, Pie, Cell
@@ -20,7 +21,7 @@ export default function SpimsAnalyticsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [students, setStudents] = useState<any[]>([]);
-
+  
   // Year & Month selections for comparison
   const [compareYear, setCompareYear] = useState(new Date().getFullYear());
   const [monthA, setMonthA] = useState(new Date().getMonth() - 1 < 0 ? 11 : new Date().getMonth() - 1);
@@ -63,10 +64,7 @@ export default function SpimsAnalyticsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center space-y-4">
-          <RefreshCw className="w-10 h-10 animate-spin text-purple-600 mx-auto" />
-          <p className="text-sm font-semibold text-gray-500">Loading SPIMS Analytics...</p>
-        </div>
+        <LogoLoader size="lg" />
       </div>
     );
   }

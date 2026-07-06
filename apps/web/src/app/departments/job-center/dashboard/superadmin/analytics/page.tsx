@@ -9,6 +9,7 @@ import {
   TrendingUp, TrendingDown, Users, Calendar, Activity,
   Briefcase, DollarSign, Filter, RefreshCw, BarChart2, CheckCircle
 } from 'lucide-react';
+import { LogoLoader } from '@/components/ui';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, BarChart, Bar, Legend, PieChart, Pie, Cell
@@ -100,10 +101,7 @@ export default function JobCenterAnalyticsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center space-y-4">
-          <RefreshCw className="w-10 h-10 animate-spin text-orange-600 mx-auto" />
-          <p className="text-sm font-semibold text-gray-500">Loading Job Center Analytics...</p>
-        </div>
+        <LogoLoader size="lg" />
       </div>
     );
   }
