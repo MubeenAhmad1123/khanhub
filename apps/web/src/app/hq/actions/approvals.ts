@@ -750,6 +750,9 @@ export async function decideTransaction(params: {
       if (params.dept === 'rehab') {
         await syncRehabRecords(adminDb, params.txId, data, caller.customId);
       }
+      if (params.dept === 'welfare') {
+        await syncWelfareRecords(adminDb, params.txId, data, caller.customId);
+      }
       if (params.dept === 'spims') {
         await syncSpimsFeeRecords(adminDb, params.txId, data, 'approved');
 
@@ -1233,6 +1236,9 @@ export async function syncDirectApprovedTransaction(params: {
     if (params.dept === 'rehab') {
       await syncRehabRecords(adminDb, params.txId, data, params.approvedBy || 'SUPERADMIN');
     }
+    if (params.dept === 'welfare') {
+      await syncWelfareRecords(adminDb, params.txId, data, params.approvedBy || 'SUPERADMIN');
+    }
     if (params.dept === 'spims') {
       await syncSpimsFeeRecords(adminDb, params.txId, data, 'approved');
     }
@@ -1562,5 +1568,171 @@ export async function bulkDeleteTransactionsServer(params: {
     return { success: true, processed };
   } catch (err: any) {
     return { success: false, processed: 0, error: err?.message || 'Failed.' };
+  }
+}
+
+async function syncWelfareRecords(
+  adminDb: FirebaseFirestore.Firestore,
+  txId: string,
+  txData: any,
+  approvedBy: string
+) {
+  const childId = txData.childId;
+  const staffId = txData.staffId;
+  if (!childId && !staffId) return;
+
+  try {
+    let txDate = new Date();
+    if (txData.date) {
+      txDate = safeToDate(txData.date);
+    }
+    const year = txDate.getFullYear();
+    const mm = String(txDate.getMonth() + 1).padStart(2, '0');
+    const month = `${year}-${mm}`;
+
+    if (txData.category === 'child_fee' && childId) {
+      const feesRef = adminDb.collection('welfare_fees');
+      const feesSnap = await feesRef
+        .where('childId', '==', childId)
+        .where('month', '==', month)
+        .limit(1)
+        .get();
+
+      const amount = Number(txData.amount) || 0;
+
+      if (feesSnap.empty) {
+        const childSnap = await adminDb.collection('welfare_children').doc(childId).get();
+        const packageAmount = childSnap.exists
+          ? (Number(childSnap.data()?.packageAmount) || 60000)
+          : 60000;
+        const amountRemaining = Math.max(0, packageAmount - amount);
+
+        await feesRef.add({
+          childId,
+          childName: txData.childName || '',
+          month,
+          packageAmount,
+          amountPaid: amount,
+          amountRemaining,
+          payments: [{
+            amount,
+            date: txDate,
+            transactionId: txId,
+            approvedBy,
+          }],
+          lastPaymentDate: FieldValue.serverTimestamp(),
+          lastPaymentAmount: amount,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      } else {
+        const feeDoc = feesSnap.docs[0];
+        const current = feeDoc.data();
+        const newPaid = (Number(current.amountPaid) || 0) + amount;
+        const newRemaining = Math.max(0, (Number(current.packageAmount) || 60000) - newPaid);
+        const existingPayments = current.payments || [];
+
+        await feeDoc.ref.update({
+          amountPaid: newPaid,
+          amountRemaining: newRemaining,
+          lastPaymentDate: FieldValue.serverTimestamp(),
+          lastPaymentAmount: amount,
+          payments: [...existingPayments, {
+            amount,
+            date: txDate,
+            transactionId: txId,
+            approvedBy,
+          }],
+        });
+      }
+    }
+
+    if (txData.category === 'canteen_deposit' && childId) {
+      const canteenRef = adminDb.collection('welfare_canteen');
+      const canteenSnap = await canteenRef
+        .where('childId', '==', childId)
+        .where('month', '==', month)
+        .limit(1)
+        .get();
+
+      const amount = Number(txData.amount) || 0;
+
+      if (canteenSnap.empty) {
+        await canteenRef.add({
+          childId,
+          childName: txData.childName || '',
+          month,
+          totalDeposited: amount,
+          totalSpent: 0,
+          balance: amount,
+          lastDepositDate: FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      } else {
+        const canteenDoc = canteenSnap.docs[0];
+        const current = canteenDoc.data();
+        const newDeposited = (Number(current.totalDeposited) || 0) + amount;
+        const newBalance = newDeposited - (Number(current.totalSpent) || 0);
+
+        await canteenDoc.ref.update({
+          totalDeposited: newDeposited,
+          balance: newBalance,
+          lastDepositDate: FieldValue.serverTimestamp(),
+        });
+      }
+    }
+
+    if (txData.category === 'canteen_expense' && childId) {
+      const canteenRef = adminDb.collection('welfare_canteen');
+      const canteenSnap = await canteenRef
+        .where('childId', '==', childId)
+        .where('month', '==', month)
+        .limit(1)
+        .get();
+
+      const amount = Number(txData.amount) || 0;
+
+      if (!canteenSnap.empty) {
+        const canteenDoc = canteenSnap.docs[0];
+        const current = canteenDoc.data();
+        const newSpent = (Number(current.totalSpent) || 0) + amount;
+        const newBalance = (Number(current.totalDeposited) || 0) - newSpent;
+
+        await canteenDoc.ref.update({
+          totalSpent: newSpent,
+          balance: Math.max(0, newBalance),
+        });
+      }
+    }
+
+    if (txData.category === 'staff_salary' && staffId) {
+      const salaryRef = adminDb.collection('welfare_salary_records');
+      const salarySnap = await salaryRef
+        .where('staffId', '==', staffId)
+        .where('month', '==', month)
+        .limit(1)
+        .get();
+
+      const amount = Number(txData.amount) || 0;
+
+      if (salarySnap.empty) {
+        await salaryRef.add({
+          staffId,
+          staffName: txData.staffName || '',
+          month,
+          amount,
+          transactionId: txId,
+          paidAt: FieldValue.serverTimestamp(),
+          approvedBy,
+        });
+      } else {
+        await salarySnap.docs[0].ref.update({
+          amount: (Number(salarySnap.docs[0].data().amount) || 0) + amount,
+          lastPaidAt: FieldValue.serverTimestamp(),
+        });
+      }
+    }
+
+  } catch (err) {
+    console.error('[syncWelfareRecords] Error syncing:', err);
   }
 }

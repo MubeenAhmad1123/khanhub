@@ -212,7 +212,7 @@ export default function ChildDetailPage() {
   }, [childId, router]);
 
   const handleDeleteChild = async () => {
-    if (!isAdmin) return;
+    if (session?.role !== 'admin' && session?.role !== 'superadmin') return;
     const confirmStr = window.prompt('To permanently delete this profile, type "DELETE" below:');
     if (confirmStr !== 'DELETE') {
       if (confirmStr !== null) toast.error('Deletion cancelled.');
@@ -709,7 +709,7 @@ export default function ChildDetailPage() {
             Back to Children
           </Link>
           
-          {isAdmin && (
+          {(session?.role === 'admin' || session?.role === 'superadmin') && (
             <button
               onClick={handleDeleteChild}
               className="inline-flex items-center text-xs font-black text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-colors uppercase tracking-widest"

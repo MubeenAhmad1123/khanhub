@@ -845,6 +845,7 @@ export default function CashierStationPage() {
       if (p.rollNumber) ids.push(String(p.rollNumber));
       if (p.rollNo) ids.push(String(p.rollNo));
       if (p.inpatientNumber) ids.push(String(p.inpatientNumber));
+      if (p.donorNumber) ids.push(String(p.donorNumber));
       if (p.id) ids.push(String(p.id));
 
       if (p.rejoinHistory && Array.isArray(p.rejoinHistory)) {
@@ -966,7 +967,7 @@ export default function CashierStationPage() {
         departmentName: activeDepartment.label,
         paymentMethod,
         referenceNo,
-        status: isSuperadmin ? 'approved' : 'pending',
+        status: (isSuperadmin || activeDepartment.code === 'welfare') ? 'approved' : 'pending',
         ...(isSuperadmin ? {
           approvedAt: Timestamp.now(),
           approvedBy: session?.customId || 'SUPERADMIN',
@@ -1126,8 +1127,8 @@ export default function CashierStationPage() {
         description,
         paymentMethod,
         referenceNo,
-        status: isSuperadmin ? 'approved' : 'pending',
-        ...(isSuperadmin ? {
+        status: (isSuperadmin || departmentCode === 'welfare') ? 'approved' : 'pending',
+        ...((isSuperadmin || departmentCode === 'welfare') ? {
           approvedAt: Timestamp.now(),
           approvedBy: session?.customId || 'SUPERADMIN',
           processedAt: Timestamp.now(),
@@ -1178,7 +1179,7 @@ export default function CashierStationPage() {
         }
       }
 
-      if (!isSuperadmin) {
+      if (!isSuperadmin && departmentCode !== 'welfare') {
         let bodyAmountText = `Rs ${Number(amount).toLocaleString()}`;
         if (Number(amount) <= 0 && Number(discount) > 0) {
           bodyAmountText = `Rs ${Number(discount).toLocaleString()} discount`;
@@ -1210,7 +1211,7 @@ export default function CashierStationPage() {
         }
       }
 
-      toast.success(isSuperadmin ? 'Transaction approved & synced successfully ✓' : 'Transaction submitted successfully ✓');
+      toast.success((isSuperadmin || departmentCode === 'welfare') ? 'Transaction approved & synced successfully ✓' : 'Transaction submitted successfully ✓');
       
       setSelectedEntity(null);
       setAmount('');
@@ -1526,7 +1527,7 @@ export default function CashierStationPage() {
                           : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-200/30"
                       )}
                     >
-                      {t}
+                      {t === 'patient' && departmentCode === 'welfare' ? 'donor' : t}
                     </button>
                   ))}
                 </div>
@@ -1540,7 +1541,7 @@ export default function CashierStationPage() {
                   value={searchQuery}
                   onFocus={() => setSearchFocused(true)}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={`Search for a ${searchType} by name, ID, CNIC or phone...`}
+                  placeholder={`Search for a ${departmentCode === 'welfare' && searchType === 'patient' ? 'donor' : searchType} by name, ID, CNIC or phone...`}
                   className="w-full h-12 sm:h-16 bg-zinc-50 border-2 border-transparent rounded-2xl pl-12 sm:pl-16 pr-10 text-sm sm:text-base font-bold text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner placeholder:text-zinc-200"
                 />
                 {entitiesLoading && (
@@ -1577,7 +1578,7 @@ export default function CashierStationPage() {
                             <div className="flex items-center gap-3">
                               <span className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest">{p._deptLabel}</span>
                               <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                                ID: {p.patientId || p.studentId || p.customId || p.id.slice(0, 8)}
+                                ID: {p.patientId || p.studentId || p.customId || p.donorNumber || p.id.slice(0, 8)}
                                 {p.inpatientNumber && p.inpatientNumber !== p.patientId && ` / ${p.inpatientNumber}`}
                               </span>
                             </div>
@@ -1766,7 +1767,7 @@ export default function CashierStationPage() {
                             <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-[1000] tracking-tighter leading-tight uppercase break-words">{selectedEntity.name || selectedEntity.fullName || selectedEntity.companyName || 'Unknown'}</h2>
                             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 md:gap-3">
                               <div className="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest truncate max-w-full">
-                                ID: <span className="text-indigo-400">{selectedEntity.patientId || selectedEntity.studentId || selectedEntity.employeeId || selectedEntity.rollNo || selectedEntity.id.slice(0, 8)}</span>
+                                ID: <span className="text-indigo-400">{selectedEntity.patientId || selectedEntity.studentId || selectedEntity.employeeId || selectedEntity.rollNo || selectedEntity.donorNumber || selectedEntity.id.slice(0, 8)}</span>
                               </div>
                               <div className="px-4 py-2 bg-indigo-600 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-xl truncate">
                                 {departmentCode}

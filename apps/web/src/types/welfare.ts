@@ -42,6 +42,21 @@ export interface Donor {
   monthlyAmount?: number;       // set if donationType === 'monthly_retainer'
   notes?: string;
 
+  // Additional Registry Info
+  profession?: string;
+  education?: string;
+  bloodGroup?: string;
+  city?: string;
+  district?: string;
+  province?: string;
+
+  // Referring Member Details
+  referringMemberName?: string;
+  referringMemberFatherName?: string;
+  referringMemberId?: string;
+  referringMemberMobile?: string;
+  referringMemberAddress?: string;
+
   isActive: boolean;
   loginUserId?: string;         // uid in welfare_users if they have portal login
   createdAt: Timestamp | Date;
