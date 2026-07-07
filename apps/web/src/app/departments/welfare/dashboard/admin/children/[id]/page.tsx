@@ -36,6 +36,13 @@ export default function ChildDetailPage() {
   const params = useParams();
   const childId = params.id as string;
 
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const isAdmin = session?.role === 'admin';
@@ -748,9 +755,11 @@ export default function ChildDetailPage() {
               <span className="flex items-center justify-center gap-1 text-teal-700 font-medium bg-teal-50 px-2 py-0.5 rounded-full">
                 <Heart className="w-4 h-4" /> Needs Sponsorship
               </span>
-              <span className="flex items-center justify-center gap-1 text-orange-700 font-bold bg-orange-50 px-2 py-0.5 rounded-full animate-pulse shadow-sm border border-orange-100">
-                ⏳ {child.remainingDays} Days Left
-              </span>
+              {child.durationMonths && (
+                <span className="flex items-center justify-center gap-1 text-teal-700 font-bold bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
+                  ⏳ stay duration: {child.durationMonths} months
+                </span>
+              )}
             </div>
             {(child.background || child.diagnosis) && (
               <p className="text-gray-600 max-w-2xl bg-gray-50 px-4 py-3 rounded-xl text-sm border border-gray-100">
@@ -760,100 +769,78 @@ export default function ChildDetailPage() {
             )}
           </div>
         </div>
-
-        {/* Tabs Navigation */}
-        <div className="w-full -mx-4 px-4">
-          <div className="flex flex-wrap gap-1 border-b border-gray-100 bg-white rounded-t-2xl p-1">
-          <button
-            onClick={() => setActiveTab('profile')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'profile' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <User className="w-4 h-4" /> Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('admission')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'admission' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <ClipboardList className="w-4 h-4" /> Admission
-          </button>
-          <button
-            onClick={() => setActiveTab('daily')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'daily' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Activity className="w-4 h-4" /> Daily Sheet
-          </button>
-          <button
-            onClick={() => setActiveTab('progress')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'progress' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <TrendingUp className="w-4 h-4" /> Progress
-          </button>
-          <button
-            onClick={() => setActiveTab('activities')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'activities' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Palette className="w-4 h-4" /> Activities
-          </button>
-          <button
-            onClick={() => setActiveTab('education')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'education' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <BookOpen className="w-4 h-4" /> Education
-          </button>
-          <button
-            onClick={() => setActiveTab('food')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'food' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Utensils className="w-4 h-4" /> Food
-          </button>
-          <button
-            onClick={() => setActiveTab('canteen')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'canteen' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <ShoppingCart className="w-4 h-4" /> Canteen
-          </button>
-          <button
-            onClick={() => setActiveTab('videos')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'videos' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Video className="w-4 h-4" /> Videos ({videos.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('visits')}
-            className={`px-3 py-2.5 text-xs whitespace-nowrap font-medium flex items-center gap-1.5 transition-colors border-b-2 rounded-lg ${
-              activeTab === 'visits' ? 'border-teal-500 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Users className="w-4 h-4" /> Family Visits
-          </button>
+          {/* Sticky Tabs Navigation */}
+        <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md shadow-sm border border-gray-100 rounded-2xl p-1 mb-8">
+          <div className="flex flex-wrap gap-1">
+            <button
+              onClick={() => scrollToSection('profile')}
+              className="px-3 py-2.5 text-xs whitespace-nowrap font-black flex items-center gap-1.5 transition-all text-teal-600 hover:bg-teal-50 rounded-xl cursor-pointer"
+            >
+              <User className="w-4 h-4" /> Overview
+            </button>
+            <button
+              onClick={() => scrollToSection('admission')}
+              className="px-3 py-2.5 text-xs whitespace-nowrap font-black flex items-center gap-1.5 transition-all text-teal-600 hover:bg-teal-50 rounded-xl cursor-pointer"
+            >
+              <ClipboardList className="w-4 h-4" /> Admission
+            </button>
+            <button
+              onClick={() => scrollToSection('daily')}
+              className="px-3 py-2.5 text-xs whitespace-nowrap font-black flex items-center gap-1.5 transition-all text-teal-600 hover:bg-teal-50 rounded-xl cursor-pointer"
+            >
+              <Activity className="w-4 h-4" /> Daily Sheet
+            </button>
+            <button
+              onClick={() => scrollToSection('progress')}
+              className="px-3 py-2.5 text-xs whitespace-nowrap font-black flex items-center gap-1.5 transition-all text-teal-600 hover:bg-teal-50 rounded-xl cursor-pointer"
+            >
+              <TrendingUp className="w-4 h-4" /> Progress
+            </button>
+            <button
+              onClick={() => scrollToSection('activities')}
+              className="px-3 py-2.5 text-xs whitespace-nowrap font-black flex items-center gap-1.5 transition-all text-teal-600 hover:bg-teal-50 rounded-xl cursor-pointer"
+            >
+              <Palette className="w-4 h-4" /> Activities
+            </button>
+            <button
+              onClick={() => scrollToSection('education')}
+              className="px-3 py-2.5 text-xs whitespace-nowrap font-black flex items-center gap-1.5 transition-all text-teal-600 hover:bg-teal-50 rounded-xl cursor-pointer"
+            >
+              <BookOpen className="w-4 h-4" /> Education
+            </button>
+            <button
+              onClick={() => scrollToSection('food')}
+              className="px-3 py-2.5 text-xs whitespace-nowrap font-black flex items-center gap-1.5 transition-all text-teal-600 hover:bg-teal-50 rounded-xl cursor-pointer"
+            >
+              <Utensils className="w-4 h-4" /> Food
+            </button>
+            <button
+              onClick={() => scrollToSection('canteen')}
+              className="px-3 py-2.5 text-xs whitespace-nowrap font-black flex items-center gap-1.5 transition-all text-teal-600 hover:bg-teal-50 rounded-xl cursor-pointer"
+            >
+              <ShoppingCart className="w-4 h-4" /> Canteen
+            </button>
+            <button
+              onClick={() => scrollToSection('videos')}
+              className="px-3 py-2.5 text-xs whitespace-nowrap font-black flex items-center gap-1.5 transition-all text-teal-600 hover:bg-teal-50 rounded-xl cursor-pointer"
+            >
+              <Video className="w-4 h-4" /> Videos ({videos.length})
+            </button>
+            <button
+              onClick={() => scrollToSection('visits')}
+              className="px-3 py-2.5 text-xs whitespace-nowrap font-black flex items-center gap-1.5 transition-all text-teal-600 hover:bg-teal-50 rounded-xl cursor-pointer"
+            >
+              <Users className="w-4 h-4" /> Family Visits
+            </button>
           </div>
         </div>
 
-        {/* Tab Content Areas */}
-        <div className="bg-white rounded-b-2xl shadow-sm border border-gray-100 border-t-0 w-full p-4 md:p-6 min-h-[400px]">
+        {/* Stacked SPA Content Sections */}
+        <div className="space-y-8 pb-24 w-full">
           
-          {/* TAB: PROFILE */}
-          {activeTab === 'profile' && (
-            <div className="space-y-8 w-full animate-in fade-in duration-500">
-              
+          {/* Section 1: Overview */}
+          <div id="profile" className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 scroll-mt-24 w-full">
+            <div className="space-y-8 w-full">
               {session && (session.role === 'admin' || session.role === 'superadmin') && !isEditing && (
                 <VisibilityManager
                   entityType="patient"
@@ -868,7 +855,7 @@ export default function ChildDetailPage() {
               )}
 
               <div className="flex items-center justify-between w-full border-b border-gray-100 pb-4">
-                <h3 className="text-lg font-bold text-gray-800">Basic Details</h3>
+                <h3 className="text-lg font-black text-gray-900">Basic Details</h3>
                 {!isEditing ? (
                   <button onClick={() => setIsEditing(true)} className="text-teal-600 hover:bg-teal-50 p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
                     <Edit3 className="w-4 h-4" /> Edit
@@ -969,31 +956,6 @@ export default function ChildDetailPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4 w-full">
-                  <div className="bg-orange-50 border border-orange-100 w-full p-4 rounded-2xl flex flex-col items-center justify-center text-center sm:col-span-2">
-                    <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Program Countdown</p>
-                    <p className="text-4xl font-black text-orange-700">
-                      {(child.remainingDays || 0) > 0 ? child.remainingDays : (child.daysAdmitted || 0)}
-                    </p>
-                    <p className="text-xs font-bold text-orange-500 mt-1">
-                      {(child.remainingDays || 0) > 0 ? 'Days remaining in 100-day program' : 'Days enrolled in welfare program'}
-                    </p>
-                    <div className="w-full bg-orange-200 h-2 rounded-full mt-4 overflow-hidden">
-                      <div 
-                        className="bg-orange-500 h-full transition-all duration-1000" 
-                        style={{ width: `${Math.min(100, (100 - (child.remainingDays || 0)))}%` }}
-                      ></div>
-                    </div>
-                    {child.isActive && (
-                      <button
-                        type="button"
-                        onClick={handleDeparture}
-                        disabled={deactivating}
-                        className="mt-4 bg-white border border-orange-200 text-orange-600 hover:bg-orange-50 px-4 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-60"
-                      >
-                        {deactivating ? 'Processing...' : 'Complete Program'}
-                      </button>
-                    )}
-                  </div>
                   <div className="w-full">
                     <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Sponsorship Status</span>
                     <span className="font-black text-gray-900 border border-gray-100 bg-gray-50 px-3 py-1.5 rounded-lg inline-block text-sm">
@@ -1027,40 +989,82 @@ export default function ChildDetailPage() {
                 </button>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* TAB: ADMISSION */}
-          {activeTab === 'admission' && (
+          {/* Section 2: Admission */}
+          <div id="admission" className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 scroll-mt-24 w-full">
+            <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+              <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                <ClipboardList size={16} />
+              </div>
+              <h3 className="text-lg font-black text-gray-900">Admission Details</h3>
+            </div>
             <AdmissionTab child={child} onUpdate={(updated: any) => setChild({...child, ...updated})} />
-          )}
+          </div>
 
-          {/* TAB: DAILY SHEET */}
-          {activeTab === 'daily' && (
+          {/* Section 3: Daily Sheet */}
+          <div id="daily" className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 scroll-mt-24 w-full">
+            <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+              <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                <Activity size={16} />
+              </div>
+              <h3 className="text-lg font-black text-gray-900">Daily Sheet Logs</h3>
+            </div>
             <DailySheetTab childId={childId} session={session} />
-          )}
+          </div>
 
-          {/* TAB: PROGRESS */}
-          {activeTab === 'progress' && (
+          {/* Section 4: Progress */}
+          <div id="progress" className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 scroll-mt-24 w-full">
+            <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+              <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                <TrendingUp size={16} />
+              </div>
+              <h3 className="text-lg font-black text-gray-900">Progress Notes</h3>
+            </div>
             <ProgressTab childId={childId} session={session} />
-          )}
+          </div>
 
-          {/* TAB: ACTIVITIES */}
-          {activeTab === 'activities' && (
+          {/* Section 5: Activities */}
+          <div id="activities" className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 scroll-mt-24 w-full">
+            <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+              <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                <Palette size={16} />
+              </div>
+              <h3 className="text-lg font-black text-gray-900">Activities</h3>
+            </div>
             <ActivitiesTab childId={childId} session={session} />
-          )}
+          </div>
 
-          {/* TAB: EDUCATION */}
-          {activeTab === 'education' && (
+          {/* Section 6: Education */}
+          <div id="education" className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 scroll-mt-24 w-full">
+            <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+              <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                <BookOpen size={16} />
+              </div>
+              <h3 className="text-lg font-black text-gray-900">Education Plan</h3>
+            </div>
             <EducationTab childId={childId} session={session} />
-          )}
+          </div>
 
-          {/* TAB: FOOD */}
-          {activeTab === 'food' && (
+          {/* Section 7: Food */}
+          <div id="food" className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 scroll-mt-24 w-full">
+            <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+              <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                <Utensils size={16} />
+              </div>
+              <h3 className="text-lg font-black text-gray-900">Food Plan</h3>
+            </div>
             <FoodTab childId={childId} session={session} />
-          )}
+          </div>
 
-          {/* TAB: CANTEEN */}
-          {activeTab === 'canteen' && (
+          {/* Section 8: Canteen */}
+          <div id="canteen" className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 scroll-mt-24 w-full">
+            <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+              <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                <ShoppingCart size={16} />
+              </div>
+              <h3 className="text-lg font-black text-gray-900">Canteen Wallet</h3>
+            </div>
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
@@ -1128,7 +1132,7 @@ export default function ChildDetailPage() {
                     </div>
                     
                     {!canteenRecord.transactions || canteenRecord.transactions.length === 0 ? (
-                      <p className="text-gray-500 text-sm text-center py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-200">No transactions recorded.</p>
+                       <p className="text-gray-500 text-sm text-center py-10 bg-gray-50 rounded-2xl border border-dashed border-gray-200">No transactions recorded.</p>
                     ) : (
                       <div className="grid grid-cols-1 gap-3">
                         {canteenRecord.transactions
@@ -1162,156 +1166,154 @@ export default function ChildDetailPage() {
                 </div>
               )}
             </div>
-          )}
+          </div>
 
-          {/* TAB: VIDEOS */}
-          {activeTab === 'videos' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between mb-2 border-b border-gray-100 pb-4">
-                <div className="flex items-center gap-3">
-                  <Video className="w-6 h-6 text-teal-600" />
-                  <h2 className="text-xl font-bold text-gray-800">Files & Progress</h2>
+          {/* Section 9: Videos */}
+          <div id="videos" className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 scroll-mt-24 w-full">
+            <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                  <Video size={16} />
                 </div>
-                <button
-                  onClick={() => setIsUploadModalOpen(true)}
-                  className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
-                >
-                  <Upload className="w-4 h-4" /> Upload
-                </button>
+                <h3 className="text-lg font-black text-gray-900">Files & Progress Videos ({videos.length})</h3>
               </div>
-
-              {videos.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl">
-                  <Video className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No files uploaded yet</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {videos.map(vid => {
-                    const isVideo = vid.fileType?.startsWith('video/') || vid.url?.includes('.mp4');
-                    const isImage = vid.fileType?.startsWith('image/');
-                    const isPdf = vid.fileType === 'application/pdf';
-
-                    return (
-                      <div key={vid.id} className="border border-gray-200 rounded-2xl overflow-hidden bg-white group hover:border-teal-300 transition-colors shadow-sm relative">
-                        {session?.role === 'superadmin' && (
-                          <button
-                            onClick={() => handleDeleteVideo(vid.id)}
-                            className="absolute top-2 right-2 z-20 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                        <div className="aspect-video bg-gray-900 flex items-center justify-center relative overflow-hidden">
-                          {isImage ? (
-                            <img src={vid.url} alt={vid.title} className="w-full h-full object-cover opacity-80" />
-                          ) : isPdf ? (
-                            <FileText className="w-10 h-10 text-gray-600 z-0" />
-                          ) : (
-                            <Video className="w-10 h-10 text-gray-600 z-0" />
-                          )}
-                          
-                          <a href={vid.url} target="_blank" rel="noreferrer" className="absolute inset-0 z-10 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
-                            <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-teal-600 transform scale-90 group-hover:scale-100 transition-transform">
-                              <Play className="w-5 h-5 ml-1" />
-                            </div>
-                          </a>
-                        </div>
-                        <div className="p-4">
-                          <h4 className="font-bold text-gray-900 truncate mb-1" title={vid.title}>{vid.title || 'Untitled'}</h4>
-                          <div className="flex items-center justify-between mt-2">
-                             <p className="text-xs text-gray-500">
-                              {formatDateDMY(vid.createdAt)}
-                            </p>
-                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
-                              isVideo ? 'bg-purple-50 text-purple-600' : isPdf ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
-                            }`}>
-                              {isVideo ? 'Video' : isPdf ? 'Document' : 'Image'}
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-gray-400 mt-2 truncate">Uploaded by staff ({vid.uploadedBy})</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              <button
+                onClick={() => setIsUploadModalOpen(true)}
+                className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" /> Upload
+              </button>
             </div>
-          )}
 
-          {/* TAB: VISITS */}
-          {activeTab === 'visits' && (
-            <div className="space-y-6 animate-in fade-in duration-500">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 border-b border-gray-100 pb-4 gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
-                    <Users size={20} />
-                  </div>
-                  <h2 className="text-xl font-black text-gray-900">Family Visit Log</h2>
-                </div>
-                <button
-                  onClick={() => setShowAddVisitModal(true)}
-                  className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 w-full sm:w-auto"
-                >
-                  <Plus size={16} /> Log New Visit
-                </button>
+            {videos.length === 0 ? (
+              <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl">
+                <Video className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">No files uploaded yet</p>
               </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {videos.map(vid => {
+                  const isVideo = vid.fileType?.startsWith('video/') || vid.url?.includes('.mp4');
+                  const isImage = vid.fileType?.startsWith('image/');
+                  const isPdf = vid.fileType === 'application/pdf';
 
-              {visits.length === 0 ? (
-                <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-[2rem] bg-gray-50/30">
-                  <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                  <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">No visits recorded yet</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {visits.map(visit => (
-                    <div key={visit.id} className="bg-white border border-gray-100 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-teal-900/5 hover:border-teal-100 transition-all group relative overflow-hidden">
-                      <div className="absolute top-0 right-0 p-4">
-                         <div className="bg-gray-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black shadow-lg shadow-gray-200 flex flex-col items-center leading-tight">
-                            <span>{formatDateDMY(visit.date)}</span>
-                         </div>
-                      </div>
-
-                      <div className="flex flex-col gap-4">
-                        <div className="space-y-1 pr-16">
-                          <div className="flex items-center gap-2">
-                             <h4 className="font-black text-gray-900 text-xl tracking-tight">{visit.visitorName}</h4>
-                             <span className="text-[10px] font-black bg-teal-100 text-teal-700 px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner">{visit.relation}</span>
-                          </div>
-                          <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-gray-500 font-medium">
-                            <span className="flex items-center gap-1.5"><Phone size={14} className="text-teal-500" /> {visit.phone}</span>
-                            {visit.cnic && <span className="flex items-center gap-1.5"><Shield size={14} className="text-blue-500" /> {visit.cnic}</span>}
-                          </div>
-                        </div>
-
-                        {visit.notes && (
-                          <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-100/50 italic text-sm text-gray-600 relative">
-                            <div className="absolute -top-2 left-6 bg-white px-2 text-[10px] font-black text-gray-300 uppercase tracking-widest">Observation Notes</div>
-                            "{visit.notes}"
-                          </div>
+                  return (
+                    <div key={vid.id} className="border border-gray-200 rounded-2xl overflow-hidden bg-white group hover:border-teal-300 transition-colors shadow-sm relative">
+                      {session?.role === 'superadmin' && (
+                        <button
+                          onClick={() => handleDeleteVideo(vid.id)}
+                          className="absolute top-2 right-2 z-20 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      <div className="aspect-video bg-gray-950 flex items-center justify-center relative overflow-hidden">
+                        {isImage ? (
+                          <img src={vid.url} alt={vid.title} className="w-full h-full object-cover opacity-80" />
+                        ) : isPdf ? (
+                          <FileText className="w-10 h-10 text-gray-600 z-0" />
+                        ) : (
+                          <Video className="w-10 h-10 text-gray-600 z-0" />
                         )}
                         
-                        <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Logged by Admin: {visit.loggedBy}</p>
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => openEditVisit(visit)}
-                                className="text-[10px] font-black uppercase tracking-widest text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-2 rounded-xl transition"
-                              >
-                                Edit
-                              </button>
-                              <User size={14} className="text-gray-200" />
-                            </div>
+                        <a href={vid.url} target="_blank" rel="noreferrer" className="absolute inset-0 z-10 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
+                          <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-teal-600 transform scale-90 group-hover:scale-100 transition-transform">
+                            <Play className="w-5 h-5 ml-1" />
+                          </div>
+                        </a>
+                      </div>
+                      <div className="p-4">
+                        <h4 className="font-bold text-gray-900 truncate mb-1" title={vid.title}>{vid.title || 'Untitled'}</h4>
+                        <div className="flex items-center justify-between mt-2">
+                           <p className="text-xs text-gray-500">
+                            {formatDateDMY(vid.createdAt)}
+                          </p>
+                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                            isVideo ? 'bg-purple-50 text-purple-600' : isPdf ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
+                          }`}>
+                            {isVideo ? 'Video' : isPdf ? 'Document' : 'Image'}
+                          </span>
                         </div>
+                        <p className="text-[10px] text-gray-400 mt-2 truncate">Uploaded by staff ({vid.uploadedBy})</p>
                       </div>
                     </div>
-                  ))}
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Section 10: Family Visits */}
+          <div id="visits" className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8 scroll-mt-24 w-full">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 border-b border-gray-100 pb-4 gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                  <Users size={16} />
                 </div>
-              )}
+                <h3 className="text-lg font-black text-gray-900">Family Visit Log</h3>
+              </div>
+              <button
+                onClick={() => setShowAddVisitModal(true)}
+                className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-900/10 active:scale-95 w-full sm:w-auto"
+              >
+                <Plus size={16} /> Log New Visit
+              </button>
             </div>
-          )}
+
+            {visits.length === 0 ? (
+              <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-[2rem] bg-gray-50/30">
+                <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">No visits recorded yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {visits.map(visit => (
+                  <div key={visit.id} className="bg-white border border-gray-100 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-teal-900/5 hover:border-teal-100 transition-all group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4">
+                       <div className="bg-gray-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black shadow-lg shadow-gray-200 flex flex-col items-center leading-tight">
+                          <span>{formatDateDMY(visit.date)}</span>
+                       </div>
+                    </div>
+
+                    <div className="flex flex-col gap-4">
+                      <div className="space-y-1 pr-16">
+                        <div className="flex items-center gap-2">
+                           <h4 className="font-black text-gray-900 text-xl tracking-tight">{visit.visitorName}</h4>
+                           <span className="text-[10px] font-black bg-teal-100 text-teal-700 px-2.5 py-1 rounded-full uppercase tracking-widest shadow-inner">{visit.relation}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-gray-500 font-medium">
+                          <span className="flex items-center gap-1.5"><Phone size={14} className="text-teal-500" /> {visit.phone}</span>
+                          {visit.cnic && <span className="flex items-center gap-1.5"><Shield size={14} className="text-blue-500" /> {visit.cnic}</span>}
+                        </div>
+                      </div>
+
+                      {visit.notes && (
+                        <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-100/50 italic text-sm text-gray-600 relative">
+                          <div className="absolute -top-2 left-6 bg-white px-2 text-[10px] font-black text-gray-300 uppercase tracking-widest">Observation Notes</div>
+                          "{visit.notes}"
+                        </div>
+                      )}
+                      
+                      <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Logged by Admin: {visit.loggedBy}</p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEditVisit(visit)}
+                              className="text-[10px] font-black uppercase tracking-widest text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-2 rounded-xl transition"
+                            >
+                              Edit
+                            </button>
+                            <User size={14} className="text-gray-200" />
+                          </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
         </div>
       </div>

@@ -46,7 +46,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'My Attendance', href: '/departments/welfare/dashboard/staff',                   icon: <CalendarDays size={16}/>,    roles: ['staff'] },
   { label: 'My Child',      href: '/departments/welfare/dashboard/family',                  icon: <User size={16}/>,            roles: ['family'] },
   { label: 'My Dashboard',  href: '/departments/welfare/dashboard/donor',                   icon: <Heart size={16}/>,           roles: ['donor'] },
-  { label: 'My Profile',    href: '/departments/welfare/dashboard/profile',                 icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'family', 'superadmin', 'donor'] },
+  { label: 'My Profile',    href: '/departments/welfare/dashboard/profile',                 icon: <UserCog size={16}/>,         roles: ['admin', 'staff', 'superadmin'] },
 ];
 
 const ROLE_COLORS: Record<WelfareRole, string> = {

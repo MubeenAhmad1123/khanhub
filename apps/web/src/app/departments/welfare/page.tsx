@@ -34,6 +34,8 @@ export default function WelfareRootPage() {
         router.push('/departments/welfare/dashboard/cashier');
       } else if (role === 'admin') {
         router.push('/departments/welfare/dashboard/admin');
+      } else if (role === 'donor') {
+        router.push('/departments/welfare/dashboard/donor');
       } else if (role === 'superadmin') {
         router.push('/departments/welfare/dashboard/superadmin');
       }

@@ -28,6 +28,8 @@ export default function DynamicRoleRedirect({ params }: PageProps) {
     if (isStaff) {
       // Redirect them straight to /staff dashboard
       router.replace('/departments/welfare/dashboard/staff');
+    } else if (decodedRole === 'donor') {
+      router.replace('/departments/welfare/dashboard/donor');
     } else {
       // If unknown, fallback to the department's home page to recalculate 
       // correctly from their LocalStorage welfare_session object.
