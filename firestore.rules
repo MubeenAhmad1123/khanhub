@@ -1605,6 +1605,10 @@ service cloud.firestore {
       let path = /databases/$(database)/documents/welfare_users/$(request.auth.uid);
       return exists(path) ? get(path).data.get('staffId', null) : null;
     }
+    function welfareCustomId() {
+      let path = /databases/$(database)/documents/welfare_users/$(request.auth.uid);
+      return exists(path) ? get(path).data.get('customId', null) : null;
+    }
 
     // ═══════════════════════════════════════════════════════════
     //  WELFARE PORTAL COLLECTIONS
@@ -1643,7 +1647,7 @@ service cloud.firestore {
     match /welfare_donors/{donorId} {
       allow read: if isWelfareAdminOrAbove()
         || isWelfareRole('cashier')
-        || (isWelfareRole('donor') && resource.data.loginUserId == request.auth.uid)
+        || (isWelfareRole('donor') && (resource.data.loginUserId == request.auth.uid || resource.data.loginUserId == welfareCustomId()))
         || isHqTier1();
       allow create, update: if isWelfareAdminOrAbove();
       allow delete: if isWelfareAdminOrAbove();
@@ -1663,7 +1667,10 @@ service cloud.firestore {
     match /welfare_transactions/{docId} {
       allow read: if isWelfareAdminOrAbove()
         || isWelfareRole('cashier')
-        || (isWelfareRole('donor') && resource.data.donorId != null && get(/databases/$(database)/documents/welfare_donors/$(resource.data.donorId)).data.loginUserId == request.auth.uid)
+        || (isWelfareRole('donor') && resource.data.donorId != null && (
+            get(/databases/$(database)/documents/welfare_donors/$(resource.data.donorId)).data.loginUserId == request.auth.uid ||
+            get(/databases/$(database)/documents/welfare_donors/$(resource.data.donorId)).data.loginUserId == welfareCustomId()
+           ))
         || isHqTier1();
       allow create: if isWelfareRole('cashier')
         || isWelfareAdminOrAbove()
