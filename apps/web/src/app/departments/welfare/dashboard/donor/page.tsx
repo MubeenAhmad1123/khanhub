@@ -43,18 +43,34 @@ export default function DonorDashboardPage() {
       setLoading(true);
       
       // 1. Find the donor profile linked to this user ID
-      const donorQuery = query(
-        collection(db, 'welfare_donors'),
-        where('loginUserId', '==', session.uid)
-      );
-      const donorSnap = await getDocs(donorQuery);
-      
-      if (donorSnap.empty) {
+      let donorData: Donor | null = null;
+
+      if (session.donorId) {
+        const donorDoc = await getDoc(doc(db, 'welfare_donors', session.donorId));
+        if (donorDoc.exists()) {
+          donorData = { id: donorDoc.id, ...donorDoc.data() } as Donor;
+        }
+      }
+
+      if (!donorData) {
+        const checks = [
+          query(collection(db, 'welfare_donors'), where('loginUserId', '==', session.customId || '')),
+          query(collection(db, 'welfare_donors'), where('loginUserId', '==', session.uid || ''))
+        ];
+        for (const q of checks) {
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            donorData = { id: snap.docs[0].id, ...snap.docs[0].data() } as Donor;
+            break;
+          }
+        }
+      }
+
+      if (!donorData) {
         setLoading(false);
         return;
       }
       
-      const donorData = { id: donorSnap.docs[0].id, ...donorSnap.docs[0].data() } as Donor;
       setDonor(donorData);
 
       // 2. Fetch their transactions (Donations)
