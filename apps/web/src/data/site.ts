@@ -8,7 +8,7 @@ export const SITE = {
   name: 'Khan Hub',
   fullName: 'Khan Hub (Pvt.) Ltd.',
   tagline: 'Healthcare • Education • Hope',
-  description: 'Khan Hub is a multi-department welfare organization dedicated to providing healthcare, education, employment, and social services to underprivileged communities across Pakistan.',
+  description: 'Khan Hub is Pakistan\'s leading welfare organization providing accessible healthcare, free education, rehabilitation, child sponsorship/orphan care, old age support (Sukoon), and job placements (Job Center) across Pakistan.',
   url: 'https://khanhub.com.pk',
   phone: '0300-6395220',
   emergency: '0300-6395220',

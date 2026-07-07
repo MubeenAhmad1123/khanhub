@@ -1,6 +1,58 @@
 # *
 User-agent: *
 Allow: /
+Disallow: /api/*
+Disallow: /hq/*
+Disallow: */dashboard/*
+Disallow: */login
+
+# GPTBot
+User-agent: GPTBot
+Allow: /
+Disallow: /api/*
+Disallow: /hq/*
+Disallow: */dashboard/*
+Disallow: */login
+
+# ChatGPT-User
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /api/*
+Disallow: /hq/*
+Disallow: */dashboard/*
+Disallow: */login
+
+# OAI-SearchBot
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /api/*
+Disallow: /hq/*
+Disallow: */dashboard/*
+Disallow: */login
+
+# Google-Extended
+User-agent: Google-Extended
+Allow: /
+Disallow: /api/*
+Disallow: /hq/*
+Disallow: */dashboard/*
+Disallow: */login
+
+# ClaudeBot
+User-agent: ClaudeBot
+Allow: /
+Disallow: /api/*
+Disallow: /hq/*
+Disallow: */dashboard/*
+Disallow: */login
+
+# PerplexityBot
+User-agent: PerplexityBot
+Allow: /
+Disallow: /api/*
+Disallow: /hq/*
+Disallow: */dashboard/*
+Disallow: */login
 
 # Host
 Host: https://khanhub.com.pk
