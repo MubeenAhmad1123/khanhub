@@ -315,8 +315,27 @@ service cloud.firestore {
         || isRehabRole('cashier')
         || (isRehabRole('family') && rehabPatientId() == patientId)
         || isHqTier1();
-      allow create, update: if isRehabAdminOrAbove();
+      allow create, update: if isRehabAdminOrAbove() || isRehabRole('cashier') || isHqTier1();
       allow delete: if isRehabAdminOrAbove() || isHqSuperOrManager();
+
+      match /remaining_logs/{logId} {
+        allow read: if isRehabAdminOrAbove()
+          || isRehabRole('cashier')
+          || (isRehabRole('family') && rehabPatientId() == patientId)
+          || isHqTier1();
+        allow create: if isRehabAdminOrAbove()
+          || isRehabRole('cashier')
+          || isHqTier1();
+        allow update, delete: if false;
+      }
+    }
+
+    // ── Rehab remaining logs ───────────────────────────
+    match /rehab_remaining_logs/{docId} {
+      allow read, create: if isRehabAdminOrAbove()
+        || isRehabRole('cashier')
+        || isHqTier1();
+      allow update, delete: if false;
     }
 
     // ── Fee records ────────────────────────────────────
