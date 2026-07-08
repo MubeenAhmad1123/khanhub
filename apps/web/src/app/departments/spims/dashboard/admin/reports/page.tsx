@@ -39,6 +39,55 @@ function formatCat(cat: string) {
   return cat?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || cat;
 }
 
+function calculateStudentRemaining(
+  studentDocId: string,
+  studentCustomId: any,
+  totalPackageVal: any,
+  allApprovedFees: any[],
+  allApprovedTxns: any[]
+): number {
+  const sId = studentDocId;
+  const sCustomId = studentCustomId ? String(studentCustomId).trim() : '';
+
+  // Filter fees for this student
+  const studentFees = allApprovedFees.filter(f => {
+    const fStudentId = f.studentId ? String(f.studentId).trim() : '';
+    return fStudentId === sId || (sCustomId && fStudentId === sCustomId);
+  });
+
+  // Filter transactions for this student
+  const studentTxns = allApprovedTxns.filter(t => {
+    const tStudentId = t.studentId ? String(t.studentId).trim() : '';
+    const tPatientId = t.patientId ? String(t.patientId).trim() : '';
+    return tStudentId === sId || (sCustomId && tStudentId === sCustomId) || tPatientId === sId || (sCustomId && tPatientId === sCustomId);
+  });
+
+  let totalReceived = 0;
+  const syncedTxIds = new Set<string>();
+  const syncedFeeIds = new Set<string>();
+
+  studentFees.forEach(fee => {
+    totalReceived += Number(fee.amount || 0);
+    syncedFeeIds.add(fee.id);
+    if (fee.linkedTransactionId) syncedTxIds.add(fee.linkedTransactionId);
+  });
+
+  studentTxns.forEach(tx => {
+    // Only process fee-related transactions
+    const cat = String(tx.category || '').toLowerCase();
+    const isFee = cat.includes('fee') || cat.includes('admission') || !!tx.feePaymentId;
+    if (!isFee) return;
+
+    const isSynced = syncedTxIds.has(tx.id) || (tx.feePaymentId && syncedFeeIds.has(tx.feePaymentId));
+    if (!isSynced) {
+      totalReceived += Number(tx.amount || 0);
+    }
+  });
+
+  const pkg = Number(totalPackageVal) || 0;
+  return Math.max(0, pkg - totalReceived);
+}
+
 export default function AdminReportsPage() {
   const router = useRouter();
   const [session, setSession] = useState<any>(null);
@@ -51,7 +100,7 @@ export default function AdminReportsPage() {
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
   const [reportFocus, setReportFocus] = useState<'income' | 'remaining' | 'students'>('income');
-  const [studentGroup, setStudentGroup] = useState<'all' | 'active' | 'completed' | 'left'>('all');
+  const [studentGroup, setStudentGroup] = useState<'all' | 'active' | 'completed' | 'left' | 'failed'>('all');
   const [filterByDateType, setFilterByDateType] = useState<'none' | 'admission'>('none');
 
   const [selectedColumns, setSelectedColumns] = useState<Record<string, boolean>>({
@@ -63,6 +112,8 @@ export default function AdminReportsPage() {
     contact: true,
     admissionDate: true,
     monthlyFee: true,
+    totalPackage: true,
+    status: true,
     remaining: true
   });
 
@@ -75,6 +126,8 @@ export default function AdminReportsPage() {
     { key: 'contact', label: 'Contact Number' },
     { key: 'admissionDate', label: 'Admission Date' },
     { key: 'monthlyFee', label: 'Monthly Fee' },
+    { key: 'totalPackage', label: 'Total Package' },
+    { key: 'status', label: 'Status' },
     { key: 'remaining', label: 'Remaining Dues' }
   ];
 
@@ -184,6 +237,14 @@ export default function AdminReportsPage() {
       setGenerated(false);
       setSortField('');
 
+      // Fetch all approved fees and all approved transactions ever for dynamic remaining calculation
+      const [allApprovedFeesSnap, allApprovedTxnsSnap] = await Promise.all([
+        getDocs(query(collection(db, 'spims_fees'), where('status', '==', 'approved'))),
+        getDocs(query(collection(db, 'spims_transactions'), where('status', '==', 'approved')))
+      ]);
+      const allApprovedFees = allApprovedFeesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+      const allApprovedTxns = allApprovedTxnsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+
       let firstDay: Date;
       let lastDay: Date;
       let label: string;
@@ -217,6 +278,7 @@ export default function AdminReportsPage() {
         const studentsSnap = await getDocs(collection(db, 'spims_students'));
         let students = studentsSnap.docs.map(doc => {
           const d = doc.data() as any;
+          const remaining = calculateStudentRemaining(doc.id, d.studentId, d.totalPackage || d.totalPackageAmount, allApprovedFees, allApprovedTxns);
           return {
             id: doc.id,
             name: d.name || '—',
@@ -228,16 +290,19 @@ export default function AdminReportsPage() {
             status: d.status || 'Active',
             admissionDate: d.admissionDate ? toDate(d.admissionDate) : null,
             monthlyFee: Number(d.monthlyFee ?? d.expectedFee ?? 0),
-            overallRemaining: Number(d.remaining ?? d.remainingBalance ?? 0),
+            totalPackage: Number(d.totalPackage ?? d.totalPackageAmount ?? 0),
+            overallRemaining: remaining,
           };
         });
 
         if (studentGroup === 'active') {
           students = students.filter(s => s.status === 'Active');
         } else if (studentGroup === 'completed') {
-          students = students.filter(s => s.status === 'Pass');
+          students = students.filter(s => ['Pass', 'Overall Pass', 'Second Year Pass', 'First Year Pass'].includes(s.status));
         } else if (studentGroup === 'left') {
-          students = students.filter(s => s.status === 'Left' || s.status === 'Fail');
+          students = students.filter(s => s.status === 'Left');
+        } else if (studentGroup === 'failed') {
+          students = students.filter(s => ['Fail', 'Overall Fail', 'Second Year Fail', 'First Year Fail'].includes(s.status));
         }
 
         if (filterByDateType === 'admission') {
@@ -249,8 +314,9 @@ export default function AdminReportsPage() {
 
         const totalStudentsCount = students.length;
         const totalActiveCount = students.filter(s => s.status === 'Active').length;
-        const totalCompletedCount = students.filter(s => s.status === 'Pass').length;
-        const totalLeftCount = students.filter(s => s.status === 'Left' || s.status === 'Fail').length;
+        const totalCompletedCount = students.filter(s => ['Pass', 'Overall Pass', 'Second Year Pass', 'First Year Pass'].includes(s.status)).length;
+        const totalLeftCount = students.filter(s => s.status === 'Left').length;
+        const totalFailedCount = students.filter(s => ['Fail', 'Overall Fail', 'Second Year Fail', 'First Year Fail'].includes(s.status)).length;
         const totalOutstandingDues = students.reduce((sum, s) => sum + s.overallRemaining, 0);
 
         setReportData({
@@ -259,6 +325,7 @@ export default function AdminReportsPage() {
           totalActiveCount,
           totalCompletedCount,
           totalLeftCount,
+          totalFailedCount,
           totalOutstandingDues,
           reportLabel: label,
           reportFocus,
@@ -348,7 +415,7 @@ export default function AdminReportsPage() {
           totalPackage: Number(student.totalPackage || student.totalPackageAmount || 0),
           paidInPeriod,
           amountPaidThisMonth,
-          overallRemaining: Number(student.remaining ?? student.remainingBalance ?? 0)
+          overallRemaining: calculateStudentRemaining(student.id, student.studentId, student.totalPackage || student.totalPackageAmount, allApprovedFees, allApprovedTxns)
         };
       });
 
@@ -535,8 +602,9 @@ export default function AdminReportsPage() {
                   >
                     <option value="all">Show All Students</option>
                     <option value="active">Active Students Only</option>
-                    <option value="completed">Completed/Passed Students Only</option>
-                    <option value="left">Left/Failed Students Only</option>
+                    <option value="completed">Passed Students Only</option>
+                    <option value="left">Left Students Only</option>
+                    <option value="failed">Failed Students Only</option>
                   </select>
                 </div>
                 <div>
@@ -660,7 +728,7 @@ export default function AdminReportsPage() {
 
             {/* Students List Summary Cards */}
             {reportData.reportFocus === 'students' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
                 <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
                   <Users className="w-6 h-6 text-teal-605 mx-auto mb-2" />
                   <div className="text-xs font-bold text-teal-650 uppercase tracking-wider mb-1">Total Matching</div>
@@ -668,7 +736,7 @@ export default function AdminReportsPage() {
                 </div>
                 <div className="bg-green-50 border border-green-100 p-5 rounded-2xl text-center">
                   <TrendingUp className="w-6 h-6 text-green-600 mx-auto mb-2" />
-                  <div className="text-xs font-bold text-green-650 uppercase tracking-wider mb-1">Active Students</div>
+                  <div className="text-xs font-bold text-green-650 tracking-wider mb-1">Active Students</div>
                   <div className="text-2xl font-black text-green-800">{reportData.totalActiveCount}</div>
                 </div>
                 <div className="bg-blue-50 border border-blue-100 p-5 rounded-2xl text-center">
@@ -678,8 +746,13 @@ export default function AdminReportsPage() {
                 </div>
                 <div className="bg-red-50 border border-red-100 p-5 rounded-2xl text-center">
                   <TrendingDown className="w-6 h-6 text-red-500 mx-auto mb-2" />
-                  <div className="text-xs font-bold text-red-650 uppercase tracking-wider mb-1">Left/Failed</div>
+                  <div className="text-xs font-bold text-red-650 uppercase tracking-wider mb-1">Left Students</div>
                   <div className="text-2xl font-black text-red-750">{reportData.totalLeftCount}</div>
+                </div>
+                <div className="bg-rose-50 border border-rose-100 p-5 rounded-2xl text-center">
+                  <TrendingDown className="w-6 h-6 text-rose-500 mx-auto mb-2" />
+                  <div className="text-xs font-bold text-rose-650 uppercase tracking-wider mb-1">Failed Students</div>
+                  <div className="text-2xl font-black text-rose-750">{reportData.totalFailedCount}</div>
                 </div>
                 <div className="bg-orange-50 border border-orange-100 p-5 rounded-2xl text-center col-span-1">
                   <DollarSign className="w-6 h-6 text-orange-600 mx-auto mb-2" />
@@ -834,6 +907,30 @@ export default function AdminReportsPage() {
                               </div>
                             </th>
                           )}
+                          {selectedColumns.totalPackage && (
+                            <th className="px-3 py-3 text-right font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('totalPackage')}>
+                              <div className="flex items-center justify-end gap-1">
+                                Total Package
+                                {sortField === 'totalPackage' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                          )}
+                          {selectedColumns.status && (
+                            <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('status')}>
+                              <div className="flex items-center gap-1">
+                                Status
+                                {sortField === 'status' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                          )}
                           {selectedColumns.remaining && (
                             <th className="px-3 py-3 text-right font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('overallRemaining')}>
                               <div className="flex items-center justify-end gap-1">
@@ -864,6 +961,8 @@ export default function AdminReportsPage() {
                             {selectedColumns.contact && <td className="px-3 py-2.5 text-gray-600">{s.contact}</td>}
                             {selectedColumns.admissionDate && <td className="px-3 py-2.5 text-gray-655">{s.admissionDate ? formatDateDMY(s.admissionDate) : '—'}</td>}
                             {selectedColumns.monthlyFee && <td className="px-3 py-2.5 text-right text-gray-800">{formatPKR(s.monthlyFee)}</td>}
+                            {selectedColumns.totalPackage && <td className="px-3 py-2.5 text-right text-gray-800">{formatPKR(s.totalPackage)}</td>}
+                            {selectedColumns.status && <td className="px-3 py-2.5 text-gray-600">{s.status}</td>}
                             {selectedColumns.remaining && (
                               <td className={`px-3 py-2.5 text-right font-black ${s.overallRemaining > 0 ? 'text-rose-600 bg-rose-50/20' : 'text-blue-700 bg-blue-50/20'}`}>
                                 {formatPKR(s.overallRemaining)}
