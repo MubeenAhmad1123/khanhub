@@ -58,6 +58,7 @@ export default function AdminReportsPage() {
     name: true,
     fatherName: true,
     rollNo: true,
+    studentId: true,
     course: true,
     contact: true,
     admissionDate: true,
@@ -69,6 +70,7 @@ export default function AdminReportsPage() {
     { key: 'name', label: 'Student Name' },
     { key: 'fatherName', label: 'Father Name' },
     { key: 'rollNo', label: 'Roll Number' },
+    { key: 'studentId', label: 'Student ID' },
     { key: 'course', label: 'Course' },
     { key: 'contact', label: 'Contact Number' },
     { key: 'admissionDate', label: 'Admission Date' },
@@ -220,6 +222,7 @@ export default function AdminReportsPage() {
             name: d.name || '—',
             fatherName: d.fatherName || '—',
             rollNo: d.rollNo || d.serialNumber || '—',
+            studentId: d.studentId || d.customId || '—',
             course: d.course || '—',
             contact: d.contact || d.phone || d.guardianPhone || d.fatherContact || '—',
             status: d.status || 'Active',
@@ -339,6 +342,7 @@ export default function AdminReportsPage() {
           id: student.id,
           name: student.name,
           rollNo: student.rollNo || student.serialNumber || '—',
+          studentId: student.studentId || student.customId || '—',
           course: student.course || '—',
           monthlyFee: Number(student.monthlyFee || 0),
           totalPackage: Number(student.totalPackage || student.totalPackageAmount || 0),
@@ -761,8 +765,20 @@ export default function AdminReportsPage() {
                           {selectedColumns.rollNo && (
                             <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('rollNo')}>
                               <div className="flex items-center gap-1">
-                                Roll No / ID
+                                Roll Number
                                 {sortField === 'rollNo' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                          )}
+                          {selectedColumns.studentId && (
+                            <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('studentId')}>
+                              <div className="flex items-center gap-1">
+                                Student ID
+                                {sortField === 'studentId' ? (
                                   sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
                                 ) : (
                                   <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
@@ -843,6 +859,7 @@ export default function AdminReportsPage() {
                             )}
                             {selectedColumns.fatherName && <td className="px-3 py-2.5 text-gray-600">{s.fatherName}</td>}
                             {selectedColumns.rollNo && <td className="px-3 py-2.5 text-gray-555 font-mono">{s.rollNo}</td>}
+                            {selectedColumns.studentId && <td className="px-3 py-2.5 text-gray-555 font-mono">{s.studentId}</td>}
                             {selectedColumns.course && <td className="px-3 py-2.5 text-gray-600">{s.course}</td>}
                             {selectedColumns.contact && <td className="px-3 py-2.5 text-gray-600">{s.contact}</td>}
                             {selectedColumns.admissionDate && <td className="px-3 py-2.5 text-gray-655">{s.admissionDate ? formatDateDMY(s.admissionDate) : '—'}</td>}
