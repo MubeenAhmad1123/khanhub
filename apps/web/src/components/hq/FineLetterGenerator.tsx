@@ -539,7 +539,7 @@ export default function FineLetterGenerator() {
                   {/* Signature graphic placement */}
                   <div className="absolute -top-7 left-1/2 -translate-x-1/2 w-36 h-12 pointer-events-none flex items-center justify-center">
                     <img
-                      src="/images/khanhub-signature.png"
+                      src="/signature.png"
                       alt="Authorized Signature"
                       className="w-32 h-auto object-contain"
                       onError={(e) => {
