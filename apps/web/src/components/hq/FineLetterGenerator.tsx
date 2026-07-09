@@ -414,10 +414,17 @@ export default function FineLetterGenerator() {
           {/* Printable Letter container */}
           <div
             id="fine-letter-preview"
-            className="bg-white text-slate-900 p-10 md:p-14 w-[760px] mx-auto select-none border border-slate-200 shadow-sm relative font-sans leading-relaxed"
+            className="w-[760px] mx-auto select-none relative font-sans leading-relaxed"
+            style={{
+              backgroundColor: '#ffffff',
+              color: '#0f172a',
+              padding: '48px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)'
+            }}
           >
             {/* Header section matching medical letterhead */}
-            <div className="flex items-center gap-4 pb-4 border-b-2 border-slate-900">
+            <div className="flex items-center gap-4 pb-4" style={{ borderBottom: '2px solid #0f172a' }}>
               <img
                 src="/logo_for_fine_letter.webp"
                 alt="Khan Hub Logo"
@@ -427,17 +434,17 @@ export default function FineLetterGenerator() {
                 }}
               />
               <div>
-                <h1 className="text-xl font-black text-slate-900 tracking-tight leading-none uppercase">
+                <h1 className="text-xl font-black tracking-tight leading-none uppercase" style={{ color: '#0f172a' }}>
                   KHAN HUB MEDICAL CENTER
                 </h1>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.25em] mt-1 leading-none">
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] mt-1 leading-none" style={{ color: '#64748b' }}>
                   Group of Companies.
                 </p>
               </div>
             </div>
 
             {/* Reference & Date Row */}
-            <div className="flex justify-between items-center mt-6 text-xs text-slate-700">
+            <div className="flex justify-between items-center mt-6 text-xs" style={{ color: '#334155' }}>
               <div>
                 <span className="font-bold">Reference number (Employee ID): </span>
                 <span className="font-semibold">{form.referenceNumber || '—'}</span>
@@ -450,69 +457,69 @@ export default function FineLetterGenerator() {
 
             {/* Letter Title */}
             <div className="text-center mt-8">
-              <h2 className="text-sm font-extrabold underline tracking-wider uppercase text-slate-900">
+              <h2 className="text-sm font-extrabold underline tracking-wider uppercase text-slate-950" style={{ color: '#0f172a' }}>
                 FINE NOTICE & WARNING LETTER
               </h2>
             </div>
 
             {/* Recipient Details */}
             <div className="mt-8 space-y-1 text-xs">
-              <p className="font-bold text-slate-600 uppercase tracking-widest text-[9px]">To,</p>
-              <p className="text-base font-black text-slate-900 leading-tight">{form.employeeName || '—'}</p>
-              <p className="text-xs font-semibold text-slate-500">({form.designation || '—'})</p>
-              <p className="text-xs font-bold text-slate-700 uppercase tracking-wide pt-0.5">
+              <p className="font-bold uppercase tracking-widest text-[9px]" style={{ color: '#475569' }}>To,</p>
+              <p className="text-base font-black leading-tight" style={{ color: '#0f172a' }}>{form.employeeName || '—'}</p>
+              <p className="text-xs font-semibold" style={{ color: '#64748b' }}>({form.designation || '—'})</p>
+              <p className="text-xs font-bold uppercase tracking-wide pt-0.5" style={{ color: '#334155' }}>
                 Department: {form.department || '—'}
               </p>
             </div>
 
             {/* Subject */}
-            <div className="mt-6 border-y border-slate-100 py-3 text-xs leading-normal">
-              <span className="font-bold uppercase tracking-wider text-[10px] text-slate-500 mr-1.5">Subject:</span>
-              <span className="font-black text-slate-800 text-xs">{form.subject || '—'}</span>
+            <div className="mt-6 py-3 text-xs leading-normal" style={{ borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #f1f5f9' }}>
+              <span className="font-bold uppercase tracking-wider text-[10px] mr-1.5" style={{ color: '#64748b' }}>Subject:</span>
+              <span className="font-black text-xs" style={{ color: '#1e293b' }}>{form.subject || '—'}</span>
             </div>
 
             {/* Body text */}
-            <div className="mt-6 text-xs text-slate-800 leading-relaxed text-justify whitespace-pre-wrap">
+            <div className="mt-6 text-xs leading-relaxed text-justify whitespace-pre-wrap" style={{ color: '#1e293b' }}>
               {form.body || 'Please select staff member and enter the text...'}
             </div>
 
             {/* Violations Table */}
             <div className="mt-8">
-              <table className="w-full text-left text-xs border-collapse border border-slate-300">
+              <table className="w-full text-left text-xs border-collapse" style={{ border: '1px solid #cbd5e1' }}>
                 <thead>
-                  <tr className="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                    <th className="border border-slate-300 px-4 py-2.5">Violation</th>
-                    <th className="border border-slate-300 px-4 py-2.5 text-right w-44">Fine Amount (Rs.)</th>
+                  <tr className="text-[10px] uppercase font-bold tracking-wider" style={{ backgroundColor: '#f8fafc', color: '#64748b' }}>
+                    <th className="px-4 py-2.5" style={{ border: '1px solid #cbd5e1' }}>Violation</th>
+                    <th className="px-4 py-2.5 text-right w-44" style={{ border: '1px solid #cbd5e1' }}>Fine Amount (Rs.)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {violations.map((v, i) => (
-                    <tr key={i} className="text-slate-800 font-semibold">
-                      <td className="border border-slate-300 px-4 py-2.5">{v.description || '—'}</td>
-                      <td className="border border-slate-300 px-4 py-2.5 text-right font-mono">Rs. {v.amount}/-</td>
+                    <tr key={i} className="font-semibold" style={{ color: '#1e293b' }}>
+                      <td className="px-4 py-2.5" style={{ border: '1px solid #cbd5e1' }}>{v.description || '—'}</td>
+                      <td className="px-4 py-2.5 text-right font-mono" style={{ border: '1px solid #cbd5e1' }}>Rs. {v.amount}/-</td>
                     </tr>
                   ))}
-                  <tr className="bg-slate-50/70 text-slate-900 font-black">
-                    <td className="border border-slate-300 px-4 py-2.5 text-right">Total Fine Payable</td>
-                    <td className="border border-slate-300 px-4 py-2.5 text-right font-mono">Rs. {totalFinePayable}/-</td>
+                  <tr className="font-black" style={{ backgroundColor: '#f8fafc', color: '#0f172a' }}>
+                    <td className="px-4 py-2.5 text-right" style={{ border: '1px solid #cbd5e1' }}>Total Fine Payable</td>
+                    <td className="px-4 py-2.5 text-right font-mono" style={{ border: '1px solid #cbd5e1' }}>Rs. {totalFinePayable}/-</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
             {/* Callout section */}
-            <div className="mt-6 border-2 border-slate-900 p-4 text-center rounded-xl bg-slate-50/40">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total Fine Payable</p>
-              <p className="text-xl font-black text-slate-900 tracking-wide mt-1">Rs. {totalFinePayable}/-</p>
+            <div className="mt-6 p-4 text-center rounded-xl" style={{ border: '2px solid #0f172a', backgroundColor: 'rgba(248, 250, 252, 0.4)' }}>
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#64748b' }}>Total Fine Payable</p>
+              <p className="text-xl font-black tracking-wide mt-1" style={{ color: '#0f172a' }}>Rs. {totalFinePayable}/-</p>
             </div>
 
             {/* Footer Signatures */}
-            <div className="mt-14 border-t border-slate-300 pt-6">
+            <div className="mt-14 pt-6" style={{ borderTop: '1px solid #cbd5e1' }}>
               <div className="flex justify-between items-start">
                 {/* Left: Admin */}
                 <div className="space-y-1.5">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Administration</p>
-                  <p className="text-xs font-black text-slate-800 leading-tight">{form.administration || '—'}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest leading-none" style={{ color: '#94a3b8' }}>Administration</p>
+                  <p className="text-xs font-black leading-tight" style={{ color: '#1e293b' }}>{form.administration || '—'}</p>
                 </div>
 
                 {/* Right: Signature stamp */}
@@ -522,16 +529,17 @@ export default function FineLetterGenerator() {
                     <img
                       src="/stamp.webp"
                       alt="Authorized Stamp"
-                      className="w-20 h-20 object-contain opacity-85 rotate-12"
+                      className="w-20 h-20 object-contain rotate-12"
+                      style={{ opacity: 0.85 }}
                       onError={(e) => {
                         (e.target as HTMLElement).style.display = 'none';
                       }}
                     />
                   </div>
-                  <div className="w-52 border-t border-slate-400 pt-1.5">
-                    <p className="text-xs font-black text-slate-800">Authorized Signature</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">&amp; Official Stamp</p>
-                    <p className="text-[9px] font-semibold text-slate-500 mt-1 font-mono">
+                  <div className="w-52 pt-1.5" style={{ borderTop: '1px solid #94a3b8' }}>
+                    <p className="text-xs font-black" style={{ color: '#1e293b' }}>Authorized Signature</p>
+                    <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5" style={{ color: '#94a3b8' }}>&amp; Official Stamp</p>
+                    <p className="text-[9px] font-semibold mt-1 font-mono" style={{ color: '#64748b' }}>
                       Date: {formatToDMY(form.date) || '—'}
                     </p>
                   </div>
