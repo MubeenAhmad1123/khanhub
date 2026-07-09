@@ -50,6 +50,7 @@ export default function FineLetterGenerator() {
     administration: '',
     subject: 'Fine Notice and Warning for Not Wearing Uniform',
     body: '',
+    letterTitle: 'FINE NOTICE & WARNING LETTER',
   });
 
   const [violations, setViolations] = useState<{ description: string; amount: number }[]>([
@@ -299,6 +300,18 @@ export default function FineLetterGenerator() {
           />
         </div>
 
+        {/* Letter Title */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Letter Title *</label>
+          <input
+            type="text"
+            value={form.letterTitle}
+            placeholder="e.g. FINE NOTICE & WARNING LETTER"
+            onChange={(e) => setForm({ ...form, letterTitle: e.target.value })}
+            className="w-full bg-slate-50 border border-slate-100 focus:border-indigo-500 focus:bg-white rounded-2xl px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none transition-all"
+          />
+        </div>
+
         {/* Subject */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Subject *</label>
@@ -458,7 +471,7 @@ export default function FineLetterGenerator() {
             {/* Letter Title */}
             <div className="text-center mt-8">
               <h2 className="text-sm font-extrabold underline tracking-wider uppercase text-slate-950" style={{ color: '#0f172a' }}>
-                FINE NOTICE & WARNING LETTER
+                {form.letterTitle || 'FINE NOTICE & WARNING LETTER'}
               </h2>
             </div>
 
@@ -515,44 +528,47 @@ export default function FineLetterGenerator() {
 
             {/* Footer Signatures */}
             <div className="mt-14 pt-6" style={{ borderTop: '1px solid #cbd5e1' }}>
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-end">
                 {/* Left: Admin */}
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 w-1/3 text-left">
                   <p className="text-[10px] font-bold uppercase tracking-widest leading-none" style={{ color: '#94a3b8' }}>Administration</p>
                   <p className="text-xs font-black leading-tight" style={{ color: '#1e293b' }}>{form.administration || '—'}</p>
                 </div>
 
-                {/* Right: Signature stamp */}
-                <div className="text-center relative">
-                  {/* Stamp graphic placement */}
-                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 pointer-events-none flex items-center justify-center">
-                    <img
-                      src="/stamp.webp"
-                      alt="Authorized Stamp"
-                      className="w-20 h-20 object-contain rotate-12"
-                      style={{ opacity: 0.85 }}
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
-                    />
-                  </div>
-                  {/* Signature graphic placement */}
-                  <div className="absolute -top-7 left-1/2 -translate-x-1/2 w-36 h-12 pointer-events-none flex items-center justify-center">
-                    <img
-                      src="/signature.png"
-                      alt="Authorized Signature"
-                      className="w-32 h-auto object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
-                    />
-                  </div>
-                  <div className="w-52 pt-1.5" style={{ borderTop: '1px solid #94a3b8' }}>
-                    <p className="text-xs font-black" style={{ color: '#1e293b' }}>Authorized Signature</p>
-                    <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5" style={{ color: '#94a3b8' }}>&amp; Official Stamp</p>
-                    <p className="text-[9px] font-semibold mt-1 font-mono" style={{ color: '#64748b' }}>
-                      Date: {formatToDMY(form.date) || '—'}
-                    </p>
+                {/* Middle: Stamp centered */}
+                <div className="w-1/3 flex justify-center items-end pb-1">
+                  <img
+                    src="/stamp.webp"
+                    alt="Authorized Stamp"
+                    className="w-20 h-20 object-contain rotate-12"
+                    style={{ opacity: 0.85 }}
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+
+                {/* Right: Signature */}
+                <div className="w-1/3 flex justify-end">
+                  <div className="text-center relative w-52">
+                    {/* Signature graphic placement */}
+                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 w-36 h-12 pointer-events-none flex items-center justify-center">
+                      <img
+                        src="/signature.png"
+                        alt="Authorized Signature"
+                        className="w-32 h-auto object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                    <div className="pt-1.5" style={{ borderTop: '1px solid #94a3b8' }}>
+                      <p className="text-xs font-black" style={{ color: '#1e293b' }}>Authorized Signature</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest mt-0.5" style={{ color: '#94a3b8' }}>&amp; Official Stamp</p>
+                      <p className="text-[9px] font-semibold mt-1 font-mono" style={{ color: '#64748b' }}>
+                        Date: {formatToDMY(form.date) || '—'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
