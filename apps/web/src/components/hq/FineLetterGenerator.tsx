@@ -435,7 +435,7 @@ export default function FineLetterGenerator() {
               />
               <div>
                 <h1 className="text-xl font-black tracking-tight leading-none uppercase" style={{ color: '#0f172a' }}>
-                  KHAN HUB MEDICAL CENTER
+                  KHAN HUB (PVT.) LTD.
                 </h1>
                 <p className="text-[10px] font-bold uppercase tracking-[0.25em] mt-1 leading-none" style={{ color: '#64748b' }}>
                   Group of Companies.
@@ -531,6 +531,17 @@ export default function FineLetterGenerator() {
                       alt="Authorized Stamp"
                       className="w-20 h-20 object-contain rotate-12"
                       style={{ opacity: 0.85 }}
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                  {/* Signature graphic placement */}
+                  <div className="absolute -top-7 left-1/2 -translate-x-1/2 w-36 h-12 pointer-events-none flex items-center justify-center">
+                    <img
+                      src="/images/khanhub-signature.png"
+                      alt="Authorized Signature"
+                      className="w-32 h-auto object-contain"
                       onError={(e) => {
                         (e.target as HTMLElement).style.display = 'none';
                       }}
