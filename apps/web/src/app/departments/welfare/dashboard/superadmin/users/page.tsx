@@ -20,8 +20,8 @@ export default function SuperAdminUserManagement() {
   const [message, setMessage] = useState({ type: '', text: '' });
 
   // Form states
-  const [adminForm, setAdminForm] = useState({ name: '', id: 'WELFARE-ADM-001', pass: '' });
-  const [cashierForm, setCashierForm] = useState({ id: 'WELFARE-CSH-001', pass: '' });
+  const [adminForm, setAdminForm] = useState({ name: '', id: 'WELFARE-ADM-001', pass: '', address: '' });
+  const [cashierForm, setCashierForm] = useState({ id: 'WELFARE-CSH-001', pass: '', address: '' });
 
   const fetchData = async () => {
     try {
@@ -52,10 +52,20 @@ export default function SuperAdminUserManagement() {
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     setActionLoading(true);
-    const res = await createWelfareUserServer(adminForm.id, adminForm.pass, 'admin', adminForm.name);
+    const res = await createWelfareUserServer(
+      adminForm.id,
+      adminForm.pass,
+      'admin',
+      adminForm.name,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      adminForm.address
+    );
     if (res.success) {
       setMessage({ type: 'success', text: `Admin ${adminForm.id} created successfully!` });
-      setAdminForm({ name: '', id: 'WELFARE-ADM-001', pass: '' });
+      setAdminForm({ name: '', id: 'WELFARE-ADM-001', pass: '', address: '' });
       fetchData();
     } else {
       setMessage({ type: 'error', text: res.error || 'Failed to create admin' });
@@ -67,10 +77,20 @@ export default function SuperAdminUserManagement() {
     e.preventDefault();
     if (cashier) return;
     setActionLoading(true);
-    const res = await createWelfareUserServer(cashierForm.id, cashierForm.pass, 'cashier', 'Portal Cashier');
+    const res = await createWelfareUserServer(
+      cashierForm.id,
+      cashierForm.pass,
+      'cashier',
+      'Portal Cashier',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      cashierForm.address
+    );
     if (res.success) {
       setMessage({ type: 'success', text: 'Cashier account has been provisioned.' });
-      setCashierForm({ id: 'WELFARE-CSH-001', pass: '' });
+      setCashierForm({ id: 'WELFARE-CSH-001', pass: '', address: '' });
       fetchData();
     } else {
       setMessage({ type: 'error', text: res.error || 'Failed to create cashier' });
@@ -172,6 +192,15 @@ export default function SuperAdminUserManagement() {
                   />
                 </div>
               </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-600">Residential Address</label>
+                <input 
+                  className="w-full bg-slate-50/50 border border-slate-100 focus:border-slate-200 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-300" 
+                  placeholder="e.g. House 123, Street 4, Islamabad" 
+                  value={adminForm.address} 
+                  onChange={e => setAdminForm({...adminForm, address: e.target.value})} 
+                />
+              </div>
             </div>
             <button 
               disabled={actionLoading} 
@@ -238,6 +267,15 @@ export default function SuperAdminUserManagement() {
                     className="w-full bg-slate-50/50 border border-slate-100 focus:border-slate-200 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 outline-none transition-all" 
                     value={cashierForm.pass} 
                     onChange={e => setCashierForm({...cashierForm, pass: e.target.value})} 
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-slate-600">Residential Address</label>
+                  <input 
+                    className="w-full bg-slate-50/50 border border-slate-100 focus:border-slate-200 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-300" 
+                    placeholder="e.g. House 456, Street 5, Rawalpindi" 
+                    value={cashierForm.address} 
+                    onChange={e => setCashierForm({...cashierForm, address: e.target.value})} 
                   />
                 </div>
                 <button 

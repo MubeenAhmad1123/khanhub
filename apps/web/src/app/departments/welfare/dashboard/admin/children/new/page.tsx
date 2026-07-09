@@ -28,6 +28,7 @@ export default function NewChildAdmissionPage() {
   const [formData, setFormData] = useState({
     // Section 1: Child Basic
     fullName: '',
+    address: '',
     dob: '',
     age: '',
     gender: 'Boy',
@@ -340,6 +341,16 @@ export default function NewChildAdmissionPage() {
                 </div>
               </>
             )}
+            <div className="lg:col-span-3">
+              <label className={labelClass}>Residential Address</label>
+              <input
+                name="address" 
+                value={formData.address} 
+                onChange={handleChange} 
+                placeholder="Enter residential address" 
+                className={inputClass}
+              />
+            </div>
           </div>
         </div>
 

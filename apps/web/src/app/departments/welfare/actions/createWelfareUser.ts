@@ -15,7 +15,8 @@ export async function createWelfareUserServer(
   childId?: string,
   emailDomain: string = DOMAIN,
   userCollection: string = 'welfare_users',
-  donorId?: string
+  donorId?: string,
+  address?: string
 ): Promise<{ success: boolean; uid?: string; error?: string }> {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
@@ -83,6 +84,7 @@ export async function createWelfareUserServer(
           donorId: donorId || null,
           isActive: true,
           createdAt: FieldValue.serverTimestamp(),
+          address: address || null,
         });
         return { success: true, uid: existingUser.uid };
       }
@@ -107,7 +109,7 @@ export async function createWelfareUserServer(
 
       // Safe update.
       await adminDb.collection(userCollection).doc(existingUser.uid).set(
-        { customId, role, displayName, password, childId: nextChildId, donorId: donorId || null, isActive: true },
+        { customId, role, displayName, password, childId: nextChildId, donorId: donorId || null, isActive: true, address: address || null },
         { merge: true }
       );
       return { success: true, uid: existingUser.uid };
@@ -125,6 +127,7 @@ export async function createWelfareUserServer(
       donorId: donorId || null,
       isActive: true,
       createdAt: FieldValue.serverTimestamp(),
+      address: address || null,
     });
 
     // Fire-and-forget audit log
@@ -247,7 +250,8 @@ export async function createStaffMemberServer(
   password: string,
   displayName: string,
   emailDomain: string = DOMAIN,
-  userCollection: string = 'welfare_users'
+  userCollection: string = 'welfare_users',
+  address?: string
 ): Promise<{ success: boolean; uid?: string; error?: string }> {
   const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!json) return { success: false, error: 'FIREBASE_SERVICE_ACCOUNT_JSON missing' };
@@ -291,6 +295,7 @@ export async function createStaffMemberServer(
       password,
       isActive: true,
       createdAt: FieldValue.serverTimestamp(),
+      address: address || null,
     });
 
     try {

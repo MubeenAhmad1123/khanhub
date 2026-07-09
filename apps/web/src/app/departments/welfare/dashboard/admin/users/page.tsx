@@ -33,6 +33,7 @@ export default function UserManagementPage() {
   const [customId, setCustomId] = useState('');
   const [password, setPassword] = useState('');
   const [childId, setChildId] = useState('');
+  const [address, setAddress] = useState('');
   const [modalError, setModalError] = useState('');
 
   useEffect(() => {
@@ -88,7 +89,11 @@ export default function UserManagementPage() {
         password,
         'family',
         fullName,
-        childId
+        childId,
+        undefined,
+        undefined,
+        undefined,
+        address
       );
 
       if (result.success) {
@@ -99,6 +104,7 @@ export default function UserManagementPage() {
         setCustomId('');
         setPassword('');
         setChildId('');
+        setAddress('');
         // Refresh list
         fetchUsers();
       } else {
@@ -338,6 +344,17 @@ export default function UserManagementPage() {
                     required
                   />
                   <p className="text-xs text-gray-500 mt-1">Find the child doc ID from the Children page</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Residential Address</label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={e => setAddress(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500 bg-gray-50 focus:bg-white"
+                    placeholder="Residential address"
+                  />
                 </div>
 
                 <div className="pt-4 flex gap-3">

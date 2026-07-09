@@ -92,6 +92,10 @@ service cloud.firestore {
           || isHqTier1()
           || isRehabAdminOrAbove()
           || isSpimsAdminOrAbove()
+          || isWelfareAdminOrAbove()
+          || isHospitalAdminOrAbove()
+          || isSukoonAdminOrAbove()
+          || isJobCenterAdminOrAbove()
         );
       allow create: if isAuth();
       allow update: if isAuth()
@@ -1607,11 +1611,17 @@ service cloud.firestore {
       return exists(path) ? get(path).data.get('role', '') : '';
     }
     function isWelfareRole(role) {
-      return isWelfareAuth() && welfareRole() == role;
+      return isWelfareAuth() && welfareRole().lower() == role.lower();
     }
     function isWelfareAdminOrAbove() {
-      let role = welfareRole();
-      return isWelfareAuth() && (role == 'admin' || role == 'superadmin' || isHqSuperOrManager());
+      let role = welfareRole().lower();
+      return isWelfareAuth() && (
+        role == 'admin' || 
+        role == 'superadmin' || 
+        role == 'welfare-admin' || 
+        role == 'welfare_admin' || 
+        isHqSuperOrManager()
+      );
     }
     function isWelfareSuperAdmin() {
       return isWelfareRole('superadmin');

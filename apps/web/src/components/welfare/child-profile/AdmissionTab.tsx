@@ -222,6 +222,7 @@ export default function AdmissionTab({
           <Field label="Nationality" value={form.nationality} fieldKey="nationality" />
           <Field label="Religion" value={form.religion} fieldKey="religion" />
           <Field label="Caste" value={form.caste} fieldKey="caste" />
+          <Field label="Address" value={form.address} fieldKey="address" />
         </SectionCard>
 
         {/* Section 2: Family status */}

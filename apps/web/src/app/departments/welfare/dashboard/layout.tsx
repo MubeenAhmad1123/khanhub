@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { getDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { signOut } from 'firebase/auth';
+import { signOut, onAuthStateChanged } from 'firebase/auth';
 import StaffNotifications from '@/components/layout/StaffNotifications';
 
 type WelfareRole = 'admin' | 'staff' | 'family' | 'superadmin' | 'donor';
@@ -117,32 +117,44 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
 
   useEffect(() => {
     setMounted(true);
-    let session = localStorage.getItem('welfare_session');
-    const hqSessionStr = localStorage.getItem('hq_session');
-    
-    if (hqSessionStr) {
-      try {
-        const hqSession = JSON.parse(hqSessionStr);
-        if (hqSession?.role === 'superadmin') {
-          const syncSession = {
-            uid: hqSession.uid,
-            customId: hqSession.customId || hqSession.email || 'HQ-USER',
-            role: 'superadmin',
-            displayName: hqSession.displayName || 'Superadmin',
-          };
-          localStorage.setItem('welfare_session', JSON.stringify(syncSession));
-          localStorage.setItem('welfare_login_time', Date.now().toString());
-          session = JSON.stringify(syncSession);
-          setIsHqAdmin(true);
-        }
-      } catch (e) {}
-    }
 
-    if (!session) { router.push('/departments/welfare/login'); return; }
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      if (!firebaseUser) {
+        console.warn('[WelfareLayout] No authenticated Firebase user, redirecting to login');
+        handleSignOut();
+        return;
+      }
 
-    const performAuthCheck = () => {
+      let session = localStorage.getItem('welfare_session');
+      const hqSessionStr = localStorage.getItem('hq_session');
+      
+      if (hqSessionStr) {
+        try {
+          const hqSession = JSON.parse(hqSessionStr);
+          const firebaseUidMatchesHq = firebaseUser && firebaseUser.uid === hqSession.uid;
+          if (hqSession?.role === 'superadmin' && firebaseUidMatchesHq) {
+            const syncSession = {
+              uid: hqSession.uid,
+              customId: hqSession.customId || hqSession.email || 'HQ-USER',
+              role: 'superadmin',
+              displayName: hqSession.displayName || 'Superadmin',
+            };
+            localStorage.setItem('welfare_session', JSON.stringify(syncSession));
+            localStorage.setItem('welfare_login_time', Date.now().toString());
+            session = JSON.stringify(syncSession);
+            setIsHqAdmin(true);
+          }
+        } catch (e) {}
+      }
+
+      if (!session) { 
+        console.warn('[WelfareLayout] No welfare_session found, redirecting to login');
+        router.push('/departments/welfare/login'); 
+        return; 
+      }
+
       try {
-        const parsed = JSON.parse(session!);
+        const parsed = JSON.parse(session);
         if (!parsed.uid || !parsed.role) throw new Error('Invalid session');
 
         setUser({
@@ -153,9 +165,9 @@ export default function WelfareDashboardLayout({ children }: { children: React.R
       } catch (err) {
         handleSignOut();
       }
-    };
+    });
 
-    performAuthCheck();
+    return () => unsubscribeAuth();
   }, [router, handleSignOut]);
 
   useEffect(() => {
