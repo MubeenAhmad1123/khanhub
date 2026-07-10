@@ -54,6 +54,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Contributions', href: '/hq/dashboard/manager/approvals', icon: <CheckCircle size={16} />, roles: ['manager'] },
   { label: 'Growth Ideas', href: '/hq/dashboard/manager/growth-ideas', icon: <Lightbulb size={16} />, roles: ['manager'] },
   { label: 'Salary Slips', href: '/hq/dashboard/manager/salary', icon: <DollarSign size={16} />, roles: ['manager'] },
+  { label: 'Payroll & Fines', href: '/hq/dashboard/manager/payroll', icon: <Calculator size={16} />, roles: ['manager'] },
   { label: 'Reports', href: '/hq/dashboard/manager/reports', icon: <BarChart2 size={16} />, roles: ['manager'] },
   { label: 'Profile', href: '/hq/dashboard/manager/profile', icon: <User size={16} />, roles: ['manager'] },
   { label: 'Create Users', href: '/hq/dashboard/manager/users', icon: <Users size={16} />, roles: ['manager'] },
