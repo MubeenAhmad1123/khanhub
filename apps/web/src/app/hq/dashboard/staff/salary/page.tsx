@@ -78,8 +78,24 @@ export default function StaffSalaryHistoryPage() {
         const prefix = getDeptPrefix(dept);
         const colName = `${prefix}_salary_records`;
 
-        // Gather all candidate IDs to match (uid, customId, employeeId)
-        const candidateIds = [uid, userData.customId, userData.employeeId].filter(Boolean);
+        // Gather all candidate IDs to match (uid, customId, employeeId, customId with/without prefix)
+        const candidateSet = new Set<string>([uid]);
+        if (userData.customId) {
+          candidateSet.add(userData.customId);
+          candidateSet.add(userData.customId.startsWith(`${prefix}_`) ? userData.customId.replace(`${prefix}_`, '') : userData.customId);
+          candidateSet.add(userData.customId.startsWith(`${prefix}_`) ? userData.customId : `${prefix}_${userData.customId}`);
+        }
+        if (userData.employeeId) {
+          candidateSet.add(userData.employeeId);
+          candidateSet.add(userData.employeeId.startsWith(`${prefix}_`) ? userData.employeeId.replace(`${prefix}_`, '') : userData.employeeId);
+          candidateSet.add(userData.employeeId.startsWith(`${prefix}_`) ? userData.employeeId : `${prefix}_${userData.employeeId}`);
+        }
+        if (uid) {
+          candidateSet.add(uid.startsWith(`${prefix}_`) ? uid.replace(`${prefix}_`, '') : uid);
+          candidateSet.add(uid.startsWith(`${prefix}_`) ? uid : `${prefix}_${uid}`);
+        }
+
+        const candidateIds = Array.from(candidateSet).filter(Boolean);
 
         const allRecords: SalaryRecord[] = [];
         const seenIds = new Set<string>();
