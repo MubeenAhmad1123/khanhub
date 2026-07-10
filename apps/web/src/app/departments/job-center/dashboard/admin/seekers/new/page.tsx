@@ -32,6 +32,7 @@ const PRESET_WORK_TYPES = [
 export default function RegisterSeekerPage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const cvRef = useRef<HTMLInputElement>(null);
 
   // UI Steps: 1: Portal Access, 2: Personal Info, 3: Career History, 4: Seeker Registered Success Screen
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
@@ -72,6 +73,10 @@ export default function RegisterSeekerPage() {
   // Profile Photo
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState('');
+
+  // CV Upload
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [cvName, setCvName] = useState('');
 
   // SECTION 3: Career Profile
   const [educationList, setEducationList] = useState<{ degree: string; institution: string; year: string }[]>([]);
@@ -533,6 +538,12 @@ export default function RegisterSeekerPage() {
         photoUrl = await uploadToCloudinary(photoFile, 'Khan Hub/jobcenter/seekers');
       }
 
+      // 1b. Upload CV if selected
+      let cvUrl = '';
+      if (cvFile) {
+        cvUrl = await uploadToCloudinary(cvFile, 'Khan Hub/jobcenter/seekers/cvs');
+      }
+
       // 2. Determine Seeker Number & Serial Number
       const finalSeekerNumber = seekerNumber.trim();
       const finalSerialNumber = Number(serialNumber) || 1;
@@ -550,6 +561,7 @@ export default function RegisterSeekerPage() {
         maritalStatus: maritalStatus as any,
         address,
         photoUrl: photoUrl || null,
+        cvUrl: cvUrl || null,
         phone,
         contactNumber: phone, // ensure profile shows contact number
         cnic,
@@ -884,6 +896,48 @@ export default function RegisterSeekerPage() {
                         <p className="text-[10px] text-gray-400 font-bold uppercase">Format: WEBP (Max 5MB)</p>
                         {photoPreview && (
                           <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview('') }} className="text-[9px] text-rose-500 hover:underline font-black uppercase mt-1">Remove</button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CV Upload */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-black text-gray-500 uppercase tracking-widest px-1">CV / Resume (Optional)</label>
+                    <div className="flex items-center gap-4">
+                      <div
+                        onClick={() => cvRef.current?.click()}
+                        className="w-16 h-16 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:border-orange-400 hover:bg-orange-50/50 transition-all flex-shrink-0"
+                      >
+                        <FileText size={20} className={cvFile ? 'text-orange-500' : 'text-gray-400'} />
+                      </div>
+                      <input
+                        ref={cvRef}
+                        type="file"
+                        accept="application/pdf,.doc,.docx"
+                        className="hidden"
+                        onChange={e => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 10 * 1024 * 1024) {
+                            toast.error('CV file must be under 10MB');
+                            return;
+                          }
+                          setCvFile(file);
+                          setCvName(file.name);
+                        }}
+                      />
+                      <div className="text-left">
+                        {cvFile ? (
+                          <>
+                            <p className="text-xs font-bold text-green-600">✓ {cvName}</p>
+                            <button type="button" onClick={() => { setCvFile(null); setCvName(''); }} className="text-[9px] text-rose-500 hover:underline font-black uppercase mt-1">Remove</button>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-xs font-bold text-gray-500">Click to upload CV</p>
+                            <p className="text-[10px] text-gray-400">PDF, DOC, DOCX — Max 10MB</p>
+                          </>
                         )}
                       </div>
                     </div>

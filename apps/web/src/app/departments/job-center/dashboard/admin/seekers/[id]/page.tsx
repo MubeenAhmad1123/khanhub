@@ -76,6 +76,11 @@ export default function SeekerDetailPage() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
+  // CV Upload State
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [cvName, setCvName] = useState('');
+  const cvInputRef = useRef<HTMLInputElement>(null);
+
   // Video Upload State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [videoTitle, setVideoTitle] = useState('');
@@ -393,12 +398,23 @@ export default function SeekerDetailPage() {
         setPhotoUploading(false);
       }
 
-      const updatedData = {
+      const updatedData: any = {
         name: editForm.name,
         careerGoals: editForm.careerGoals,
         salaryExpectation: Number(editForm.salaryExpectation),
         photoUrl: photoUrl || seeker.photoUrl || null
       };
+
+      // Upload CV if a new one was selected
+      if (cvFile) {
+        try {
+          const uploadedCvUrl = await uploadToCloudinary(cvFile, 'khanhub/job-center/seekers/cvs');
+          updatedData.cvUrl = uploadedCvUrl;
+        } catch (err) {
+          console.error('CV upload failed', err);
+          toast.error('CV upload failed, keeping old CV if any');
+        }
+      }
 
       await updateDoc(doc(db, 'jobcenter_seekers', seekerId), updatedData);
 
@@ -408,6 +424,8 @@ export default function SeekerDetailPage() {
       }));
       setEditForm((prev: any) => ({ ...prev, photoUrl }));
       setPhotoFile(null);
+      setCvFile(null);
+      setCvName('');
       setIsEditing(false);
       toast.success('Profile updated');
     } catch (error) {
@@ -970,6 +988,54 @@ export default function SeekerDetailPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Salary Expectation (Monthly)</label>
                     <input type="number" value={editForm.salaryExpectation} onChange={e => setEditForm({...editForm, salaryExpectation: Number(e.target.value)})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 outline-none" />
                   </div>
+
+                  {/* CV Upload */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">CV / Resume (Optional)</label>
+                    <div className="flex items-center gap-4">
+                      <div
+                        onClick={() => cvInputRef.current?.click()}
+                        className="w-16 h-16 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-all flex-shrink-0"
+                      >
+                        <FileText size={20} className={cvFile ? 'text-orange-500 mb-1' : 'text-gray-400 mb-1'} />
+                        <span className="text-[9px] text-gray-400 font-bold text-center leading-tight px-1">CV</span>
+                      </div>
+                      <input
+                        ref={cvInputRef}
+                        type="file"
+                        accept="application/pdf,.doc,.docx"
+                        className="hidden"
+                        onChange={e => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 10 * 1024 * 1024) {
+                            toast.error('CV file must be under 10MB');
+                            return;
+                          }
+                          setCvFile(file);
+                          setCvName(file.name);
+                        }}
+                      />
+                      <div>
+                        {cvFile ? (
+                          <>
+                            <p className="text-xs font-semibold text-green-600">✓ {cvName}</p>
+                            <button type="button" onClick={() => { setCvFile(null); setCvName(''); }} className="text-[10px] text-red-400 hover:text-red-600 mt-1 font-semibold">Remove</button>
+                          </>
+                        ) : seeker?.cvUrl ? (
+                          <>
+                            <a href={seeker.cvUrl} target="_blank" rel="noreferrer" className="text-xs font-semibold text-orange-600 hover:underline">View current CV ↗</a>
+                            <p className="text-[10px] text-gray-400 mt-0.5">Click the box to replace it</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-xs text-gray-500 font-medium">Click to upload CV</p>
+                            <p className="text-[10px] text-gray-400">PDF, DOC, DOCX — Max 10MB</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4 w-full">
@@ -997,6 +1063,21 @@ export default function SeekerDetailPage() {
                     <span className="font-black text-gray-900 border border-gray-100 bg-gray-50 px-3 py-1.5 rounded-lg inline-block text-sm">
                       PKR {seeker.salaryExpectation?.toLocaleString() || '0'}
                     </span>
+                  </div>
+                  <div className="w-full">
+                    <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">CV / Resume</span>
+                    {seeker.cvUrl ? (
+                      <a
+                        href={seeker.cvUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 bg-orange-50 border border-orange-200 text-orange-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-orange-100 transition-colors"
+                      >
+                        <FileText className="w-4 h-4" /> View / Download CV ↗
+                      </a>
+                    ) : (
+                      <span className="text-xs text-gray-400 font-medium italic">No CV uploaded</span>
+                    )}
                   </div>
                   <div className="w-full">
                     <span className="block text-[10px] text-gray-400 mb-1 lowercase tracking-widest font-black uppercase">Assigned Staff ID</span>
