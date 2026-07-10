@@ -27,6 +27,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Patients',      href: '/departments/rehab/dashboard/admin/patients', icon: <Heart size={16}/>,           roles: ['admin', 'superadmin'] },
   { label: 'Reports',       href: '/departments/rehab/dashboard/admin/reports',  icon: <BarChart2 size={16}/>,       roles: ['admin'] },
   { label: 'Reports',       href: '/departments/rehab/dashboard/superadmin/reports', icon: <BarChart2 size={16}/>, roles: ['superadmin'] },
+  { label: 'Payroll & Fines', href: '/departments/rehab/dashboard/superadmin/payroll', icon: <Calculator size={16}/>, roles: ['superadmin'] },
   { label: 'Analytics',     href: '/departments/rehab/dashboard/superadmin/analytics', icon: <TrendingUp size={16}/>, roles: ['superadmin'] },
   { label: 'Dues Adjustment', href: '/departments/rehab/dashboard/superadmin/dues', icon: <Calculator size={16}/>, roles: ['superadmin'] },
   { label: 'My Attendance', href: '/departments/rehab/dashboard/staff',          icon: <CalendarDays size={16}/>,    roles: ['staff'] },
