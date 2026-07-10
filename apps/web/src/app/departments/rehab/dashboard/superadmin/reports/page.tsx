@@ -325,10 +325,14 @@ export default function SuperAdminReportsPage() {
       const finesSnap = await getDocs(query(collection(db, 'rehab_fines'), where('month', '==', monthStr)));
       const allFines = finesSnap.docs.map(d => d.data());
 
-      const attendanceSnap = await getDocs(query(collection(db, 'rehab_attendance'), where('status', '==', 'absent')));
+      // Fetch by date range only — filter absent client-side to avoid composite index
+      const attendanceSnap = await getDocs(query(collection(db, 'rehab_attendance'),
+        where('date', '>=', `${monthStr}-01`),
+        where('date', '<=', `${monthStr}-31`)
+      ));
       const allAbsences = attendanceSnap.docs
         .map(d => d.data() as any)
-        .filter((a: any) => a.date >= `${monthStr}-01` && a.date <= `${monthStr}-31`);
+        .filter((a: any) => a.status === 'absent');
 
       const staffSalaries = allStaff.map((staff: any) => {
         const gross = staff.salary || 0;
@@ -361,9 +365,22 @@ export default function SuperAdminReportsPage() {
       const newAdmissions = newAdmissionsSnap.size;
 
       // === PATIENT FEES BREAKDOWN ===
+      // Period Collections = sum of all fee-type income txns in period (source of truth)
+      const feeTxnsInPeriod = txns.filter((t: any) => {
+        if (t.type !== 'income') return false;
+        return (
+          t.category === 'patient_fee' ||
+          t.category === 'fee' ||
+          String(t.category || '').toLowerCase().includes('fee') ||
+          String(t.categoryName || '').toLowerCase().includes('fee') ||
+          String(t.categoryName || '').toLowerCase().includes('admission')
+        );
+      });
+      const totalPatientFeesCollectedInPeriod = feeTxnsInPeriod.reduce((s: number, t: any) => s + (t.amount || 0), 0);
+
+      // Per-patient fee breakdown for the table
       const feesSnap = await getDocs(collection(db, 'rehab_fees'));
       const allFees = feesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-
       const monthFees = allFees.filter(fee => fee.month === monthStr);
 
       const patientFeesBreakdown = patients.map(patient => {
@@ -372,16 +389,11 @@ export default function SuperAdminReportsPage() {
         const expectedFee = Number(patient.packageAmount || 60000);
         const overallRemaining = patientFeeRecord ? Number(patientFeeRecord.amountRemaining || 0) : expectedFee;
 
-        // Calculate paid specifically in selected range (e.g. daily, weekly, monthly)
-        const patientPeriodTxns = txns.filter((t: any) => {
-          if (t.patientId !== patient.id) return false;
-          return (
-            t.category === 'patient_fee' ||
-            t.category === 'fee' ||
-            String(t.category || '').toLowerCase().includes('fee') ||
-            String(t.categoryName || '').toLowerCase().includes('fee') ||
-            String(t.categoryName || '').toLowerCase().includes('admission')
-          );
+        // Match period txns by doc ID or any patientId field stored on the transaction
+        const patientPeriodTxns = feeTxnsInPeriod.filter((t: any) => {
+          const tPId = String(t.patientId || '').trim();
+          const tSId = String(t.studentId || '').trim();
+          return tPId === patient.id || tSId === patient.id;
         });
         const paidInPeriod = patientPeriodTxns.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
 
@@ -396,7 +408,6 @@ export default function SuperAdminReportsPage() {
         };
       });
 
-      const totalPatientFeesCollectedInPeriod = patientFeesBreakdown.reduce((sum, p) => sum + p.paidInPeriod, 0);
       const totalPatientOutstandingDues = patientFeesBreakdown.reduce((sum, p) => sum + p.overallRemaining, 0);
 
       setReportData({
@@ -419,9 +430,8 @@ export default function SuperAdminReportsPage() {
         reportFocus,
       });
       setGenerated(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Report error:', error);
-      alert('Failed to generate report.');
     } finally {
       setGenerating(false);
     }

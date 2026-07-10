@@ -382,12 +382,12 @@ export default function SuperAdminReportsPage() {
       const finesSnap = await getDocs(query(collection(db, 'spims_fines'), where('month', '==', monthStr)));
       const allFines = finesSnap.docs.map(d => d.data());
 
+      // Fetch by date range only — filter absent client-side to avoid composite index
       const attendanceSnap = await getDocs(query(collection(db, 'spims_attendance'),
         where('date', '>=', `${monthStr}-01`),
-        where('date', '<=', `${monthStr}-31`),
-        where('status', '==', 'absent')
+        where('date', '<=', `${monthStr}-31`)
       ));
-      const allAbsences = attendanceSnap.docs.map(d => d.data());
+      const allAbsences = attendanceSnap.docs.map(d => d.data()).filter((a: any) => a.status === 'absent');
 
       const staffSalaries = allStaff.map((staff: any) => {
         const gross = staff.salary || 0;
@@ -410,8 +410,8 @@ export default function SuperAdminReportsPage() {
       // === STUDENTS ===
       const activeStudentsSnap = await getDocs(collection(db, 'spims_students'));
       const allStudents = activeStudentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-      const students = allStudents.filter(student => (student.status || 'Active') === 'Active');
-      const totalActiveStudents = students.length;
+      // Only 'Active' students for the header count
+      const totalActiveStudents = allStudents.filter(s => (s.status || 'Active') === 'Active').length;
 
       const newAdmissions = allStudents.filter((student: any) => {
         if (!student.admissionDate) return false;
@@ -420,34 +420,34 @@ export default function SuperAdminReportsPage() {
       }).length;
 
       // === STUDENT FEES BREAKDOWN ===
-      const feesSnap = await getDocs(collection(db, 'spims_fees'));
-      const allFees = feesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-
-      const monthFees = allFees.filter(fee => {
-        if (fee.status !== 'approved') return false;
-        const feeDate = fee.date?.toDate?.() ? fee.date.toDate() : new Date(fee.date || 0);
-        const feeMonthStr = `${feeDate.getFullYear()}-${String(feeDate.getMonth() + 1).padStart(2, '0')}`;
-        return feeMonthStr === monthStr;
+      // Period Collections = sum of all fee-type income txns in period (source of truth)
+      const feeTxnsInPeriod = txns.filter((t: any) => {
+        if (t.type !== 'income') return false;
+        return (
+          t.category === 'student_fee' ||
+          t.category === 'fee' ||
+          String(t.category || '').toLowerCase().includes('fee') ||
+          String(t.categoryName || '').toLowerCase().includes('fee') ||
+          String(t.categoryName || '').toLowerCase().includes('admission')
+        );
       });
+      const totalStudentFeesCollectedInPeriod = feeTxnsInPeriod.reduce((s: number, t: any) => s + (t.amount || 0), 0);
 
-      const studentFeesBreakdown = students.map(student => {
-        const studentPayments = monthFees.filter(f => f.studentId === student.id);
-        const amountPaidThisMonth = studentPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      // Build per-student breakdown — use ALL students so no one is excluded
+      const studentFeesBreakdown = allStudents.map(student => {
+        const sId = student.id;
+        const sCustomId = String(student.studentId || student.customId || '').trim();
 
-        const studentPeriodTxns = txns.filter((t: any) => {
-          if (t.studentId !== student.id && t.patientId !== student.id) return false;
-          return (
-            t.category === 'student_fee' ||
-            t.category === 'fee' ||
-            String(t.category || '').toLowerCase().includes('fee') ||
-            String(t.categoryName || '').toLowerCase().includes('fee') ||
-            String(t.categoryName || '').toLowerCase().includes('admission')
-          );
+        // Match txns by doc ID OR custom student ID (both are used in transactions)
+        const studentPeriodTxns = feeTxnsInPeriod.filter((t: any) => {
+          const tSId = String(t.studentId || '').trim();
+          const tPId = String(t.patientId || '').trim();
+          return tSId === sId || tPId === sId || (sCustomId && (tSId === sCustomId || tPId === sCustomId));
         });
         const paidInPeriod = studentPeriodTxns.reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
 
         return {
-          id: student.id,
+          id: sId,
           name: student.name,
           rollNo: student.rollNo || student.serialNumber || '—',
           studentId: student.studentId || student.customId || '—',
@@ -455,12 +455,11 @@ export default function SuperAdminReportsPage() {
           monthlyFee: Number(student.monthlyFee || 0),
           totalPackage: Number(student.totalPackage || student.totalPackageAmount || 0),
           paidInPeriod,
-          amountPaidThisMonth,
-          overallRemaining: calculateStudentRemaining(student.id, student.studentId, student.totalPackage || student.totalPackageAmount, allApprovedFees, allApprovedTxns)
+          amountPaidThisMonth: paidInPeriod, // same source in period context
+          overallRemaining: calculateStudentRemaining(sId, student.studentId, student.totalPackage || student.totalPackageAmount, allApprovedFees, allApprovedTxns)
         };
       });
 
-      const totalStudentFeesCollectedInPeriod = studentFeesBreakdown.reduce((sum, s) => sum + s.paidInPeriod, 0);
       const totalStudentOutstandingDues = studentFeesBreakdown.reduce((sum, s) => sum + s.overallRemaining, 0);
 
       setReportData({
@@ -485,9 +484,8 @@ export default function SuperAdminReportsPage() {
         reportFocus,
       });
       setGenerated(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Report error:', error);
-      alert('Failed to generate report.');
     } finally {
       setGenerating(false);
     }
