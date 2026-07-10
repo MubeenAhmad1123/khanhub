@@ -51,6 +51,7 @@ export default function HospitalSuperAdminReportsPage() {
   const [generating, setGenerating] = useState(false);
   const [reportData, setReportData] = useState<any>(null);
   const [generated, setGenerated] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -68,6 +69,7 @@ export default function HospitalSuperAdminReportsPage() {
     try {
       setGenerating(true);
       setGenerated(false);
+      setReportError(null);
 
       let firstDay: Date;
       let lastDay: Date;
@@ -207,12 +209,12 @@ export default function HospitalSuperAdminReportsPage() {
       const finesSnap = await getDocs(query(collection(db, 'hospital_fines'), where('month', '==', monthStr)));
       const allFines = finesSnap.docs.map(d => d.data());
 
+      // Fetch by date range only — filter status client-side to avoid composite index
       const attendanceSnap = await getDocs(query(collection(db, 'hospital_attendance'),
         where('date', '>=', `${monthStr}-01`),
-        where('date', '<=', `${monthStr}-31`),
-        where('status', '==', 'absent')
+        where('date', '<=', `${monthStr}-31`)
       ));
-      const allAbsences = attendanceSnap.docs.map(d => d.data());
+      const allAbsences = attendanceSnap.docs.map(d => d.data()).filter((a: any) => a.status === 'absent');
 
       const staffSalaries = allStaff.map((staff: any) => {
         const gross = staff.salary || 0;
@@ -266,9 +268,9 @@ export default function HospitalSuperAdminReportsPage() {
       });
 
       setGenerated(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Report error:', error);
-      alert('Failed to generate report.');
+      setReportError(error?.message || 'Failed to generate report. Please try again.');
     } finally {
       setGenerating(false);
     }
@@ -388,6 +390,17 @@ export default function HospitalSuperAdminReportsPage() {
               Generate Report
             </button>
           </div>
+
+          {/* Error Banner */}
+          {reportError && (
+            <div className="flex items-start gap-3 bg-red-50 border border-red-200 p-4 rounded-xl">
+              <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-red-800">Failed to generate report</p>
+                <p className="text-xs text-red-600 mt-0.5">{reportError}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Report Preview */}
