@@ -91,7 +91,7 @@ export default function RehabPayrollPage() {
       // Build salary rows
       const salaryRows = allStaff.map((staff: any) => {
         const gross = Number(staff.salary || 0);
-        const dailyRate = gross / 26;
+        const dailyRate = gross / 30;
         const absences = allAbsences.filter((a: any) => a.staffId === staff.id);
         const absentDays = absences.length;
         const absentDates = absences.map((a: any) => a.date).sort();

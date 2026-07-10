@@ -151,7 +151,7 @@ export default function ManagerPayrollPage() {
           const staffMap = Object.fromEntries(allStaff.map((s: any) => [s.id, s.name || s.id]));
           const salaryRows = allStaff.map((staff: any) => {
             const gross = Number(staff.monthlySalary || staff.salary || 0);
-            const dailyRate = gross / 26;
+            const dailyRate = gross / 30;
             const absences = allAbsences.filter((a: any) => a.staffId === staff.id);
             const absentDays = absences.length;
             const absentDates = absences.map((a: any) => a.date).sort();
