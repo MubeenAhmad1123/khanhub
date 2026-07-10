@@ -117,6 +117,8 @@ export default function StaffProfilePage() {
   const [generatingSlip, setGeneratingSlip] = useState(false);
   const [uploadingRecordId, setUploadingRecordId] = useState<string | null>(null);
   const [uploadingType, setUploadingType] = useState<'slip' | 'proof' | null>(null);
+  const [draftSlipFile, setDraftSlipFile] = useState<File | null>(null);
+  const [draftProofFile, setDraftProofFile] = useState<File | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'tasks' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll' | 'action' | 'leads'>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1600,6 +1602,31 @@ export default function StaffProfilePage() {
         createdBy: session?.uid || ''
       };
       const salaryPrefix = getDeptPrefix(staff.dept);
+
+      if (draftSlipFile) {
+        try {
+          const { uploadToCloudinary } = await import('@/lib/cloudinaryUpload');
+          const folder = `khanhub/staff/${staff.dept}/salaries/slips`;
+          slip.slipFileUrl = await uploadToCloudinary(draftSlipFile, folder, undefined, 'auto');
+          slip.slipFileName = draftSlipFile.name;
+        } catch (err) {
+          console.error("Draft slip file upload failed", err);
+          toast.error("Slip file upload failed, but continuing slip generation");
+        }
+      }
+
+      if (draftProofFile) {
+        try {
+          const { uploadToCloudinary } = await import('@/lib/cloudinaryUpload');
+          const folder = `khanhub/staff/${staff.dept}/salaries/proofs`;
+          slip.proofFileUrl = await uploadToCloudinary(draftProofFile, folder, undefined, 'image');
+          slip.proofFileName = draftProofFile.name;
+        } catch (err) {
+          console.error("Draft proof file upload failed", err);
+          toast.error("Proof file upload failed, but continuing slip generation");
+        }
+      }
+
       await addDoc(collection(db, `${salaryPrefix}_salary_records`), slip);
       toast.success("Financial Ledger Updated & Finalized");
       setShowPayrollModal(false);
@@ -1608,6 +1635,8 @@ export default function StaffProfilePage() {
       toast.error("Failed to generate slip");
     } finally {
       setGeneratingSlip(false);
+      setDraftSlipFile(null);
+      setDraftProofFile(null);
     }
   };
 
@@ -4489,6 +4518,33 @@ export default function StaffProfilePage() {
                           </div>
                         </div>
                       </div>
+                      <div className="p-4 rounded-2xl bg-gray-50 border border-gray-250/50 mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[9px] font-black uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Salary Slip Document (Optional)</label>
+                          <input
+                            type="file"
+                            accept="application/pdf,image/*"
+                            className="w-full text-xs text-gray-700 bg-white border border-gray-250 rounded-xl px-3 py-2 outline-none font-bold"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null;
+                              setDraftSlipFile(file);
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-black uppercase tracking-widest text-gray-500 ml-2 mb-1 block">Salary Proof / Bank Screenshot (Optional)</label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="w-full text-xs text-gray-700 bg-white border border-gray-250 rounded-xl px-3 py-2 outline-none font-bold"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null;
+                              setDraftProofFile(file);
+                            }}
+                          />
+                        </div>
+                      </div>
+
                       <button
                         disabled={generatingSlip}
                         onClick={handleGenerateSlip}
