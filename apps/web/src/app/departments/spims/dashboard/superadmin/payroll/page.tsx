@@ -62,13 +62,18 @@ export default function SpimsPayrollPage() {
         .filter((s: any) => !['executive', 'hide'].includes(String(s.status || '').toLowerCase()))
         .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
 
-      // Fines for this month
-      const finesSnap = await getDocs(query(collection(db, 'spims_fines'), where('month', '==', monthStr)));
-      // Also get fines where 'date' field equals monthStr (auto-generated ones use 'date')
-      const finesByDate = await getDocs(query(collection(db, 'spims_fines'), where('date', '==', monthStr)));
-
+      // Fines by date range (catches full-date fines like 2026-07-05 AND month-string fines)
+      const finesSnap = await getDocs(query(
+        collection(db, 'spims_fines'),
+        where('date', '>=', `${monthStr}-01`),
+        where('date', '<=', `${monthStr}-31`)
+      ));
+      const finesByMonthSnap = await getDocs(query(
+        collection(db, 'spims_fines'),
+        where('month', '==', monthStr)
+      ));
       const allFinesDocs = new Map<string, any>();
-      [...finesSnap.docs, ...finesByDate.docs].forEach(d => {
+      [...finesSnap.docs, ...finesByMonthSnap.docs].forEach(d => {
         allFinesDocs.set(d.id, { id: d.id, ...d.data() as any });
       });
       const allFines = Array.from(allFinesDocs.values());

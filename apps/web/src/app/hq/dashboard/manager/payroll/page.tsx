@@ -85,13 +85,30 @@ export default function ManagerPayrollPage() {
             : dept === 'social-media' ? 'media_users'
             : `${prefix}_users`;
 
+          // Roles considered actual staff (not students/patients/family)
+          const STAFF_ROLES = new Set([
+            'admin', 'staff', 'cashier', 'superadmin', 'manager',
+            'doctor', 'nurse', 'counselor', 'personnel', 'other',
+          ]);
+
           const staffSnap = await getDocs(collection(db, staffCol));
           const allStaff = staffSnap.docs
             .map(d => ({ id: d.id, ...d.data() as any, dept }))
             .filter((s: any) => {
+              // Exclude by name/email patterns
               const name = String(s.name || s.displayName || '').toLowerCase();
               const email = String(s.email || '').toLowerCase();
               if (name.includes('super') || name.includes('network') || email.includes('super') || email.includes('network')) return false;
+
+              // Exclude students, patients, family members by role
+              const role = String(s.role || '').toLowerCase();
+              if (['student', 'patient', 'family', 'visitor'].includes(role)) return false;
+
+              // Must have a staff role (if role is set) OR have a salary field
+              const hasSalaryField = s.monthlySalary !== undefined || s.salary !== undefined;
+              if (role && !STAFF_ROLES.has(role) && !hasSalaryField) return false;
+
+              // Active status check
               const statusStr = String(s.status || '').toLowerCase();
               return s.isActive !== false && !['inactive', 'resigned', 'terminated', 'executive', 'hide'].includes(statusStr);
             })
@@ -99,19 +116,26 @@ export default function ManagerPayrollPage() {
 
           if (allStaff.length === 0) return { dept, salaryRows: [], allFines: [], allStaff: [] };
 
-          // Fines — try both 'month' and 'date' field
+          // Fines — fetch by date range to catch both full-date fines AND month-string fines
           const finesCol = `${prefix}_fines`;
-          const [finesM, finesD] = await Promise.all([
-            getDocs(query(collection(db, finesCol), where('month', '==', monthStr))).catch(() => ({ docs: [] } as any)),
-            getDocs(query(collection(db, finesCol), where('date', '==', monthStr))).catch(() => ({ docs: [] } as any)),
-          ]);
+          const finesSnap = await getDocs(query(
+            collection(db, finesCol),
+            where('date', '>=', `${monthStr}-01`),
+            where('date', '<=', `${monthStr}-31`)
+          )).catch(() => ({ docs: [] } as any));
+          // Also grab fines stored with 'month' field (some auto-fines use month: '2026-07')
+          const finesByMonthSnap = await getDocs(query(
+            collection(db, finesCol),
+            where('month', '==', monthStr)
+          )).catch(() => ({ docs: [] } as any));
+
           const finesMap = new Map<string, any>();
-          [...finesM.docs, ...finesD.docs].forEach((d: any) => {
+          [...finesSnap.docs, ...finesByMonthSnap.docs].forEach((d: any) => {
             finesMap.set(d.id, { id: d.id, dept, ...d.data() });
           });
           const allFines = Array.from(finesMap.values());
 
-          // Attendance absences
+          // Attendance absences for selected month
           const attCol = `${prefix}_attendance`;
           const attSnap = await getDocs(query(
             collection(db, attCol),
