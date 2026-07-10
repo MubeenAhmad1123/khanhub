@@ -115,6 +115,8 @@ export default function StaffProfilePage() {
 
   const [staff, setStaff] = useState<StaffProfile | null>(null);
   const [generatingSlip, setGeneratingSlip] = useState(false);
+  const [uploadingRecordId, setUploadingRecordId] = useState<string | null>(null);
+  const [uploadingType, setUploadingType] = useState<'slip' | 'proof' | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'tasks' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll' | 'action' | 'leads'>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1465,6 +1467,70 @@ export default function StaffProfilePage() {
     );
 
     return isLast5Days || isFirst10DaysNextMonth || isFirst10DaysSelectedMonth;
+  };
+
+  const handleUploadSalaryFile = async (recordId: string, file: File, type: 'slip' | 'proof') => {
+    if (!staff) return;
+    setUploadingRecordId(recordId);
+    setUploadingType(type);
+    try {
+      const { uploadToCloudinary } = await import('@/lib/cloudinaryUpload');
+      const folder = `khanhub/staff/${staff.dept}/salaries/${type}s`;
+      const fileUrl = await uploadToCloudinary(file, folder, undefined, type === 'slip' ? 'auto' : 'image');
+      
+      const salaryPrefix = getDeptPrefix(staff.dept);
+      const docRef = doc(db, `${salaryPrefix}_salary_records`, recordId);
+      
+      const updateData: any = {};
+      if (type === 'slip') {
+        updateData.slipFileUrl = fileUrl;
+        updateData.slipFileName = file.name;
+      } else {
+        updateData.proofFileUrl = fileUrl;
+        updateData.proofFileName = file.name;
+      }
+      
+      await updateDoc(docRef, updateData);
+      toast.success(`${type === 'slip' ? 'Salary slip' : 'Salary proof'} uploaded successfully!`);
+      fetchData();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || `Failed to upload ${type}`);
+    } finally {
+      setUploadingRecordId(null);
+      setUploadingType(null);
+    }
+  };
+
+  const handleDeleteSalaryFile = async (recordId: string, type: 'slip' | 'proof') => {
+    if (!staff) return;
+    if (!confirm(`Are you sure you want to delete this ${type === 'slip' ? 'salary slip file' : 'salary proof image'}?`)) return;
+    
+    setUploadingRecordId(recordId);
+    setUploadingType(type);
+    try {
+      const salaryPrefix = getDeptPrefix(staff.dept);
+      const docRef = doc(db, `${salaryPrefix}_salary_records`, recordId);
+      
+      const updateData: any = {};
+      if (type === 'slip') {
+        updateData.slipFileUrl = null;
+        updateData.slipFileName = null;
+      } else {
+        updateData.proofFileUrl = null;
+        updateData.proofFileName = null;
+      }
+      
+      await updateDoc(docRef, updateData);
+      toast.success(`${type === 'slip' ? 'Salary slip' : 'Salary proof'} removed!`);
+      fetchData();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || `Failed to remove ${type}`);
+    } finally {
+      setUploadingRecordId(null);
+      setUploadingType(null);
+    }
   };
 
   const handleDeleteSlip = async (record: SalarySlip) => {
@@ -4497,7 +4563,7 @@ export default function StaffProfilePage() {
                             </div>
                           </div>
 
-                          <div className={`mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-dashed border-gray-200`}>
+                          <div className={`mt-6 grid grid-cols-1 md:grid-cols-4 gap-6 pt-6 border-t border-dashed border-gray-200`}>
                             <div>
                               <p className="text-[9px] font-black text-black uppercase tracking-widest mb-1">Base Earnings</p>
                               <p className={`text-xs font-bold text-black`}>
@@ -4506,26 +4572,108 @@ export default function StaffProfilePage() {
                               <p className="text-[9px] text-black mt-1 uppercase font-black">Pro-rated attendance</p>
                             </div>
 
-                            {((record as any).bonus > 0) && (
-                              <div className="p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
-                                <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Performance Bonus (+)</p>
-                                <p className={`text-xs font-bold text-emerald-600`}>
-                                  ₨{(record as any).bonus.toLocaleString()}
-                                </p>
-                                <p className="text-[10px] text-emerald-500/60 mt-1 font-medium leading-tight">Reason: {(record as any).bonusReason || 'Incentive'}</p>
-                              </div>
-                            )}
+                            <div>
+                              {((record as any).bonus > 0) && (
+                                <div className="p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 mb-3">
+                                  <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Performance Bonus (+)</p>
+                                  <p className={`text-xs font-bold text-emerald-600`}>
+                                    ₨{(record as any).bonus.toLocaleString()}
+                                  </p>
+                                  <p className="text-[10px] text-emerald-500/60 mt-1 font-medium leading-tight">Reason: {(record as any).bonusReason || 'Incentive'}</p>
+                                </div>
+                              )}
 
-                            {((record as any).otherDeductions > 0) && (
-                              <div className="p-3 rounded-2xl bg-rose-500/5 border border-rose-500/10">
-                                <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-1">Other Deductions (-)</p>
-                                <p className={`text-xs font-bold text-rose-600`}>
-                                  ₨{(record as any).otherDeductions.toLocaleString()}
-                                </p>
-                                <p className="text-[10px] text-rose-500/60 mt-1 font-medium leading-tight">Reason: {(record as any).deductionReason || 'Adjustment'}</p>
+                              {((record as any).otherDeductions > 0) && (
+                                <div className="p-3 rounded-2xl bg-rose-500/5 border border-rose-500/10">
+                                  <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-1">Other Deductions (-)</p>
+                                  <p className={`text-xs font-bold text-rose-600`}>
+                                    ₨{(record as any).otherDeductions.toLocaleString()}
+                                  </p>
+                                  <p className="text-[10px] text-rose-500/60 mt-1 font-medium leading-tight">Reason: {(record as any).deductionReason || 'Adjustment'}</p>
+                                </div>
+                              )}
+                              {!((record as any).bonus > 0) && !((record as any).otherDeductions > 0) && (
+                                <p className="text-[10px] text-gray-400 font-bold uppercase">No Adjustments</p>
+                              )}
+                            </div>
+
+                            <div className="p-3 rounded-2xl bg-gray-50 border border-gray-150 flex flex-col justify-between min-h-[100px]">
+                              <div>
+                                <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Salary Slip File</p>
+                                {(record as any).slipFileUrl ? (
+                                  <div className="flex items-center gap-2">
+                                    <FileText size={16} className="text-indigo-500 shrink-0" />
+                                    <a href={(record as any).slipFileUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-indigo-600 hover:underline truncate max-w-[120px]">
+                                      {(record as any).slipFileName || 'View Slip File'}
+                                    </a>
+                                  </div>
+                                ) : (
+                                  <p className="text-[10px] text-gray-400 font-medium italic">No slip uploaded</p>
+                                )}
                               </div>
-                            )}
-                          </div>
+                              <div className="mt-2 flex gap-1.5 flex-wrap">
+                                <label className="cursor-pointer bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 font-black text-[8px] uppercase tracking-wider px-2.5 py-1.5 rounded-lg transition-colors block text-center">
+                                  {uploadingRecordId === record.id && uploadingType === 'slip' ? 'Uploading...' : 'Upload File'}
+                                  <input
+                                    type="file"
+                                    accept="application/pdf,image/*"
+                                    className="hidden"
+                                    disabled={uploadingRecordId === record.id}
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) handleUploadSalaryFile(record.id, file, 'slip');
+                                    }}
+                                  />
+                                </label>
+                                {(record as any).slipFileUrl && (
+                                  <button
+                                    onClick={() => handleDeleteSalaryFile(record.id, 'slip')}
+                                    className="bg-white hover:bg-red-50 border border-red-100 text-rose-600 font-black text-[8px] uppercase tracking-wider px-2.5 py-1.5 rounded-lg transition-colors"
+                                  >
+                                    Remove
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="p-3 rounded-2xl bg-gray-50 border border-gray-150 flex flex-col justify-between min-h-[100px]">
+                              <div>
+                                <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Salary Proof Image</p>
+                                {(record as any).proofFileUrl ? (
+                                  <div className="flex items-center gap-2">
+                                    <Camera size={16} className="text-emerald-500 shrink-0" />
+                                    <a href={(record as any).proofFileUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-emerald-600 hover:underline truncate max-w-[120px]">
+                                      {(record as any).proofFileName || 'View Proof'}
+                                    </a>
+                                  </div>
+                                ) : (
+                                  <p className="text-[10px] text-gray-400 font-medium italic">No proof uploaded</p>
+                                )}
+                              </div>
+                              <div className="mt-2 flex gap-1.5 flex-wrap">
+                                <label className="cursor-pointer bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 font-black text-[8px] uppercase tracking-wider px-2.5 py-1.5 rounded-lg transition-colors block text-center">
+                                  {uploadingRecordId === record.id && uploadingType === 'proof' ? 'Uploading...' : 'Upload Image'}
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    disabled={uploadingRecordId === record.id}
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) handleUploadSalaryFile(record.id, file, 'proof');
+                                    }}
+                                  />
+                                </label>
+                                {(record as any).proofFileUrl && (
+                                  <button
+                                    onClick={() => handleDeleteSalaryFile(record.id, 'proof')}
+                                    className="bg-white hover:bg-red-50 border border-red-100 text-rose-600 font-black text-[8px] uppercase tracking-wider px-2.5 py-1.5 rounded-lg transition-colors"
+                                  >
+                                    Remove
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                         </div>
                       ))}
                     </div>
