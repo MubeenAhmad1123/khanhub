@@ -100,7 +100,7 @@ export default function AdminReportsPage() {
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
   const [reportFocus, setReportFocus] = useState<'income' | 'remaining' | 'students'>('income');
-  const [studentGroup, setStudentGroup] = useState<'all' | 'active' | 'inactive' | 'completed' | 'left' | 'failed'>('all');
+  const [studentGroup, setStudentGroup] = useState<'all' | 'active' | 'inactive' | 'completed' | 'left' | 'failed' | 'no_status'>('all');
   const [filterByDateType, setFilterByDateType] = useState<'none' | 'admission'>('none');
 
   const [selectedColumns, setSelectedColumns] = useState<Record<string, boolean>>({
@@ -287,7 +287,7 @@ export default function AdminReportsPage() {
             studentId: d.studentId || d.customId || '—',
             course: d.course || '—',
             contact: d.contact || d.phone || d.guardianPhone || d.fatherContact || '—',
-            status: d.status || 'Active',
+            status: d.status || '',
             activity: d.activity || 'Active',
             admissionDate: d.admissionDate ? toDate(d.admissionDate) : null,
             monthlyFee: Number(d.monthlyFee ?? d.expectedFee ?? 0),
@@ -306,6 +306,8 @@ export default function AdminReportsPage() {
           students = students.filter(s => String(s.status).toLowerCase() === 'left');
         } else if (studentGroup === 'failed') {
           students = students.filter(s => ['fail', 'overall fail', 'second year fail', 'first year fail'].includes(String(s.status).toLowerCase()));
+        } else if (studentGroup === 'no_status') {
+          students = students.filter(s => !s.status);
         }
 
         if (filterByDateType === 'admission') {
@@ -321,6 +323,7 @@ export default function AdminReportsPage() {
         const totalCompletedCount = students.filter(s => ['pass', 'overall pass', 'second year pass', 'first year pass'].includes(String(s.status).toLowerCase())).length;
         const totalLeftCount = students.filter(s => String(s.status).toLowerCase() === 'left').length;
         const totalFailedCount = students.filter(s => ['fail', 'overall fail', 'second year fail', 'first year fail'].includes(String(s.status).toLowerCase())).length;
+        const totalNoStatusCount = students.filter(s => !s.status).length;
         const totalOutstandingDues = students.reduce((sum, s) => sum + s.overallRemaining, 0);
 
         setReportData({
@@ -331,6 +334,7 @@ export default function AdminReportsPage() {
           totalCompletedCount,
           totalLeftCount,
           totalFailedCount,
+          totalNoStatusCount,
           totalOutstandingDues,
           reportLabel: label,
           reportFocus,
@@ -611,6 +615,7 @@ export default function AdminReportsPage() {
                     <option value="completed">Passed Students Only</option>
                     <option value="left">Left Students Only</option>
                     <option value="failed">Failed Students Only</option>
+                    <option value="no_status">No Status Only</option>
                   </select>
                 </div>
                 <div>
@@ -734,7 +739,7 @@ export default function AdminReportsPage() {
 
             {/* Students List Summary Cards */}
             {reportData.reportFocus === 'students' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
                 <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
                   <Users className="w-6 h-6 text-teal-605 mx-auto mb-2" />
                   <div className="text-xs font-bold text-teal-650 uppercase tracking-wider mb-1">Total Matching</div>
@@ -764,6 +769,11 @@ export default function AdminReportsPage() {
                   <TrendingDown className="w-6 h-6 text-rose-500 mx-auto mb-2" />
                   <div className="text-xs font-bold text-rose-650 uppercase tracking-wider mb-1">Failed Students</div>
                   <div className="text-2xl font-black text-rose-750">{reportData.totalFailedCount}</div>
+                </div>
+                <div className="bg-amber-50 border border-amber-100 p-5 rounded-2xl text-center">
+                  <TrendingDown className="w-6 h-6 text-amber-500 mx-auto mb-2" />
+                  <div className="text-xs font-bold text-amber-650 uppercase tracking-wider mb-1">No Status</div>
+                  <div className="text-2xl font-black text-amber-750">{reportData.totalNoStatusCount}</div>
                 </div>
                 <div className="bg-orange-50 border border-orange-100 p-5 rounded-2xl text-center col-span-1">
                   <DollarSign className="w-6 h-6 text-orange-600 mx-auto mb-2" />
