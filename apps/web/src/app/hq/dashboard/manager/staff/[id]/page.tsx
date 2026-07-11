@@ -4730,6 +4730,7 @@ export default function StaffProfilePage() {
                                 )}
                               </div>
                             </div>
+                          </div>
                         </div>
                       ))}
                     </div>
