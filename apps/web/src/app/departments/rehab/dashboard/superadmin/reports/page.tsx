@@ -45,6 +45,7 @@ function formatCat(cat: string) {
 
 function calculatePatientOverallRemaining(
   patient: any,
+  allFees: any[],
   allTxns: any[]
 ): number {
   if (patient.isActive === false || (typeof patient.manualRemainingAdjustment === 'number' && patient.manualRemainingAdjustment !== 0)) {
@@ -52,28 +53,8 @@ function calculatePatientOverallRemaining(
   }
 
   const patientId = patient.id;
-  const patientTxns = allTxns.filter(t => t.patientId === patientId);
 
-  let totalReceived = 0;
-  let totalMedicineCharges = 0;
-  let totalDiscount = 0;
-
-  patientTxns.forEach((tx) => {
-    const amount = Number(tx.amount) || 0;
-    const discount = Number(tx.discount || 0);
-    const returnAmount = Number(tx.returnAmount || tx.return || 0);
-    const netAmount = amount - returnAmount;
-
-    if (tx.category === 'medicine_charge') {
-      totalMedicineCharges += netAmount;
-    } else if (tx.category === 'canteen_deposit' || tx.category === 'canteen' || tx.category === 'canteen_expense') {
-      // Exclude canteen
-    } else {
-      totalReceived += netAmount;
-      totalDiscount += discount;
-    }
-  });
-
+  // 1. Stay packages
   const monthlyPkg = Number(patient.monthlyPackage || patient.packageAmount || 0);
   
   const safeToDateLocal = (d: any) => {
@@ -105,8 +86,65 @@ function calculatePatientOverallRemaining(
   });
 
   const totalStayPackage = currentStayPackage + historicalStayPackage;
+
+  // 2. Fetch payments from allFees (synced payments) and allTxns (approved transactions)
+  const patientFees = allFees.filter(f => f.patientId === patientId);
+  const patientTxns = allTxns.filter(t => t.patientId === patientId);
+
+  let overallReceived = 0;
+  let totalMedicineCharges = 0;
+  let totalDiscount = 0;
+
+  const syncedTxIds = new Set<string>();
+  const aggregatedPayments: any[] = [];
+
+  patientFees.forEach(feeData => {
+    const docPayments = feeData.payments || [];
+    docPayments.forEach((p: any) => {
+      const status = p.status || 'approved';
+      if (p.transactionId) syncedTxIds.add(p.transactionId);
+      if (p.id) syncedTxIds.add(p.id);
+      aggregatedPayments.push({
+        amount: Number(p.amount) || 0,
+        status
+      });
+    });
+  });
+
+  patientTxns.forEach(txData => {
+    const txId = txData.id;
+    const isApproved = txData.status === 'approved';
+    const isSynced = syncedTxIds.has(txId);
+    const isMedicineCharge = txData.category === 'medicine_charge';
+    const isCanteen = txData.category === 'canteen_deposit' || txData.category === 'canteen' || txData.category === 'canteen_expense';
+
+    if (isCanteen) {
+      return;
+    }
+
+    if (isMedicineCharge) {
+      if (isApproved) {
+        totalMedicineCharges += Number(txData.amount || 0);
+      }
+    } else if (isApproved && !isSynced) {
+      aggregatedPayments.push({
+        amount: Number(txData.amount || 0),
+        status: 'approved'
+      });
+    }
+
+    // Accumulate total discount
+    if (isApproved && !isMedicineCharge) {
+      totalDiscount += Number(txData.discount || 0);
+    }
+  });
+
+  // Sum up approved payments
+  const approvedPayments = aggregatedPayments.filter(p => p.status === 'approved');
+  overallReceived = approvedPayments.reduce((sum, p) => sum + p.amount, 0);
+
   const finalMedicineCharges = typeof patient.medicineCharges === 'number' ? patient.medicineCharges : totalMedicineCharges;
-  const calculatedRemaining = (totalStayPackage + finalMedicineCharges) - totalReceived - totalDiscount + Number(patient.manualRemainingAdjustment || 0);
+  const calculatedRemaining = (totalStayPackage + finalMedicineCharges) - overallReceived - totalDiscount + Number(patient.manualRemainingAdjustment || 0);
 
   return Math.max(0, calculatedRemaining);
 }
@@ -283,6 +321,8 @@ export default function SuperAdminReportsPage() {
 
       if (reportFocus === 'patients') {
         const patientsSnap = await getDocs(collection(db, 'rehab_patients'));
+        const feesSnap = await getDocs(collection(db, 'rehab_fees'));
+        const allFees = feesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
         const txnSnap = await getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'approved')));
         const allTxns = txnSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
 
@@ -290,7 +330,7 @@ export default function SuperAdminReportsPage() {
           const data = doc.data() as any;
           const patientId = doc.id;
           const patientObj = { id: patientId, ...data };
-          const overallRemaining = calculatePatientOverallRemaining(patientObj, allTxns);
+          const overallRemaining = calculatePatientOverallRemaining(patientObj, allFees, allTxns);
 
           return {
             id: doc.id,
@@ -465,7 +505,7 @@ export default function SuperAdminReportsPage() {
         const patientFeeRecord = monthFees.find(f => f.patientId === patient.id);
         const amountPaidThisMonth = patientFeeRecord ? Number(patientFeeRecord.amountPaid || 0) : 0;
         const expectedFee = Number(patient.packageAmount || 60000);
-        const overallRemaining = calculatePatientOverallRemaining(patient, allTxnsForDues);
+        const overallRemaining = calculatePatientOverallRemaining(patient, allFees, allTxnsForDues);
 
         // Match period txns by doc ID or any patientId field stored on the transaction
         const patientPeriodTxns = feeTxnsInPeriod.filter((t: any) => {
