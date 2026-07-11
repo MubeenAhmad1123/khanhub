@@ -100,7 +100,7 @@ export default function SuperAdminReportsPage() {
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
   const [reportFocus, setReportFocus] = useState<'income' | 'remaining' | 'students'>('income');
-  const [studentGroup, setStudentGroup] = useState<'all' | 'active' | 'completed' | 'left' | 'failed'>('all');
+  const [studentGroup, setStudentGroup] = useState<'all' | 'active' | 'inactive' | 'completed' | 'left' | 'failed'>('all');
   const [filterByDateType, setFilterByDateType] = useState<'none' | 'admission'>('none');
 
   const [selectedColumns, setSelectedColumns] = useState<Record<string, boolean>>({
@@ -288,6 +288,7 @@ export default function SuperAdminReportsPage() {
             course: d.course || '—',
             contact: d.contact || d.phone || d.guardianPhone || d.fatherContact || '—',
             status: d.status || 'Active',
+            activity: d.activity || 'Active',
             admissionDate: d.admissionDate ? toDate(d.admissionDate) : null,
             monthlyFee: Number(d.monthlyFee ?? d.expectedFee ?? 0),
             totalPackage: Number(d.totalPackage ?? d.totalPackageAmount ?? 0),
@@ -296,13 +297,15 @@ export default function SuperAdminReportsPage() {
         });
 
         if (studentGroup === 'active') {
-          students = students.filter(s => s.status === 'Active');
+          students = students.filter(s => (s.activity || 'Active') === 'Active' && s.status !== 'Left');
+        } else if (studentGroup === 'inactive') {
+          students = students.filter(s => (s.activity || '').toLowerCase() === 'inactive' || (s.status || '').toLowerCase() === 'inactive');
         } else if (studentGroup === 'completed') {
-          students = students.filter(s => ['Pass', 'Overall Pass', 'Second Year Pass', 'First Year Pass'].includes(s.status));
+          students = students.filter(s => ['pass', 'overall pass', 'second year pass', 'first year pass'].includes(String(s.status).toLowerCase()));
         } else if (studentGroup === 'left') {
-          students = students.filter(s => s.status === 'Left');
+          students = students.filter(s => String(s.status).toLowerCase() === 'left');
         } else if (studentGroup === 'failed') {
-          students = students.filter(s => ['Fail', 'Overall Fail', 'Second Year Fail', 'First Year Fail'].includes(s.status));
+          students = students.filter(s => ['fail', 'overall fail', 'second year fail', 'first year fail'].includes(String(s.status).toLowerCase()));
         }
 
         if (filterByDateType === 'admission') {
@@ -313,16 +316,18 @@ export default function SuperAdminReportsPage() {
         }
 
         const totalStudentsCount = students.length;
-        const totalActiveCount = students.filter(s => s.status === 'Active').length;
-        const totalCompletedCount = students.filter(s => ['Pass', 'Overall Pass', 'Second Year Pass', 'First Year Pass'].includes(s.status)).length;
-        const totalLeftCount = students.filter(s => s.status === 'Left').length;
-        const totalFailedCount = students.filter(s => ['Fail', 'Overall Fail', 'Second Year Fail', 'First Year Fail'].includes(s.status)).length;
+        const totalActiveCount = students.filter(s => (s.activity || 'Active') === 'Active' && s.status !== 'Left').length;
+        const totalInactiveCount = students.filter(s => (s.activity || '').toLowerCase() === 'inactive' || (s.status || '').toLowerCase() === 'inactive').length;
+        const totalCompletedCount = students.filter(s => ['pass', 'overall pass', 'second year pass', 'first year pass'].includes(String(s.status).toLowerCase())).length;
+        const totalLeftCount = students.filter(s => String(s.status).toLowerCase() === 'left').length;
+        const totalFailedCount = students.filter(s => ['fail', 'overall fail', 'second year fail', 'first year fail'].includes(String(s.status).toLowerCase())).length;
         const totalOutstandingDues = students.reduce((sum, s) => sum + s.overallRemaining, 0);
 
         setReportData({
           students,
           totalStudentsCount,
           totalActiveCount,
+          totalInactiveCount,
           totalCompletedCount,
           totalLeftCount,
           totalFailedCount,
@@ -644,6 +649,7 @@ export default function SuperAdminReportsPage() {
                   >
                     <option value="all">Show All Students</option>
                     <option value="active">Active Students Only</option>
+                    <option value="inactive">Inactive Students Only</option>
                     <option value="completed">Passed Students Only</option>
                     <option value="left">Left Students Only</option>
                     <option value="failed">Failed Students Only</option>
@@ -780,7 +786,7 @@ export default function SuperAdminReportsPage() {
 
             {/* Students List Summary Cards */}
             {reportData.reportFocus === 'students' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
                 <div className="bg-purple-50 border border-purple-100 p-5 rounded-2xl text-center">
                   <Users className="w-6 h-6 text-purple-605 mx-auto mb-2" />
                   <div className="text-xs font-bold text-purple-650 uppercase tracking-wider mb-1">Total Matching</div>
@@ -790,6 +796,11 @@ export default function SuperAdminReportsPage() {
                   <TrendingUp className="w-6 h-6 text-green-600 mx-auto mb-2" />
                   <div className="text-xs font-bold text-green-650 uppercase tracking-wider mb-1">Active Students</div>
                   <div className="text-2xl font-black text-green-800">{reportData.totalActiveCount}</div>
+                </div>
+                <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl text-center">
+                  <TrendingDown className="w-6 h-6 text-slate-500 mx-auto mb-2" />
+                  <div className="text-xs font-bold text-slate-650 uppercase tracking-wider mb-1">Inactive Students</div>
+                  <div className="text-2xl font-black text-slate-750">{reportData.totalInactiveCount}</div>
                 </div>
                 <div className="bg-blue-50 border border-blue-100 p-5 rounded-2xl text-center">
                   <BarChart3 className="w-6 h-6 text-blue-600 mx-auto mb-2" />
