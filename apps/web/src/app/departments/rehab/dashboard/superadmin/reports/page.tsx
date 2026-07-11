@@ -47,6 +47,10 @@ function calculatePatientOverallRemaining(
   patient: any,
   allTxns: any[]
 ): number {
+  if (patient.isActive === false || (typeof patient.manualRemainingAdjustment === 'number' && patient.manualRemainingAdjustment !== 0)) {
+    return Number(patient.remaining ?? patient.overallRemaining ?? patient.remainingBalance ?? patient.amountRemaining ?? 0);
+  }
+
   const patientId = patient.id;
   const patientTxns = allTxns.filter(t => t.patientId === patientId);
 
