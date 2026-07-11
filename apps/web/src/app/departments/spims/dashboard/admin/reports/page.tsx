@@ -100,7 +100,14 @@ export default function AdminReportsPage() {
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
   const [reportFocus, setReportFocus] = useState<'income' | 'remaining' | 'students'>('income');
-  const [studentGroup, setStudentGroup] = useState<'all' | 'active' | 'inactive' | 'completed' | 'left' | 'failed' | 'no_status'>('all');
+  const [selectedStatuses, setSelectedStatuses] = useState<Record<string, boolean>>({
+    active: true,
+    inactive: true,
+    completed: true,
+    left: true,
+    failed: true,
+    no_status: true
+  });
   const [filterByDateType, setFilterByDateType] = useState<'none' | 'admission'>('none');
 
   const [selectedColumns, setSelectedColumns] = useState<Record<string, boolean>>({
@@ -114,7 +121,8 @@ export default function AdminReportsPage() {
     monthlyFee: true,
     totalPackage: true,
     status: true,
-    remaining: true
+    remaining: true,
+    pendingTillNow: true
   });
 
   const columnsList = [
@@ -128,7 +136,8 @@ export default function AdminReportsPage() {
     { key: 'monthlyFee', label: 'Monthly Fee' },
     { key: 'totalPackage', label: 'Total Package' },
     { key: 'status', label: 'Status' },
-    { key: 'remaining', label: 'Remaining Dues' }
+    { key: 'remaining', label: 'Remaining Dues' },
+    { key: 'pendingTillNow', label: 'Pending Till Now' }
   ];
 
   const [generating, setGenerating] = useState(false);
@@ -278,7 +287,60 @@ export default function AdminReportsPage() {
         const studentsSnap = await getDocs(collection(db, 'spims_students'));
         let students = studentsSnap.docs.map(doc => {
           const d = doc.data() as any;
-          const remaining = calculateStudentRemaining(doc.id, d.studentId, d.totalPackage || d.totalPackageAmount, allApprovedFees, allApprovedTxns);
+          
+          const sId = doc.id;
+          const sCustomId = d.studentId ? String(d.studentId).trim() : '';
+
+          // Filter fees for this student
+          const studentFees = allApprovedFees.filter(f => {
+            const fStudentId = f.studentId ? String(f.studentId).trim() : '';
+            return fStudentId === sId || (sCustomId && fStudentId === sCustomId);
+          });
+
+          // Filter transactions for this student
+          const studentTxns = allApprovedTxns.filter(t => {
+            const tStudentId = t.studentId ? String(t.studentId).trim() : '';
+            const tPatientId = t.patientId ? String(t.patientId).trim() : '';
+            return tStudentId === sId || (sCustomId && tStudentId === sCustomId) || tPatientId === sId || (sCustomId && tPatientId === sCustomId);
+          });
+
+          let totalReceived = 0;
+          const syncedTxIds = new Set<string>();
+          const syncedFeeIds = new Set<string>();
+
+          studentFees.forEach(fee => {
+            totalReceived += Number(fee.amount || 0);
+            syncedFeeIds.add(fee.id);
+            if (fee.linkedTransactionId) syncedTxIds.add(fee.linkedTransactionId);
+          });
+
+          studentTxns.forEach(tx => {
+            const cat = String(tx.category || '').toLowerCase();
+            const isFee = cat.includes('fee') || cat.includes('admission') || !!tx.feePaymentId;
+            if (!isFee) return;
+
+            const isSynced = syncedTxIds.has(tx.id) || (tx.feePaymentId && syncedFeeIds.has(tx.feePaymentId));
+            if (!isSynced) {
+              totalReceived += Number(tx.amount || 0);
+            }
+          });
+
+          const pkg = Number(d.totalPackage ?? d.totalPackageAmount ?? 0);
+          const remaining = Math.max(0, pkg - totalReceived);
+          
+          // Calculate pending till now
+          let pendingTillNow = 0;
+          let monthlyDuesTillNow = 0;
+          const admissionDate = d.admissionDate ? toDate(d.admissionDate) : null;
+          const monthlyFee = Number(d.monthlyFee ?? d.expectedFee ?? 0);
+          
+          if (admissionDate) {
+            const now = new Date();
+            const billableMonths = Math.max(0, (now.getFullYear() - admissionDate.getFullYear()) * 12 + (now.getMonth() - admissionDate.getMonth()) + 1);
+            monthlyDuesTillNow = billableMonths * monthlyFee;
+            pendingTillNow = Math.max(0, monthlyDuesTillNow - totalReceived);
+          }
+
           return {
             id: doc.id,
             name: d.name || '—',
@@ -289,26 +351,32 @@ export default function AdminReportsPage() {
             contact: d.contact || d.phone || d.guardianPhone || d.fatherContact || '—',
             status: d.status || '',
             activity: d.activity || 'Active',
-            admissionDate: d.admissionDate ? toDate(d.admissionDate) : null,
-            monthlyFee: Number(d.monthlyFee ?? d.expectedFee ?? 0),
-            totalPackage: Number(d.totalPackage ?? d.totalPackageAmount ?? 0),
+            admissionDate,
+            monthlyFee,
+            totalPackage: pkg,
             overallRemaining: remaining,
+            pendingTillNow
           };
         });
 
-        if (studentGroup === 'active') {
-          students = students.filter(s => (s.activity || 'Active') === 'Active' && s.status !== 'Left');
-        } else if (studentGroup === 'inactive') {
-          students = students.filter(s => (s.activity || '').toLowerCase() === 'inactive' || (s.status || '').toLowerCase() === 'inactive');
-        } else if (studentGroup === 'completed') {
-          students = students.filter(s => ['pass', 'overall pass', 'second year pass', 'first year pass'].includes(String(s.status).toLowerCase()));
-        } else if (studentGroup === 'left') {
-          students = students.filter(s => String(s.status).toLowerCase() === 'left');
-        } else if (studentGroup === 'failed') {
-          students = students.filter(s => ['fail', 'overall fail', 'second year fail', 'first year fail'].includes(String(s.status).toLowerCase()));
-        } else if (studentGroup === 'no_status') {
-          students = students.filter(s => !s.status);
-        }
+        // Filter based on selectedStatuses checkboxes
+        students = students.filter(s => {
+          const isLeft = String(s.status).toLowerCase() === 'left';
+          const isActive = (s.activity || 'Active') === 'Active' && !isLeft;
+          const isInactive = (s.activity || '').toLowerCase() === 'inactive' || (s.status || '').toLowerCase() === 'inactive';
+          const isCompleted = ['pass', 'overall pass', 'second year pass', 'first year pass'].includes(String(s.status).toLowerCase());
+          const isFailed = ['fail', 'overall fail', 'second year fail', 'first year fail'].includes(String(s.status).toLowerCase());
+          const isNoStatus = !s.status;
+
+          if (selectedStatuses.active && isActive) return true;
+          if (selectedStatuses.inactive && isInactive) return true;
+          if (selectedStatuses.completed && isCompleted) return true;
+          if (selectedStatuses.failed && isFailed) return true;
+          if (selectedStatuses.left && isLeft) return true;
+          if (selectedStatuses.no_status && isNoStatus) return true;
+
+          return false;
+        });
 
         if (filterByDateType === 'admission') {
           students = students.filter(s => {
@@ -318,7 +386,10 @@ export default function AdminReportsPage() {
         }
 
         const totalStudentsCount = students.length;
-        const totalActiveCount = students.filter(s => (s.activity || 'Active') === 'Active' && s.status !== 'Left').length;
+        const totalActiveCount = students.filter(s => {
+          const isLeft = String(s.status).toLowerCase() === 'left';
+          return (s.activity || 'Active') === 'Active' && !isLeft;
+        }).length;
         const totalInactiveCount = students.filter(s => (s.activity || '').toLowerCase() === 'inactive' || (s.status || '').toLowerCase() === 'inactive').length;
         const totalCompletedCount = students.filter(s => ['pass', 'overall pass', 'second year pass', 'first year pass'].includes(String(s.status).toLowerCase())).length;
         const totalLeftCount = students.filter(s => String(s.status).toLowerCase() === 'left').length;
@@ -602,21 +673,64 @@ export default function AdminReportsPage() {
           {reportFocus === 'students' && (
             <div className="border-t border-gray-100 pt-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Student Status</label>
-                  <select
-                    value={studentGroup}
-                    onChange={e => setStudentGroup(e.target.value as any)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500 text-black font-bold"
-                  >
-                    <option value="all">Show All Students</option>
-                    <option value="active">Active Students Only</option>
-                    <option value="inactive">Inactive Students Only</option>
-                    <option value="completed">Passed Students Only</option>
-                    <option value="left">Left Students Only</option>
-                    <option value="failed">Failed Students Only</option>
-                    <option value="no_status">No Status Only</option>
-                  </select>
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Student Status</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                    <label className="flex items-center gap-2 text-xs font-bold text-gray-700 select-none cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedStatuses.active}
+                        onChange={e => setSelectedStatuses(prev => ({ ...prev, active: e.target.checked }))}
+                        className="rounded border-gray-300 text-teal-600 focus:ring-teal-500 w-4 h-4 cursor-pointer"
+                      />
+                      Active
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-bold text-gray-700 select-none cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedStatuses.inactive}
+                        onChange={e => setSelectedStatuses(prev => ({ ...prev, inactive: e.target.checked }))}
+                        className="rounded border-gray-300 text-teal-600 focus:ring-teal-500 w-4 h-4 cursor-pointer"
+                      />
+                      Inactive
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-bold text-gray-700 select-none cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedStatuses.completed}
+                        onChange={e => setSelectedStatuses(prev => ({ ...prev, completed: e.target.checked }))}
+                        className="rounded border-gray-300 text-teal-600 focus:ring-teal-500 w-4 h-4 cursor-pointer"
+                      />
+                      Passed
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-bold text-gray-700 select-none cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedStatuses.failed}
+                        onChange={e => setSelectedStatuses(prev => ({ ...prev, failed: e.target.checked }))}
+                        className="rounded border-gray-300 text-teal-600 focus:ring-teal-500 w-4 h-4 cursor-pointer"
+                      />
+                      Failed
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-bold text-gray-700 select-none cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedStatuses.left}
+                        onChange={e => setSelectedStatuses(prev => ({ ...prev, left: e.target.checked }))}
+                        className="rounded border-gray-300 text-teal-600 focus:ring-teal-500 w-4 h-4 cursor-pointer"
+                      />
+                      Left
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-bold text-gray-700 select-none cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedStatuses.no_status}
+                        onChange={e => setSelectedStatuses(prev => ({ ...prev, no_status: e.target.checked }))}
+                        className="rounded border-gray-300 text-teal-600 focus:ring-teal-500 w-4 h-4 cursor-pointer"
+                      />
+                      No Status
+                    </label>
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Date Scope Filter</label>
@@ -964,6 +1078,18 @@ export default function AdminReportsPage() {
                               </div>
                             </th>
                           )}
+                          {selectedColumns.pendingTillNow && (
+                            <th className="px-3 py-3 text-right font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('pendingTillNow')}>
+                              <div className="flex items-center justify-end gap-1">
+                                Pending Till Now
+                                {sortField === 'pendingTillNow' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                          )}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-150">
@@ -972,7 +1098,7 @@ export default function AdminReportsPage() {
                             {selectedColumns.name && (
                               <td className="px-3 py-2.5 text-gray-855 font-bold">
                                 {s.name}
-                                {s.status !== 'Active' && <span className="ml-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">{s.status}</span>}
+                                {s.status && s.status !== 'Active' && <span className="ml-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">{s.status}</span>}
                               </td>
                             )}
                             {selectedColumns.fatherName && <td className="px-3 py-2.5 text-gray-600">{s.fatherName}</td>}
@@ -983,10 +1109,15 @@ export default function AdminReportsPage() {
                             {selectedColumns.admissionDate && <td className="px-3 py-2.5 text-gray-655">{s.admissionDate ? formatDateDMY(s.admissionDate) : '—'}</td>}
                             {selectedColumns.monthlyFee && <td className="px-3 py-2.5 text-right text-gray-800">{formatPKR(s.monthlyFee)}</td>}
                             {selectedColumns.totalPackage && <td className="px-3 py-2.5 text-right text-gray-800">{formatPKR(s.totalPackage)}</td>}
-                            {selectedColumns.status && <td className="px-3 py-2.5 text-gray-600">{s.status}</td>}
+                            {selectedColumns.status && <td className="px-3 py-2.5 text-gray-600">{s.status || 'No Status'}</td>}
                             {selectedColumns.remaining && (
                               <td className={`px-3 py-2.5 text-right font-black ${s.overallRemaining > 0 ? 'text-rose-600 bg-rose-50/20' : 'text-blue-700 bg-blue-50/20'}`}>
                                 {formatPKR(s.overallRemaining)}
+                              </td>
+                            )}
+                            {selectedColumns.pendingTillNow && (
+                              <td className={`px-3 py-2.5 text-right font-black ${s.pendingTillNow > 0 ? 'text-amber-600 bg-amber-50/20' : 'text-green-700 bg-green-50/20'}`}>
+                                {formatPKR(s.pendingTillNow)}
                               </td>
                             )}
                           </tr>
