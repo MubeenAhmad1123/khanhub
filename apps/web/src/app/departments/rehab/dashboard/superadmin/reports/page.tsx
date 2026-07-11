@@ -45,13 +45,66 @@ function formatCat(cat: string) {
 
 function calculatePatientOverallRemaining(
   patient: any,
-  allFees: any[]
+  allTxns: any[]
 ): number {
-  const patientFees = allFees.filter(f => f.patientId === patient.id);
-  if (patientFees.length === 0) {
-    return Number(patient.remaining ?? patient.overallRemaining ?? patient.remainingBalance ?? 0);
+  const patientId = patient.id;
+  const patientTxns = allTxns.filter(t => t.patientId === patientId);
+
+  let totalReceived = 0;
+  let totalMedicineCharges = 0;
+  let totalDiscount = 0;
+
+  patientTxns.forEach((tx) => {
+    const amount = Number(tx.amount) || 0;
+    const discount = Number(tx.discount || 0);
+    const returnAmount = Number(tx.returnAmount || tx.return || 0);
+    const netAmount = amount - returnAmount;
+
+    if (tx.category === 'medicine_charge') {
+      totalMedicineCharges += netAmount;
+    } else if (tx.category === 'canteen_deposit' || tx.category === 'canteen' || tx.category === 'canteen_expense') {
+      // Exclude canteen
+    } else {
+      totalReceived += netAmount;
+      totalDiscount += discount;
+    }
+  });
+
+  const monthlyPkg = Number(patient.monthlyPackage || patient.packageAmount || 0);
+  
+  const safeToDateLocal = (d: any) => {
+    if (!d) return new Date();
+    if (d.toDate) return d.toDate();
+    return new Date(d);
+  };
+
+  let admissionDate = safeToDateLocal(patient.admissionDate);
+  let endDate = new Date();
+  if (patient.isActive === false && patient.dischargeDate) {
+    endDate = safeToDateLocal(patient.dischargeDate);
   }
-  return patientFees.reduce((sum, f) => sum + Number(f.amountRemaining || 0), 0);
+
+  // Calculate billable calendar months for current stay
+  const currentStayMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth()) + 1;
+  const currentStayPackage = Math.max(1, currentStayMonths) * monthlyPkg;
+
+  // Calculate historical stays using calendar months
+  let historicalStayPackage = 0;
+  const history = patient.rejoinHistory || [];
+  history.forEach((stay: any) => {
+    const sAdmission = safeToDateLocal(stay.admissionDate);
+    const sDischarge = stay.dischargeDate ? safeToDateLocal(stay.dischargeDate) : new Date();
+    const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || 0);
+
+    const sMonths = (sDischarge.getFullYear() - sAdmission.getFullYear()) * 12 + (sDischarge.getMonth() - sAdmission.getMonth()) + 1;
+    historicalStayPackage += Math.max(1, sMonths) * sMonthlyPkg;
+  });
+
+  const totalStayPackage = currentStayPackage + historicalStayPackage;
+  const finalMedicineCharges = typeof patient.medicineCharges === 'number' ? patient.medicineCharges : totalMedicineCharges;
+  const calculatedRemaining = (totalStayPackage + finalMedicineCharges) - totalReceived - totalDiscount + Number(patient.manualRemainingAdjustment || 0);
+
+  return Math.max(0, calculatedRemaining);
 }
 
 export default function SuperAdminReportsPage() {
@@ -226,14 +279,14 @@ export default function SuperAdminReportsPage() {
 
       if (reportFocus === 'patients') {
         const patientsSnap = await getDocs(collection(db, 'rehab_patients'));
-        const feesSnap = await getDocs(collection(db, 'rehab_fees'));
-        const allFees = feesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+        const txnSnap = await getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'approved')));
+        const allTxns = txnSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
 
         let patients = patientsSnap.docs.map(doc => {
           const data = doc.data() as any;
           const patientId = doc.id;
           const patientObj = { id: patientId, ...data };
-          const overallRemaining = calculatePatientOverallRemaining(patientObj, allFees);
+          const overallRemaining = calculatePatientOverallRemaining(patientObj, allTxns);
 
           return {
             id: doc.id,
