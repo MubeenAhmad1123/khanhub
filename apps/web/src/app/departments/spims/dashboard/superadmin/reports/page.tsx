@@ -330,15 +330,15 @@ export default function SuperAdminReportsPage() {
           
           // Calculate pending till now
           let pendingTillNow = 0;
-          let monthlyDuesTillNow = 0;
           const admissionDate = d.admissionDate ? toDate(d.admissionDate) : null;
           const monthlyFee = Number(d.monthlyFee ?? d.expectedFee ?? 0);
           
-          if (admissionDate) {
+          if (remaining > 0 && admissionDate && monthlyFee > 0) {
             const now = new Date();
             const billableMonths = Math.max(0, (now.getFullYear() - admissionDate.getFullYear()) * 12 + (now.getMonth() - admissionDate.getMonth()) + 1);
-            monthlyDuesTillNow = billableMonths * monthlyFee;
-            pendingTillNow = Math.max(0, monthlyDuesTillNow - totalReceived);
+            const monthsPaid = totalReceived / monthlyFee;
+            const unpaidMonths = Math.max(0, billableMonths - monthsPaid);
+            pendingTillNow = Math.max(0, Math.min(remaining, unpaidMonths * monthlyFee));
           }
 
           return {
