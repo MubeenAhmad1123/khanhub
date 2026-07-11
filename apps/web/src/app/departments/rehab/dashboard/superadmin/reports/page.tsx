@@ -215,8 +215,97 @@ export default function SuperAdminReportsPage() {
 
       if (reportFocus === 'patients') {
         const patientsSnap = await getDocs(collection(db, 'rehab_patients'));
+        const txnSnap = await getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'approved')));
+        const allTxns = txnSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+
         let patients = patientsSnap.docs.map(doc => {
           const data = doc.data() as any;
+          const patientId = doc.id;
+
+          const patientTxns = allTxns.filter(t => t.patientId === patientId);
+
+          let totalReceived = 0;
+          let totalMedicineCharges = 0;
+          let totalDiscount = 0;
+
+          patientTxns.forEach((tx) => {
+            const amount = Number(tx.amount) || 0;
+            const discount = Number(tx.discount || 0);
+            const returnAmount = Number(tx.returnAmount || tx.return || 0);
+            const netAmount = amount - returnAmount;
+
+            if (tx.category === 'medicine_charge') {
+              totalMedicineCharges += netAmount;
+            } else if (tx.category === 'canteen_deposit' || tx.category === 'canteen' || tx.category === 'canteen_expense') {
+              // Exclude canteen
+            } else {
+              totalReceived += netAmount;
+              totalDiscount += discount;
+            }
+          });
+
+          const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
+          
+          const safeToDateLocal = (d: any) => {
+            if (!d) return new Date();
+            if (d.toDate) return d.toDate();
+            return new Date(d);
+          };
+
+          let admissionDate = safeToDateLocal(data.admissionDate);
+          let endDate = new Date();
+          if (data.isActive === false && data.dischargeDate) {
+            endDate = safeToDateLocal(data.dischargeDate);
+          }
+
+          const rawMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth());
+          let completedMonths = rawMonths;
+          let hasExtraDays = false;
+
+          if (endDate.getDate() < admissionDate.getDate()) {
+            completedMonths = rawMonths - 1;
+            hasExtraDays = true;
+          } else if (endDate.getDate() > admissionDate.getDate()) {
+            completedMonths = rawMonths;
+            hasExtraDays = true;
+          } else {
+            completedMonths = rawMonths;
+            hasExtraDays = false;
+          }
+
+          const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+          const currentStayPackage = billableMonths * monthlyPkg;
+
+          let historicalStayPackage = 0;
+          const history = data.rejoinHistory || [];
+          history.forEach((stay: any) => {
+            const sAdmission = safeToDateLocal(stay.admissionDate);
+            const sDischarge = stay.dischargeDate ? safeToDateLocal(stay.dischargeDate) : new Date();
+            const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || 0);
+
+            const sRawMonths = (sDischarge.getFullYear() - sAdmission.getFullYear()) * 12 + (sDischarge.getMonth() - sAdmission.getMonth());
+            let sCompletedMonths = sRawMonths;
+            let sHasExtraDays = false;
+
+            if (sDischarge.getDate() < sAdmission.getDate()) {
+              sCompletedMonths = sRawMonths - 1;
+              sHasExtraDays = true;
+            } else if (sDischarge.getDate() > sAdmission.getDate()) {
+              sCompletedMonths = sRawMonths;
+              sHasExtraDays = true;
+            } else {
+              sCompletedMonths = sRawMonths;
+              sHasExtraDays = false;
+            }
+
+            const sBillableMonths = Math.max(1, sCompletedMonths + (sHasExtraDays ? 1 : 0));
+            historicalStayPackage += sBillableMonths * sMonthlyPkg;
+          });
+
+          const totalStayPackage = currentStayPackage + historicalStayPackage;
+          const finalMedicineCharges = typeof data.medicineCharges === 'number' ? data.medicineCharges : totalMedicineCharges;
+          const calculatedRemaining = (totalStayPackage + finalMedicineCharges) - totalReceived - totalDiscount + Number(data.manualRemainingAdjustment || 0);
+
           return {
             id: doc.id,
             name: data.name || '—',
@@ -229,8 +318,8 @@ export default function SuperAdminReportsPage() {
             admissionDate: data.admissionDate,
             dischargeDate: data.dischargeDate,
             substanceOfAddiction: data.substanceOfAddiction || (data.reasonsForAdmission?.join(', ') || '—'),
-            monthlyPackage: Number(data.monthlyPackage ?? data.packageAmount ?? 60000),
-            overallRemaining: Number(data.remaining ?? data.overallRemaining ?? data.remainingBalance ?? data.amountRemaining ?? 0),
+            monthlyPackage: monthlyPkg,
+            overallRemaining: Math.max(0, calculatedRemaining),
           };
         });
 
