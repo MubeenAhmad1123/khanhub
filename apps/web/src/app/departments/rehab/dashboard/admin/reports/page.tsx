@@ -42,6 +42,98 @@ function formatCat(cat: string) {
   return cat?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || cat;
 }
 
+function calculatePatientOverallRemaining(
+  patient: any,
+  allTxns: any[]
+): number {
+  const patientId = patient.id;
+  const patientTxns = allTxns.filter(t => t.patientId === patientId);
+
+  let totalReceived = 0;
+  let totalMedicineCharges = 0;
+  let totalDiscount = 0;
+
+  patientTxns.forEach((tx) => {
+    const amount = Number(tx.amount) || 0;
+    const discount = Number(tx.discount || 0);
+    const returnAmount = Number(tx.returnAmount || tx.return || 0);
+    const netAmount = amount - returnAmount;
+
+    if (tx.category === 'medicine_charge') {
+      totalMedicineCharges += netAmount;
+    } else if (tx.category === 'canteen_deposit' || tx.category === 'canteen' || tx.category === 'canteen_expense') {
+      // Exclude canteen
+    } else {
+      totalReceived += netAmount;
+      totalDiscount += discount;
+    }
+  });
+
+  const monthlyPkg = Number(patient.monthlyPackage || patient.packageAmount || 0);
+  
+  const safeToDateLocal = (d: any) => {
+    if (!d) return new Date();
+    if (d.toDate) return d.toDate();
+    return new Date(d);
+  };
+
+  let admissionDate = safeToDateLocal(patient.admissionDate);
+  let endDate = new Date();
+  if (patient.isActive === false && patient.dischargeDate) {
+    endDate = safeToDateLocal(patient.dischargeDate);
+  }
+
+  const rawMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth());
+  let completedMonths = rawMonths;
+  let hasExtraDays = false;
+
+  if (endDate.getDate() < admissionDate.getDate()) {
+    completedMonths = rawMonths - 1;
+    hasExtraDays = true;
+  } else if (endDate.getDate() > admissionDate.getDate()) {
+    completedMonths = rawMonths;
+    hasExtraDays = true;
+  } else {
+    completedMonths = rawMonths;
+    hasExtraDays = false;
+  }
+
+  const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+  const currentStayPackage = billableMonths * monthlyPkg;
+
+  let historicalStayPackage = 0;
+  const history = patient.rejoinHistory || [];
+  history.forEach((stay: any) => {
+    const sAdmission = safeToDateLocal(stay.admissionDate);
+    const sDischarge = stay.dischargeDate ? safeToDateLocal(stay.dischargeDate) : new Date();
+    const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || 0);
+
+    const sRawMonths = (sDischarge.getFullYear() - sAdmission.getFullYear()) * 12 + (sDischarge.getMonth() - sAdmission.getMonth());
+    let sCompletedMonths = sRawMonths;
+    let sHasExtraDays = false;
+
+    if (sDischarge.getDate() < sAdmission.getDate()) {
+      sCompletedMonths = sRawMonths - 1;
+      sHasExtraDays = true;
+    } else if (sDischarge.getDate() > sAdmission.getDate()) {
+      sCompletedMonths = sRawMonths;
+      sHasExtraDays = true;
+    } else {
+      sCompletedMonths = sRawMonths;
+      sHasExtraDays = false;
+    }
+
+    const sBillableMonths = Math.max(1, sCompletedMonths + (sHasExtraDays ? 1 : 0));
+    historicalStayPackage += sBillableMonths * sMonthlyPkg;
+  });
+
+  const totalStayPackage = currentStayPackage + historicalStayPackage;
+  const finalMedicineCharges = typeof patient.medicineCharges === 'number' ? patient.medicineCharges : totalMedicineCharges;
+  const calculatedRemaining = (totalStayPackage + finalMedicineCharges) - totalReceived - totalDiscount + Number(patient.manualRemainingAdjustment || 0);
+
+  return Math.max(0, calculatedRemaining);
+}
+
 export default function AdminReportsPage() {
   const router = useRouter();
   const [session, setSession] = useState<any>(null);
@@ -222,90 +314,8 @@ export default function AdminReportsPage() {
         let patients = patientsSnap.docs.map(doc => {
           const data = doc.data() as any;
           const patientId = doc.id;
-
-          const patientTxns = allTxns.filter(t => t.patientId === patientId);
-
-          let totalReceived = 0;
-          let totalMedicineCharges = 0;
-          let totalDiscount = 0;
-
-          patientTxns.forEach((tx) => {
-            const amount = Number(tx.amount) || 0;
-            const discount = Number(tx.discount || 0);
-            const returnAmount = Number(tx.returnAmount || tx.return || 0);
-            const netAmount = amount - returnAmount;
-
-            if (tx.category === 'medicine_charge') {
-              totalMedicineCharges += netAmount;
-            } else if (tx.category === 'canteen_deposit' || tx.category === 'canteen' || tx.category === 'canteen_expense') {
-              // Exclude canteen
-            } else {
-              totalReceived += netAmount;
-              totalDiscount += discount;
-            }
-          });
-
-          const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
-          
-          const safeToDateLocal = (d: any) => {
-            if (!d) return new Date();
-            if (d.toDate) return d.toDate();
-            return new Date(d);
-          };
-
-          let admissionDate = safeToDateLocal(data.admissionDate);
-          let endDate = new Date();
-          if (data.isActive === false && data.dischargeDate) {
-            endDate = safeToDateLocal(data.dischargeDate);
-          }
-
-          const rawMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth());
-          let completedMonths = rawMonths;
-          let hasExtraDays = false;
-
-          if (endDate.getDate() < admissionDate.getDate()) {
-            completedMonths = rawMonths - 1;
-            hasExtraDays = true;
-          } else if (endDate.getDate() > admissionDate.getDate()) {
-            completedMonths = rawMonths;
-            hasExtraDays = true;
-          } else {
-            completedMonths = rawMonths;
-            hasExtraDays = false;
-          }
-
-          const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
-          const currentStayPackage = billableMonths * monthlyPkg;
-
-          let historicalStayPackage = 0;
-          const history = data.rejoinHistory || [];
-          history.forEach((stay: any) => {
-            const sAdmission = safeToDateLocal(stay.admissionDate);
-            const sDischarge = stay.dischargeDate ? safeToDateLocal(stay.dischargeDate) : new Date();
-            const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || 0);
-
-            const sRawMonths = (sDischarge.getFullYear() - sAdmission.getFullYear()) * 12 + (sDischarge.getMonth() - sAdmission.getMonth());
-            let sCompletedMonths = sRawMonths;
-            let sHasExtraDays = false;
-
-            if (sDischarge.getDate() < sAdmission.getDate()) {
-              sCompletedMonths = sRawMonths - 1;
-              sHasExtraDays = true;
-            } else if (sDischarge.getDate() > sAdmission.getDate()) {
-              sCompletedMonths = sRawMonths;
-              sHasExtraDays = true;
-            } else {
-              sCompletedMonths = sRawMonths;
-              sHasExtraDays = false;
-            }
-
-            const sBillableMonths = Math.max(1, sCompletedMonths + (sHasExtraDays ? 1 : 0));
-            historicalStayPackage += sBillableMonths * sMonthlyPkg;
-          });
-
-          const totalStayPackage = currentStayPackage + historicalStayPackage;
-          const finalMedicineCharges = typeof data.medicineCharges === 'number' ? data.medicineCharges : totalMedicineCharges;
-          const calculatedRemaining = (totalStayPackage + finalMedicineCharges) - totalReceived - totalDiscount + Number(data.manualRemainingAdjustment || 0);
+          const patientObj = { id: patientId, ...data };
+          const overallRemaining = calculatePatientOverallRemaining(patientObj, allTxns);
 
           return {
             id: doc.id,
@@ -319,8 +329,8 @@ export default function AdminReportsPage() {
             admissionDate: data.admissionDate,
             dischargeDate: data.dischargeDate,
             substanceOfAddiction: data.substanceOfAddiction || (data.reasonsForAdmission?.join(', ') || '—'),
-            monthlyPackage: monthlyPkg,
-            overallRemaining: Math.max(0, calculatedRemaining),
+            monthlyPackage: Number(data.monthlyPackage ?? data.packageAmount ?? 60000),
+            overallRemaining,
           };
         });
 
@@ -405,6 +415,9 @@ export default function AdminReportsPage() {
       const feesSnap = await getDocs(collection(db, 'rehab_fees'));
       const allFees = feesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
 
+      const txnAllSnap = await getDocs(query(collection(db, 'rehab_transactions'), where('status', '==', 'approved')));
+      const allTxnsForDues = txnAllSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+
       const monthFees = allFees.filter(fee => fee.month === monthStr);
 
       const patientFeesBreakdown = patients.map(patient => {
@@ -432,7 +445,7 @@ export default function AdminReportsPage() {
           expectedFee,
           paidInPeriod,
           amountPaidThisMonth,
-          overallRemaining: Math.max(expectedFee - paidInPeriod, 0)
+          overallRemaining: calculatePatientOverallRemaining(patient, allTxnsForDues)
         };
       });
 
@@ -1038,7 +1051,7 @@ export default function AdminReportsPage() {
                         <div className="text-xl font-black text-teal-800">{formatPKR(reportData.totalPatientFeesCollectedInPeriod)}</div>
                       </div>
                       <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl text-center">
-                        <div className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Total Outstanding Month Dues</div>
+                        <div className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Total Outstanding Remaining Dues</div>
                         <div className="text-xl font-black text-orange-850">{formatPKR(reportData.totalPatientOutstandingDues)}</div>
                       </div>
                     </div>
@@ -1098,7 +1111,7 @@ export default function AdminReportsPage() {
                             </th>
                             <th className="px-3 py-3 text-right font-bold text-rose-700 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('overallRemaining')}>
                               <div className="flex items-center justify-end gap-1">
-                                Remaining Monthly Dues
+                                Total Remaining Dues
                                 {sortField === 'overallRemaining' ? (
                                   sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
                                 ) : (
