@@ -46,7 +46,11 @@ const getTxDisplayDescription = (tx: any): string => {
       return `Expense: ${details.reason || tx.description || 'General Expense'}`;
     }
     if (details.type === 'fee') {
-      const feeLabel = details.feeType === 'checkup' ? 'Checkup Fee' : 'USG Fee';
+      let feeLabel = 'Checkup Fee';
+      if (details.feeType === 'usg') feeLabel = 'USG Fee';
+      else if (details.feeType === 'bsr') feeLabel = 'BSR Fee';
+      else if (details.feeType === 'hb_test') feeLabel = 'HB Test Fee';
+      else if (details.feeType === 'custom') feeLabel = details.customFeeName || 'Custom Fee';
       return `Fee: ${feeLabel}${tx.description ? ` (${tx.description})` : ''}`;
     }
     if (details.type === 'medicine') {

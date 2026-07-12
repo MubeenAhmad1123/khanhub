@@ -154,7 +154,8 @@ export default function CashierStationPage() {
 
   // Refined Hospital Cashier States for Common Hospital
   const [hospitalIncomeType, setHospitalIncomeType] = useState<'fee' | 'medicine' | 'none'>('none');
-  const [hospitalFeeType, setHospitalFeeType] = useState<'checkup' | 'usg' | 'none'>('none');
+  const [hospitalFeeType, setHospitalFeeType] = useState<'checkup' | 'usg' | 'bsr' | 'hb_test' | 'custom' | 'none'>('none');
+  const [hospitalCustomFeeName, setHospitalCustomFeeName] = useState('');
   const [hospitalExpenseReceiver, setHospitalExpenseReceiver] = useState('');
   const [hospitalExpenseReason, setHospitalExpenseReason] = useState('');
   const [hospitalExpenseTime, setHospitalExpenseTime] = useState('');
@@ -230,7 +231,8 @@ export default function CashierStationPage() {
     hospitalReceiverName: '',
     hospitalReason: '',
     hospitalTime: '',
-    hospitalFeeType: 'none' as 'none' | 'checkup' | 'usg',
+    hospitalFeeType: 'none' as 'none' | 'checkup' | 'usg' | 'bsr' | 'hb_test' | 'custom',
+    hospitalCustomFeeName: '',
     hospitalIncomeType: 'none' as 'none' | 'fee' | 'medicine',
   });
   const [updatingDetail, setUpdatingDetail] = useState(false);
@@ -985,7 +987,12 @@ export default function CashierStationPage() {
           }
           if (hospitalIncomeType === 'fee') {
             if (hospitalFeeType === 'none') {
-              const txt = 'Please select Checkup Fee or USG Fee.';
+              const txt = 'Please select a fee type.';
+              toast.error(txt);
+              return setMessage({ type: 'error', text: txt });
+            }
+            if (hospitalFeeType === 'custom' && !hospitalCustomFeeName.trim()) {
+              const txt = 'Please enter a custom fee name.';
               toast.error(txt);
               return setMessage({ type: 'error', text: txt });
             }
@@ -1167,7 +1174,12 @@ export default function CashierStationPage() {
         if (txnType === 'expense') {
           resolvedCategory = { id: 'other_expense', name: 'Other Expense', appliesTo: 'expense' } as any;
         } else if (hospitalIncomeType === 'fee') {
-          resolvedCategory = { id: 'fee', name: hospitalFeeType === 'checkup' ? 'Check-up Fee' : 'USG Fee', appliesTo: 'income' } as any;
+          let feeName = 'Check-up Fee';
+          if (hospitalFeeType === 'usg') feeName = 'USG Fee';
+          else if (hospitalFeeType === 'bsr') feeName = 'BSR Fee';
+          else if (hospitalFeeType === 'hb_test') feeName = 'HB Test Fee';
+          else if (hospitalFeeType === 'custom') feeName = hospitalCustomFeeName.trim();
+          resolvedCategory = { id: 'fee', name: feeName, appliesTo: 'income' } as any;
         } else if (hospitalIncomeType === 'medicine') {
           resolvedCategory = { id: 'medicine_charge', name: 'Medicine / Treatment', appliesTo: 'income' } as any;
         }
@@ -1180,7 +1192,12 @@ export default function CashierStationPage() {
         if (txnType === 'expense') {
           finalDescription = `Received by: ${hospitalExpenseReceiver} | Reason: ${hospitalExpenseReason} | Time: ${hospitalExpenseTime}${description ? ` | Note: ${description}` : ''}`;
         } else if (hospitalIncomeType === 'fee') {
-          finalDescription = `${hospitalFeeType === 'checkup' ? 'Check-up Fee' : 'USG Fee'} for ${hospitalFeePatientName} | Time: ${hospitalFeeTime}${description ? ` | Note: ${description}` : ''}`;
+          let feeName = 'Check-up Fee';
+          if (hospitalFeeType === 'usg') feeName = 'USG Fee';
+          else if (hospitalFeeType === 'bsr') feeName = 'BSR Fee';
+          else if (hospitalFeeType === 'hb_test') feeName = 'HB Test Fee';
+          else if (hospitalFeeType === 'custom') feeName = hospitalCustomFeeName.trim();
+          finalDescription = `${feeName} for ${hospitalFeePatientName} | Time: ${hospitalFeeTime}${description ? ` | Note: ${description}` : ''}`;
         } else if (hospitalIncomeType === 'medicine') {
           finalDescription = `Medicine/Treatment for ${hospitalMedicinePatientName} | Time: ${hospitalMedicineTime} | Items: ${hospitalMedicineItems.map(i => `${i.name} (Rs ${i.price})`).join(', ')}${description ? ` | Note: ${description}` : ''}`;
         }
@@ -1229,6 +1246,7 @@ export default function CashierStationPage() {
                           ? {
                               type: 'fee',
                               feeType: hospitalFeeType,
+                              customFeeName: hospitalFeeType === 'custom' ? hospitalCustomFeeName.trim() : undefined,
                               patientName: hospitalFeePatientName,
                               time: hospitalFeeTime,
                               date: txDate
@@ -1368,6 +1386,7 @@ export default function CashierStationPage() {
       setHospitalMode('none');
       setHospitalIncomeType('none');
       setHospitalFeeType('none');
+      setHospitalCustomFeeName('');
       setHospitalExpenseReceiver('');
       setHospitalExpenseReason('');
       setHospitalExpenseTime('');
@@ -1424,14 +1443,26 @@ export default function CashierStationPage() {
             };
             finalDescription = `Received by: ${editDetailForm.hospitalReceiverName.trim()} | Reason: ${editDetailForm.hospitalReason.trim()} | Time: ${editDetailForm.hospitalTime.trim()}${editDetailForm.description ? ` | Note: ${editDetailForm.description}` : ''}`;
           } else if (editDetailForm.hospitalIncomeType === 'fee') {
+            if (editDetailForm.hospitalFeeType === 'custom' && !editDetailForm.hospitalCustomFeeName.trim()) {
+              toast.error('Please enter a custom fee name');
+              setUpdatingDetail(false);
+              return;
+            }
             finalHospitalDetails = {
               ...details,
               feeType: editDetailForm.hospitalFeeType,
+              customFeeName: editDetailForm.hospitalFeeType === 'custom' ? editDetailForm.hospitalCustomFeeName.trim() : undefined,
               patientName: editDetailForm.hospitalPatientName.trim(),
               time: editDetailForm.hospitalTime.trim(),
               date: editDetailForm.date,
             };
-            finalDescription = `${editDetailForm.hospitalFeeType === 'checkup' ? 'Check-up Fee' : 'USG Fee'} for ${editDetailForm.hospitalPatientName.trim()} | Time: ${editDetailForm.hospitalTime.trim()}${editDetailForm.description ? ` | Note: ${editDetailForm.description}` : ''}`;
+            let feeName = 'Check-up Fee';
+            if (editDetailForm.hospitalFeeType === 'usg') feeName = 'USG Fee';
+            else if (editDetailForm.hospitalFeeType === 'bsr') feeName = 'BSR Fee';
+            else if (editDetailForm.hospitalFeeType === 'hb_test') feeName = 'HB Test Fee';
+            else if (editDetailForm.hospitalFeeType === 'custom') feeName = editDetailForm.hospitalCustomFeeName.trim();
+
+            finalDescription = `${feeName} for ${editDetailForm.hospitalPatientName.trim()} | Time: ${editDetailForm.hospitalTime.trim()}${editDetailForm.description ? ` | Note: ${editDetailForm.description}` : ''}`;
           } else if (editDetailForm.hospitalIncomeType === 'medicine') {
             finalHospitalDetails = {
               ...details,
@@ -1453,6 +1484,16 @@ export default function CashierStationPage() {
         }
       }
 
+      let feeCategoryName = editDetailForm.categoryName;
+      if (deptCode === 'hospital' && editDetailForm.hospitalIncomeType === 'fee') {
+        let feeName = 'Check-up Fee';
+        if (editDetailForm.hospitalFeeType === 'usg') feeName = 'USG Fee';
+        else if (editDetailForm.hospitalFeeType === 'bsr') feeName = 'BSR Fee';
+        else if (editDetailForm.hospitalFeeType === 'hb_test') feeName = 'HB Test Fee';
+        else if (editDetailForm.hospitalFeeType === 'custom') feeName = editDetailForm.hospitalCustomFeeName.trim();
+        feeCategoryName = feeName;
+      }
+
       if (isApproved) {
         // If it is approved, call the server action
         const { editApprovedTransaction } = await import('@/app/hq/actions/approvals');
@@ -1463,7 +1504,7 @@ export default function CashierStationPage() {
           date: editDetailForm.date,
           description: finalDescription,
           category: editDetailForm.category || undefined,
-          categoryName: editDetailForm.categoryName || undefined,
+          categoryName: feeCategoryName || undefined,
           hospitalDayCloseShift: detailModalTx.hospitalDayCloseShift ? editDetailForm.hospitalShift : undefined,
           hospitalPatientDetails: finalHospitalDetails || undefined,
           _collection: detailModalTx._collection,
@@ -1486,9 +1527,9 @@ export default function CashierStationPage() {
         };
         if (editDetailForm.category) {
           updatePayload.category = editDetailForm.category;
-          if (editDetailForm.categoryName) {
-            updatePayload.categoryName = editDetailForm.categoryName;
-          }
+        }
+        if (feeCategoryName) {
+          updatePayload.categoryName = feeCategoryName;
         }
         if (detailModalTx.hospitalDayCloseShift) {
           updatePayload.hospitalDayCloseShift = editDetailForm.hospitalShift;
@@ -1515,7 +1556,7 @@ export default function CashierStationPage() {
         description: finalDescription,
         ...(detailModalTx.hospitalDayCloseShift ? { hospitalDayCloseShift: editDetailForm.hospitalShift } : {}),
         ...(editDetailForm.category ? { category: editDetailForm.category } : {}),
-        ...(editDetailForm.categoryName ? { categoryName: editDetailForm.categoryName } : {}),
+        ...(feeCategoryName ? { categoryName: feeCategoryName } : {}),
         ...(finalHospitalDetails ? { 
           hospitalPatientDetails: finalHospitalDetails,
           patientName: finalHospitalDetails.patientName || finalHospitalDetails.receiverName || 'Inline Patient'
@@ -2266,29 +2307,43 @@ export default function CashierStationPage() {
                               <div className="space-y-4 pt-4 border-t border-zinc-200/60 animate-in fade-in duration-300">
                                 <div className="space-y-4">
                                   <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Fee Category</label>
-                                  <div className="grid grid-cols-2 gap-3">
-                                    <button
-                                      type="button"
-                                      onClick={() => setHospitalFeeType('checkup')}
-                                      className={cn(
-                                        "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
-                                        hospitalFeeType === 'checkup' ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-indigo-200"
-                                      )}
-                                    >
-                                      Checkup Fee
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setHospitalFeeType('usg')}
-                                      className={cn(
-                                        "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
-                                        hospitalFeeType === 'usg' ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-indigo-200"
-                                      )}
-                                    >
-                                      USG Fee
-                                    </button>
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {([
+                                      { id: 'checkup', label: 'Checkup' },
+                                      { id: 'usg', label: 'USG' },
+                                      { id: 'bsr', label: 'BSR' },
+                                      { id: 'hb_test', label: 'HB Test' },
+                                      { id: 'custom', label: 'Custom' },
+                                    ] as const).map((t) => (
+                                      <button
+                                        key={t.id}
+                                        type="button"
+                                        onClick={() => setHospitalFeeType(t.id)}
+                                        className={cn(
+                                          "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                          hospitalFeeType === t.id
+                                            ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10"
+                                            : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
+                                        )}
+                                      >
+                                        {t.label}
+                                      </button>
+                                    ))}
                                   </div>
                                 </div>
+
+                                {hospitalFeeType === 'custom' && (
+                                  <div className="space-y-2 pt-2 animate-in slide-in-from-top-2 duration-300">
+                                    <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Custom Fee Name</label>
+                                    <input
+                                      type="text"
+                                      value={hospitalCustomFeeName}
+                                      onChange={(e) => setHospitalCustomFeeName(e.target.value)}
+                                      className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                      placeholder="e.g. Drip Fee..."
+                                    />
+                                  </div>
+                                )}
 
                                 <div className="space-y-2">
                                   <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Patient Name</label>
@@ -3235,31 +3290,49 @@ export default function CashierStationPage() {
                             </div>
 
                             {/* Fee Type selection if fee */}
-                            {editDetailForm.hospitalIncomeType === 'fee' && (
-                              <div className="space-y-2">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Fee Sub-type</label>
-                                <div className="grid grid-cols-2 gap-3">
-                                  {([
-                                    { id: 'checkup', label: 'Checkup Fee' },
-                                    { id: 'usg', label: 'USG Fee' },
-                                  ] as const).map((t) => (
-                                    <button
-                                      key={t.id}
-                                      type="button"
-                                      onClick={() => setEditDetailForm({ ...editDetailForm, hospitalFeeType: t.id })}
-                                      className={cn(
-                                        "py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all",
-                                        editDetailForm.hospitalFeeType === t.id
-                                          ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10"
-                                          : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-300"
-                                      )}
-                                    >
-                                      {t.label}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+                             {editDetailForm.hospitalIncomeType === 'fee' && (
+                               <div className="space-y-4">
+                                 <div className="space-y-2">
+                                   <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Fee Sub-type</label>
+                                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                     {([
+                                       { id: 'checkup', label: 'Checkup' },
+                                       { id: 'usg', label: 'USG' },
+                                       { id: 'bsr', label: 'BSR' },
+                                       { id: 'hb_test', label: 'HB Test' },
+                                       { id: 'custom', label: 'Custom' },
+                                     ] as const).map((t) => (
+                                       <button
+                                         key={t.id}
+                                         type="button"
+                                         onClick={() => setEditDetailForm({ ...editDetailForm, hospitalFeeType: t.id })}
+                                         className={cn(
+                                           "py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all",
+                                           editDetailForm.hospitalFeeType === t.id
+                                             ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10"
+                                             : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-300"
+                                         )}
+                                       >
+                                         {t.label}
+                                       </button>
+                                     ))}
+                                   </div>
+                                 </div>
+
+                                 {editDetailForm.hospitalFeeType === 'custom' && (
+                                   <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                                     <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Custom Fee Name</label>
+                                     <input
+                                       type="text"
+                                       value={editDetailForm.hospitalCustomFeeName}
+                                       onChange={(e) => setEditDetailForm({ ...editDetailForm, hospitalCustomFeeName: e.target.value })}
+                                       className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20"
+                                       placeholder="e.g. Drip Fee..."
+                                     />
+                                   </div>
+                                 )}
+                               </div>
+                             )}
                           </>
                         )}
 
@@ -3431,6 +3504,7 @@ export default function CashierStationPage() {
                               hospitalReason: details.reason || '',
                               hospitalTime: details.time || '',
                               hospitalFeeType: details.feeType || 'none',
+                              hospitalCustomFeeName: details.customFeeName || '',
                               hospitalIncomeType: details.type || 'none',
                             });
                           }}
