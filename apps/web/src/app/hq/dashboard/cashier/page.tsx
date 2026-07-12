@@ -1246,7 +1246,7 @@ export default function CashierStationPage() {
                           ? {
                               type: 'fee',
                               feeType: hospitalFeeType,
-                              customFeeName: hospitalFeeType === 'custom' ? hospitalCustomFeeName.trim() : undefined,
+                              ...(hospitalFeeType === 'custom' ? { customFeeName: hospitalCustomFeeName.trim() } : {}),
                               patientName: hospitalFeePatientName,
                               time: hospitalFeeTime,
                               date: txDate
@@ -1451,11 +1451,15 @@ export default function CashierStationPage() {
             finalHospitalDetails = {
               ...details,
               feeType: editDetailForm.hospitalFeeType,
-              customFeeName: editDetailForm.hospitalFeeType === 'custom' ? editDetailForm.hospitalCustomFeeName.trim() : undefined,
               patientName: editDetailForm.hospitalPatientName.trim(),
               time: editDetailForm.hospitalTime.trim(),
               date: editDetailForm.date,
             };
+            if (editDetailForm.hospitalFeeType === 'custom') {
+              finalHospitalDetails.customFeeName = editDetailForm.hospitalCustomFeeName.trim();
+            } else {
+              delete finalHospitalDetails.customFeeName;
+            }
             let feeName = 'Check-up Fee';
             if (editDetailForm.hospitalFeeType === 'usg') feeName = 'USG Fee';
             else if (editDetailForm.hospitalFeeType === 'bsr') feeName = 'BSR Fee';
