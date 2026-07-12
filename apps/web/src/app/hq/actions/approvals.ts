@@ -1031,6 +1031,9 @@ export async function editApprovedTransaction(params: {
     }
     if (params.hospitalPatientDetails !== undefined) {
       updatePayload.hospitalPatientDetails = params.hospitalPatientDetails;
+      if (params.hospitalPatientDetails) {
+        updatePayload.patientName = params.hospitalPatientDetails.patientName || params.hospitalPatientDetails.receiverName || 'Inline Patient';
+      }
     }
     await ref.set(updatePayload, { merge: true });
 

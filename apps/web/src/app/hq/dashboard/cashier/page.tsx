@@ -935,7 +935,7 @@ export default function CashierStationPage() {
     setMessage(null);
 
     const isHospitalDayClose = departmentCode === 'hospital' && hospitalMode === 'day_close';
-    const isHospitalCommonAllTx = departmentCode === 'hospital' && selectedEntity?.name?.toLowerCase().includes('common') && hospitalMode === 'all_transactions';
+    const isHospitalCommonAllTx = departmentCode === 'hospital' && hospitalMode === 'all_transactions';
     const missingReason = proofReason.trim();
 
     if (!isHospitalDayClose) {
@@ -1207,7 +1207,14 @@ export default function CashierStationPage() {
             : departmentCode === 'hospital'
               ? {
                   patientId: hospitalMode === 'all_transactions' ? (selectedEntity?.id || 'hospital-inline') : 'hospital-day-close',
-                  patientName: hospitalMode === 'all_transactions' ? (selectedEntity?.name || 'Inline Patient') : 'Day Close Transaction',
+                  patientName: hospitalMode === 'all_transactions' 
+                    ? (selectedEntity?.name || 
+                       (txnType === 'expense' 
+                         ? hospitalExpenseReceiver.trim() 
+                         : hospitalIncomeType === 'fee' 
+                           ? hospitalFeePatientName.trim() 
+                           : hospitalMedicinePatientName.trim()) || 'Inline Patient') 
+                    : 'Day Close Transaction',
                   hospitalPatientDetails: hospitalMode === 'all_transactions' 
                     ? (isHospitalCommonAllTx 
                       ? (txnType === 'expense'
@@ -1398,7 +1405,7 @@ export default function CashierStationPage() {
 
       if (deptCode === 'hospital' && detailModalTx.hospitalPatientDetails) {
         const details = detailModalTx.hospitalPatientDetails;
-        const isCommonTx = detailModalTx.patientId === 'hospital-inline' || (detailModalTx.patientName && String(detailModalTx.patientName).toLowerCase().includes('common')) || (selectedEntity && String(selectedEntity.name).toLowerCase().includes('common'));
+        const isCommonTx = detailModalTx.patientId === 'hospital-inline' || (detailModalTx.patientName && String(detailModalTx.patientName).toLowerCase().includes('common')) || detailModalTx.departmentCode === 'hospital';
         
         if (isCommonTx) {
           if (detailModalTx.type === 'expense') {
@@ -1481,6 +1488,7 @@ export default function CashierStationPage() {
         }
         if (finalHospitalDetails) {
           updatePayload.hospitalPatientDetails = finalHospitalDetails;
+          updatePayload.patientName = finalHospitalDetails.patientName || finalHospitalDetails.receiverName || 'Inline Patient';
         }
         await updateDoc(docRef, updatePayload);
       }
@@ -1495,7 +1503,10 @@ export default function CashierStationPage() {
         ...(detailModalTx.hospitalDayCloseShift ? { hospitalDayCloseShift: editDetailForm.hospitalShift } : {}),
         ...(editDetailForm.category ? { category: editDetailForm.category } : {}),
         ...(editDetailForm.categoryName ? { categoryName: editDetailForm.categoryName } : {}),
-        ...(finalHospitalDetails ? { hospitalPatientDetails: finalHospitalDetails } : {}),
+        ...(finalHospitalDetails ? { 
+          hospitalPatientDetails: finalHospitalDetails,
+          patientName: finalHospitalDetails.patientName || finalHospitalDetails.receiverName || 'Inline Patient'
+        } : {}),
       };
 
       setDetailModalTx(updatedTx);
@@ -2499,7 +2510,7 @@ export default function CashierStationPage() {
                         <div className="space-y-6">
                           <div className="flex items-center justify-between px-4">
                             <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Amount (PKR)</label>
-                            {(selectedEntity?.name?.toLowerCase().includes('common') && txnType === 'income' && hospitalIncomeType === 'medicine') ? (
+                            {((departmentCode === 'hospital' || selectedEntity?.name?.toLowerCase().includes('common')) && txnType === 'income' && hospitalIncomeType === 'medicine') ? (
                               <div className="flex items-center gap-3">
                                 <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce" />
                                 <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Auto Summed From Items</span>
@@ -2519,7 +2530,7 @@ export default function CashierStationPage() {
                               type="number"
                               step="0.01"
                               value={amount}
-                              disabled={selectedEntity?.name?.toLowerCase().includes('common') && txnType === 'income' && hospitalIncomeType === 'medicine'}
+                              disabled={(departmentCode === 'hospital' || selectedEntity?.name?.toLowerCase().includes('common')) && txnType === 'income' && hospitalIncomeType === 'medicine'}
                               onChange={(e) => setAmount(e.target.value)}
                               placeholder="0.00"
                               className="w-full h-12 sm:h-14 xl:h-16 bg-zinc-50 border-2 border-transparent rounded-2xl pl-12 sm:pl-14 pr-6 text-base sm:text-lg md:text-xl xl:text-2xl font-black text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200 tabular-nums disabled:opacity-75"
@@ -2597,7 +2608,7 @@ export default function CashierStationPage() {
                           </div>
                         </div>
 
-                        {(!selectedEntity?.name?.toLowerCase().includes('common') || hospitalMode !== 'all_transactions') && (
+                        {((departmentCode !== 'hospital' && !selectedEntity?.name?.toLowerCase().includes('common')) || hospitalMode === 'none') && (
                           <div className="space-y-6">
                             <div className="flex items-center justify-between px-4">
                               <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Category</label>
