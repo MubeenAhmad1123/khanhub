@@ -152,6 +152,20 @@ export default function CashierStationPage() {
   const [hospitalIncomeAmount, setHospitalIncomeAmount] = useState('');
   const [hospitalExpenseAmount, setHospitalExpenseAmount] = useState('');
 
+  // Refined Hospital Cashier States for Common Hospital
+  const [hospitalIncomeType, setHospitalIncomeType] = useState<'fee' | 'medicine' | 'none'>('none');
+  const [hospitalFeeType, setHospitalFeeType] = useState<'checkup' | 'usg' | 'none'>('none');
+  const [hospitalExpenseReceiver, setHospitalExpenseReceiver] = useState('');
+  const [hospitalExpenseReason, setHospitalExpenseReason] = useState('');
+  const [hospitalExpenseTime, setHospitalExpenseTime] = useState('');
+  const [hospitalFeePatientName, setHospitalFeePatientName] = useState('');
+  const [hospitalFeeTime, setHospitalFeeTime] = useState('');
+  const [hospitalMedicinePatientName, setHospitalMedicinePatientName] = useState('');
+  const [hospitalMedicineTime, setHospitalMedicineTime] = useState('');
+  const [hospitalMedicineItems, setHospitalMedicineItems] = useState<{ id: string; name: string; price: number }[]>([]);
+  const [newMedItemName, setNewMedItemName] = useState('');
+  const [newMedItemPrice, setNewMedItemPrice] = useState('');
+
   const [txnType, setTxnType] = useState<TxnType>('income');
   const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
   const [amount, setAmount] = useState('');
@@ -824,10 +838,10 @@ export default function CashierStationPage() {
 
   useEffect(() => {
     const isReady = !sessionLoading && session && (session.role === 'cashier' || session.role === 'superadmin') && auth.currentUser;
-    if (isReady && (searchFocused || searchQuery.length > 0)) {
+    if (isReady) {
       loadAllEntities();
     }
-  }, [sessionLoading, session, auth.currentUser, searchFocused, searchQuery]);
+  }, [sessionLoading, session, auth.currentUser]);
 
 
   useEffect(() => {
@@ -915,6 +929,7 @@ export default function CashierStationPage() {
     setMessage(null);
 
     const isHospitalDayClose = departmentCode === 'hospital' && hospitalMode === 'day_close';
+    const isHospitalCommonAllTx = departmentCode === 'hospital' && selectedEntity?.name?.toLowerCase().includes('common') && hospitalMode === 'all_transactions';
     const missingReason = proofReason.trim();
 
     if (!isHospitalDayClose) {
@@ -923,7 +938,7 @@ export default function CashierStationPage() {
         toast.error(txt);
         return setMessage({ type: 'error', text: txt });
       }
-      if (!selectedCategory) {
+      if (!selectedCategory && !isHospitalCommonAllTx) {
         const txt = 'Select category field.';
         toast.error(txt);
         return setMessage({ type: 'error', text: txt });
@@ -936,6 +951,61 @@ export default function CashierStationPage() {
         const txt = 'Please enter a valid amount, discount, or refund.';
         toast.error(txt);
         return setMessage({ type: 'error', text: txt });
+      }
+
+      // Validate Common Hospital transactions
+      if (isHospitalCommonAllTx) {
+        if (txnType === 'expense') {
+          if (!hospitalExpenseReceiver.trim()) {
+            const txt = 'Please enter the name of the person taking the amount.';
+            toast.error(txt);
+            return setMessage({ type: 'error', text: txt });
+          }
+          if (!hospitalExpenseReason.trim()) {
+            const txt = 'Please enter the reason why he is taking that amount.';
+            toast.error(txt);
+            return setMessage({ type: 'error', text: txt });
+          }
+          if (!hospitalExpenseTime.trim()) {
+            const txt = 'Please enter the time.';
+            toast.error(txt);
+            return setMessage({ type: 'error', text: txt });
+          }
+        } else {
+          if (hospitalIncomeType === 'none') {
+            const txt = 'Please select Fee or Medicine.';
+            toast.error(txt);
+            return setMessage({ type: 'error', text: txt });
+          }
+          if (hospitalIncomeType === 'fee') {
+            if (hospitalFeeType === 'none') {
+              const txt = 'Please select Checkup Fee or USG Fee.';
+              toast.error(txt);
+              return setMessage({ type: 'error', text: txt });
+            }
+            if (!hospitalFeePatientName.trim()) {
+              const txt = "Please enter the patient's name.";
+              toast.error(txt);
+              return setMessage({ type: 'error', text: txt });
+            }
+            if (!hospitalFeeTime.trim()) {
+              const txt = 'Please enter the time.';
+              toast.error(txt);
+              return setMessage({ type: 'error', text: txt });
+            }
+          } else if (hospitalIncomeType === 'medicine') {
+            if (!hospitalMedicinePatientName.trim()) {
+              const txt = "Please enter the patient's name.";
+              toast.error(txt);
+              return setMessage({ type: 'error', text: txt });
+            }
+            if (!hospitalMedicineTime.trim()) {
+              const txt = 'Please enter the time.';
+              toast.error(txt);
+              return setMessage({ type: 'error', text: txt });
+            }
+          }
+        }
       }
     } else {
       const inc = Number(hospitalIncomeAmount) || 0;
@@ -1086,13 +1156,35 @@ export default function CashierStationPage() {
         return;
       }
 
-      if (!selectedCategory) return;
+      let resolvedCategory = selectedCategory;
+      if (isHospitalCommonAllTx) {
+        if (txnType === 'expense') {
+          resolvedCategory = { id: 'other_expense', name: 'Other Expense', appliesTo: 'expense' } as any;
+        } else if (hospitalIncomeType === 'fee') {
+          resolvedCategory = { id: 'fee', name: hospitalFeeType === 'checkup' ? 'Check-up Fee' : 'USG Fee', appliesTo: 'income' } as any;
+        } else if (hospitalIncomeType === 'medicine') {
+          resolvedCategory = { id: 'medicine_charge', name: 'Medicine / Treatment', appliesTo: 'income' } as any;
+        }
+      }
+
+      if (!resolvedCategory) return;
+
+      let finalDescription = description;
+      if (isHospitalCommonAllTx) {
+        if (txnType === 'expense') {
+          finalDescription = `Received by: ${hospitalExpenseReceiver} | Reason: ${hospitalExpenseReason} | Time: ${hospitalExpenseTime}${description ? ` | Note: ${description}` : ''}`;
+        } else if (hospitalIncomeType === 'fee') {
+          finalDescription = `${hospitalFeeType === 'checkup' ? 'Check-up Fee' : 'USG Fee'} for ${hospitalFeePatientName} | Time: ${hospitalFeeTime}${description ? ` | Note: ${description}` : ''}`;
+        } else if (hospitalIncomeType === 'medicine') {
+          finalDescription = `Medicine/Treatment for ${hospitalMedicinePatientName} | Time: ${hospitalMedicineTime} | Items: ${hospitalMedicineItems.map(i => `${i.name} (Rs ${i.price})`).join(', ')}${description ? ` | Note: ${description}` : ''}`;
+        }
+      }
 
       const createPayload: Record<string, any> = {
         type: txnType,
         amount: Number(amount),
-        category: selectedCategory.id,
-        categoryName: selectedCategory.name,
+        category: resolvedCategory.id,
+        categoryName: resolvedCategory.name,
         departmentCode: activeDepartment.code,
         departmentName: activeDepartment.label,
         ...(isStaffMode
@@ -1108,15 +1200,43 @@ export default function CashierStationPage() {
               }
             : departmentCode === 'hospital'
               ? {
-                  patientId: hospitalMode === 'all_transactions' ? 'hospital-inline' : 'hospital-day-close',
-                  patientName: hospitalMode === 'all_transactions' ? (hospitalTxForm.patientName || 'Inline Patient') : 'Day Close Transaction',
-                  hospitalPatientDetails: hospitalMode === 'all_transactions' ? {
-                    serialNumber: hospitalTxForm.serialNumber,
-                    patientName: hospitalTxForm.patientName,
-                    fatherName: hospitalTxForm.fatherName,
-                    category: hospitalTxForm.category,
-                    reason: hospitalTxForm.reason
-                  } : null
+                  patientId: hospitalMode === 'all_transactions' ? (selectedEntity?.id || 'hospital-inline') : 'hospital-day-close',
+                  patientName: hospitalMode === 'all_transactions' ? (selectedEntity?.name || 'Inline Patient') : 'Day Close Transaction',
+                  hospitalPatientDetails: hospitalMode === 'all_transactions' 
+                    ? (isHospitalCommonAllTx 
+                      ? (txnType === 'expense'
+                        ? {
+                            type: 'expense',
+                            receiverName: hospitalExpenseReceiver,
+                            reason: hospitalExpenseReason,
+                            time: hospitalExpenseTime,
+                            date: txDate
+                          }
+                        : hospitalIncomeType === 'fee'
+                          ? {
+                              type: 'fee',
+                              feeType: hospitalFeeType,
+                              patientName: hospitalFeePatientName,
+                              time: hospitalFeeTime,
+                              date: txDate
+                            }
+                          : {
+                              type: 'medicine',
+                              patientName: hospitalMedicinePatientName,
+                              time: hospitalMedicineTime,
+                              items: hospitalMedicineItems,
+                              date: txDate
+                            }
+                      )
+                      : {
+                          serialNumber: hospitalTxForm.serialNumber,
+                          patientName: hospitalTxForm.patientName,
+                          fatherName: hospitalTxForm.fatherName,
+                          category: hospitalTxForm.category,
+                          reason: hospitalTxForm.reason
+                        }
+                    ) 
+                    : null
                 }
             : { 
                 patientId: selectedEntity?.id || `${departmentCode}-general`, 
@@ -1125,7 +1245,7 @@ export default function CashierStationPage() {
                 seekerId: selectedEntity?._entityType === 'seeker' ? selectedEntity?.id : undefined,
                 patientName: selectedEntity?.name || selectedEntity?.companyName || selectedEntity?.fullName || customTargetName.trim() || `General ${activeDepartment.label} Account` 
               }),
-        description,
+        description: finalDescription,
         paymentMethod,
         referenceNo,
         status: (isSuperadmin || departmentCode === 'welfare') ? 'approved' : 'pending',
@@ -1145,7 +1265,7 @@ export default function CashierStationPage() {
         discount: Number(discount) || 0,
         returnAmount: Number(returnAmount) || 0,
         ...(stayDurationIndex !== '' ? { stayDurationIndex: Number(stayDurationIndex) } : {}),
-        ...(departmentCode === 'spims' && selectedCategory.id === 'fee' ? { spimsFeeSubtype } : {}),
+        ...(departmentCode === 'spims' && resolvedCategory.id === 'fee' ? { spimsFeeSubtype } : {}),
       };
       if (proofUrl) createPayload.proofUrl = proofUrl;
       if (!proofUrl && missingReason) createPayload.proofMissingReason = missingReason;
@@ -1154,7 +1274,7 @@ export default function CashierStationPage() {
 
       const txRef = await addDoc(collection(db, activeDepartment.txCollection), createPayload);
 
-      if (departmentCode === 'spims' && selectedCategory.id === 'fee' && selectedEntity) {
+      if (departmentCode === 'spims' && resolvedCategory.id === 'fee' && selectedEntity) {
         try {
           const feeRef = await addDoc(collection(db, 'spims_fees'), {
             studentId: selectedEntity.id,
@@ -1226,6 +1346,19 @@ export default function CashierStationPage() {
       setCategorySearch('');
       setSearchQuery('');
       setEntityResults([]);
+      setHospitalMode('none');
+      setHospitalIncomeType('none');
+      setHospitalFeeType('none');
+      setHospitalExpenseReceiver('');
+      setHospitalExpenseReason('');
+      setHospitalExpenseTime('');
+      setHospitalFeePatientName('');
+      setHospitalFeeTime('');
+      setHospitalMedicinePatientName('');
+      setHospitalMedicineTime('');
+      setHospitalMedicineItems([]);
+      setNewMedItemName('');
+      setNewMedItemPrice('');
 
       setProofUploading(false);
       await fetchHistory();
@@ -1486,6 +1619,19 @@ export default function CashierStationPage() {
                       setDepartmentCode(dept.code);
                       setSelectedEntity(null);
                       setAmount('');
+                      setHospitalMode('none');
+                      setHospitalIncomeType('none');
+                      setHospitalFeeType('none');
+                      setHospitalExpenseReceiver('');
+                      setHospitalExpenseReason('');
+                      setHospitalExpenseTime('');
+                      setHospitalFeePatientName('');
+                      setHospitalFeeTime('');
+                      setHospitalMedicinePatientName('');
+                      setHospitalMedicineTime('');
+                      setHospitalMedicineItems([]);
+                      setNewMedItemName('');
+                      setNewMedItemPrice('');
                     }}
                     className={cn(
                       "h-14 sm:h-16 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all border-2 group/dept",
@@ -1520,6 +1666,7 @@ export default function CashierStationPage() {
                   {(['patient', 'student', 'company', 'job seeker', 'staff', 'other'] as const).map((t) => (
                     <button
                       key={t}
+                      type="button"
                       onClick={() => setSearchType(t)}
                       className={cn(
                         "py-2 sm:py-3 px-3 sm:px-6 rounded-lg sm:rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer text-center",
@@ -1552,7 +1699,7 @@ export default function CashierStationPage() {
                 )}
               </div>
 
-              {searchOpen && searchResults.length > 0 && (
+              {searchOpen && searchQuery.trim() && searchResults.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in slide-in-from-top-8 duration-700">
                   {searchResults.map((p) => (
                     <button
@@ -1571,7 +1718,7 @@ export default function CashierStationPage() {
                       <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-600/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700" />
                       <div className="flex items-center gap-6 relative z-10">
                         <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center text-zinc-300 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-xl group-hover:rotate-6">
-                          <User size={28} />
+                           <User size={28} />
                         </div>
                         <div>
                           <h4 className="text-xl font-[1000] text-zinc-900 uppercase tracking-tight truncate max-w-[180px]">{p.name || p.fullName || p.companyName || 'Unknown'}</h4>
@@ -1611,8 +1758,76 @@ export default function CashierStationPage() {
                 </div>
               )}
             </div>
+          </div>
+          ) : !selectedEntity ? (
+            <div className="bg-white rounded-3xl border border-zinc-100 p-5 md:p-8 xl:p-10 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/5 rounded-full -mr-96 -mt-96 blur-[120px] transition-all duration-1000" />
+              <div className="relative z-10 space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-2xl">
+                      <User size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg sm:text-xl font-[1000] text-zinc-900 uppercase tracking-tighter">Select Hospital Account</h3>
+                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">Choose patient or general account to proceed</p>
+                    </div>
+                  </div>
+                  <div className="relative w-full sm:w-64">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                    <input
+                      type="text"
+                      placeholder="Search accounts..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full h-10 bg-zinc-50 border border-zinc-200 rounded-xl pl-9 pr-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {allEntities
+                    .filter(p => p._deptCode === 'hospital' && (p._entityType === 'patient' || p._entityType === 'staff') &&
+                      (p.name || p.fullName || '').toLowerCase().includes(searchQuery.trim().toLowerCase()))
+                    .map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedEntity(p);
+                          setSelectedEntityType(p._entityType || 'patient');
+                          setSearchQuery('');
+                          if (p.name?.toLowerCase().includes('common')) {
+                            setHospitalMode('none');
+                          } else {
+                            setHospitalMode('all_transactions');
+                            setHospitalTxForm(prev => ({
+                              ...prev,
+                              patientName: p.name || p.fullName || '',
+                              serialNumber: p.serialNumber || '',
+                              fatherName: p.fatherName || '',
+                            }));
+                          }
+                        }}
+                        className="p-6 bg-zinc-50 border-2 border-zinc-100 rounded-2xl hover:border-indigo-500 hover:bg-white hover:shadow-xl transition-all text-left flex items-center justify-between group"
+                      >
+                        <div>
+                          <h4 className="text-base font-black text-zinc-900 uppercase tracking-tight">{p.name || p.fullName || 'Unknown'}</h4>
+                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">ID: {p.patientId || p.customId || p.id.slice(0, 8)}</p>
+                        </div>
+                        <ChevronRight size={18} className="text-zinc-300 group-hover:text-indigo-600 transition-colors" />
+                      </button>
+                    ))}
+                  {allEntities.filter(p => p._deptCode === 'hospital' && (p._entityType === 'patient' || p._entityType === 'staff')).length === 0 && (
+                    <div className="col-span-full py-12 text-center bg-zinc-50 rounded-2xl border border-dashed border-zinc-200">
+                      <Loader2 className="animate-spin mx-auto text-indigo-600 mb-3" size={24} />
+                      <p className="text-xs font-black text-zinc-400 uppercase tracking-widest">Loading Hospital Accounts...</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          ) : (
+          ) : selectedEntity.name?.toLowerCase().includes('common') ? (
             <div className="bg-white rounded-3xl border border-zinc-100 p-5 md:p-8 xl:p-10 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden">
               <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/5 rounded-full -mr-96 -mt-96 blur-[120px] transition-all duration-1000" />
               <div className="relative z-10 space-y-8">
@@ -1659,7 +1874,7 @@ export default function CashierStationPage() {
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
 
       <div className="max-w-4xl mx-auto space-y-8 md:space-y-12 overflow-hidden">
@@ -1892,68 +2107,327 @@ export default function CashierStationPage() {
                     )}
 
                     {departmentCode === 'hospital' && hospitalMode === 'all_transactions' && (
-                      <div className="p-6 bg-zinc-50 rounded-2xl border border-zinc-200/60 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white">
-                            <User size={16} />
+                      selectedEntity?.name?.toLowerCase().includes('common') ? (
+                        <div className="p-6 bg-zinc-50 rounded-2xl border border-zinc-200/60 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white">
+                              <Activity size={16} />
+                            </div>
+                            <h4 className="text-xs font-black text-zinc-900 uppercase tracking-wider">Common Hospital Transaction</h4>
                           </div>
-                          <h4 className="text-xs font-black text-zinc-900 uppercase tracking-wider">Hospital Patient Entry</h4>
+
+                          <div className="space-y-4">
+                            <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Flow Type</label>
+                            <div className="grid grid-cols-2 gap-3">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTxnType('income');
+                                  setHospitalIncomeType('none');
+                                  setHospitalFeeType('none');
+                                  setAmount('');
+                                }}
+                                className={cn(
+                                  "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                  txnType === 'income' ? "bg-emerald-600 border-emerald-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
+                                )}
+                              >
+                                Income
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTxnType('expense');
+                                  setHospitalIncomeType('none');
+                                  setHospitalFeeType('none');
+                                  setAmount('');
+                                }}
+                                className={cn(
+                                  "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                  txnType === 'expense' ? "bg-rose-600 border-rose-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
+                                )}
+                              >
+                                Expense
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Expense Fields */}
+                          {txnType === 'expense' && (
+                            <div className="space-y-4 pt-4 border-t border-zinc-200/60 animate-in fade-in duration-300">
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Receiver Name (Who is taking?)</label>
+                                <input
+                                  value={hospitalExpenseReceiver}
+                                  onChange={(e) => setHospitalExpenseReceiver(e.target.value)}
+                                  placeholder="e.g. Aqsa Nasreen, Dr. Khan, Staff Member..."
+                                  className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Reason / Purpose</label>
+                                <input
+                                  value={hospitalExpenseReason}
+                                  onChange={(e) => setHospitalExpenseReason(e.target.value)}
+                                  placeholder="e.g. Medicine purchase, Petty cash, Equipment..."
+                                  className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Time</label>
+                                <input
+                                  type="time"
+                                  value={hospitalExpenseTime}
+                                  onChange={(e) => setHospitalExpenseTime(e.target.value)}
+                                  className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Income Fields */}
+                          {txnType === 'income' && (
+                            <div className="space-y-6 pt-4 border-t border-zinc-200/60 animate-in fade-in duration-300">
+                              <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Income Classification</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setHospitalIncomeType('fee');
+                                      setHospitalFeeType('none');
+                                      setAmount('');
+                                    }}
+                                    className={cn(
+                                      "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                      hospitalIncomeType === 'fee' ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-indigo-200"
+                                    )}
+                                  >
+                                    Fee
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setHospitalIncomeType('medicine');
+                                      setHospitalFeeType('none');
+                                      setAmount('');
+                                      setHospitalMedicineItems([]);
+                                    }}
+                                    className={cn(
+                                      "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                      hospitalIncomeType === 'medicine' ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-indigo-200"
+                                    )}
+                                  >
+                                    Medicine
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Income Subcategory: Fee */}
+                              {hospitalIncomeType === 'fee' && (
+                                <div className="space-y-4 pt-4 border-t border-zinc-200/60 animate-in fade-in duration-300">
+                                  <div className="space-y-4">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Fee Category</label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <button
+                                        type="button"
+                                        onClick={() => setHospitalFeeType('checkup')}
+                                        className={cn(
+                                          "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                          hospitalFeeType === 'checkup' ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-indigo-200"
+                                        )}
+                                      >
+                                        Checkup Fee
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setHospitalFeeType('usg')}
+                                        className={cn(
+                                          "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                          hospitalFeeType === 'usg' ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-indigo-200"
+                                        )}
+                                      >
+                                        USG Fee
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Patient Name</label>
+                                    <input
+                                      value={hospitalFeePatientName}
+                                      onChange={(e) => setHospitalFeePatientName(e.target.value)}
+                                      placeholder="e.g. Patient Name..."
+                                      className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Time</label>
+                                    <input
+                                      type="time"
+                                      value={hospitalFeeTime}
+                                      onChange={(e) => setHospitalFeeTime(e.target.value)}
+                                      className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Income Subcategory: Medicine */}
+                              {hospitalIncomeType === 'medicine' && (
+                                <div className="space-y-4 pt-4 border-t border-zinc-200/60 animate-in fade-in duration-300">
+                                  <div className="space-y-2">
+                                    <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Patient Name</label>
+                                    <input
+                                      value={hospitalMedicinePatientName}
+                                      onChange={(e) => setHospitalMedicinePatientName(e.target.value)}
+                                      placeholder="e.g. Patient Name..."
+                                      className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Time</label>
+                                    <input
+                                      type="time"
+                                      value={hospitalMedicineTime}
+                                      onChange={(e) => setHospitalMedicineTime(e.target.value)}
+                                      className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                    />
+                                  </div>
+
+                                  {/* Medicine Item Builder */}
+                                  <div className="p-4 bg-white rounded-xl border border-zinc-200 space-y-4">
+                                    <h5 className="text-[10px] font-black uppercase tracking-wider text-zinc-800">Add Medicine / Drip / Item</h5>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <input
+                                        value={newMedItemName}
+                                        onChange={(e) => setNewMedItemName(e.target.value)}
+                                        placeholder="Item Name (e.g. Drip)"
+                                        className="h-10 border border-zinc-200 rounded-lg px-3 text-xs font-bold outline-none text-gray-900"
+                                      />
+                                      <input
+                                        type="number"
+                                        value={newMedItemPrice}
+                                        onChange={(e) => setNewMedItemPrice(e.target.value)}
+                                        placeholder="Price (Rs)"
+                                        className="h-10 border border-zinc-200 rounded-lg px-3 text-xs font-bold outline-none text-gray-900"
+                                      />
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const name = newMedItemName.trim();
+                                        const price = Number(newMedItemPrice) || 0;
+                                        if (!name || price <= 0) return;
+                                        const newItem = { id: Math.random().toString(), name, price };
+                                        const updated = [...hospitalMedicineItems, newItem];
+                                        setHospitalMedicineItems(updated);
+                                        setNewMedItemName('');
+                                        setNewMedItemPrice('');
+                                        // Auto-calculate amount
+                                        const total = updated.reduce((sum, item) => sum + item.price, 0);
+                                        setAmount(String(total));
+                                      }}
+                                      className="w-full h-9 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
+                                    >
+                                      + Add Item
+                                    </button>
+
+                                    {/* Added items list */}
+                                    {hospitalMedicineItems.length > 0 && (
+                                      <div className="mt-3 space-y-2 max-h-32 overflow-y-auto pr-1">
+                                        {hospitalMedicineItems.map((item) => (
+                                          <div key={item.id} className="flex justify-between items-center bg-zinc-50 p-2 rounded border border-zinc-100 text-xs">
+                                            <div className="truncate max-w-[200px]">
+                                              <span className="font-extrabold text-zinc-900">{item.name}</span>
+                                              <span className="text-[10px] text-zinc-400 ml-2">Rs {item.price}</span>
+                                            </div>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                const updated = hospitalMedicineItems.filter(i => i.id !== item.id);
+                                                setHospitalMedicineItems(updated);
+                                                const total = updated.reduce((sum, item) => sum + item.price, 0);
+                                                setAmount(String(total));
+                                              }}
+                                              className="text-[9px] text-rose-500 hover:underline uppercase tracking-wider"
+                                            >
+                                              Remove
+                                            </button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
+                      ) : (
+                        <div className="p-6 bg-zinc-50 rounded-2xl border border-zinc-200/60 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white">
+                              <User size={16} />
+                            </div>
+                            <h4 className="text-xs font-black text-zinc-900 uppercase tracking-wider">Hospital Patient Entry</h4>
+                          </div>
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Serial Number</label>
+                                <input
+                                  value={hospitalTxForm.serialNumber}
+                                  onChange={(e) => setHospitalTxForm({...hospitalTxForm, serialNumber: e.target.value})}
+                                  placeholder="e.g. 104"
+                                  className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Category</label>
+                                <select
+                                  value={hospitalTxForm.category}
+                                  onChange={(e) => setHospitalTxForm({...hospitalTxForm, category: e.target.value})}
+                                  className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
+                                >
+                                  <option value="Check-up Patient">Check-up Patient</option>
+                                  <option value="USG Patient">USG Patient</option>
+                                  <option value="Operated Patient">Operated Patient</option>
+                                  <option value="Lab Test">Lab Test</option>
+                                  <option value="Other">Other</option>
+                                </select>
+                              </div>
+                            </div>
                             <div className="space-y-2">
-                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Serial Number</label>
+                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Patient Name</label>
                               <input
-                                value={hospitalTxForm.serialNumber}
-                                onChange={(e) => setHospitalTxForm({...hospitalTxForm, serialNumber: e.target.value})}
-                                placeholder="e.g. 104"
+                                value={hospitalTxForm.patientName}
+                                onChange={(e) => setHospitalTxForm({...hospitalTxForm, patientName: e.target.value})}
+                                placeholder="e.g. John Doe"
                                 className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
                               />
                             </div>
                             <div className="space-y-2">
-                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Category</label>
-                              <select
-                                value={hospitalTxForm.category}
-                                onChange={(e) => setHospitalTxForm({...hospitalTxForm, category: e.target.value})}
+                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Father/Husband Name</label>
+                              <input
+                                value={hospitalTxForm.fatherName}
+                                onChange={(e) => setHospitalTxForm({...hospitalTxForm, fatherName: e.target.value})}
+                                placeholder="e.g. Richard Doe"
                                 className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
-                              >
-                                <option value="Check-up Patient">Check-up Patient</option>
-                                <option value="USG Patient">USG Patient</option>
-                                <option value="Operated Patient">Operated Patient</option>
-                                <option value="Lab Test">Lab Test</option>
-                                <option value="Other">Other</option>
-                              </select>
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Reason / Symptoms</label>
+                              <input
+                                value={hospitalTxForm.reason}
+                                onChange={(e) => setHospitalTxForm({...hospitalTxForm, reason: e.target.value})}
+                                placeholder="e.g. Fever and Cough"
+                                className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
+                              />
                             </div>
                           </div>
-                          <div className="space-y-2">
-                            <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Patient Name</label>
-                            <input
-                              value={hospitalTxForm.patientName}
-                              onChange={(e) => setHospitalTxForm({...hospitalTxForm, patientName: e.target.value})}
-                              placeholder="e.g. John Doe"
-                              className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Father/Husband Name</label>
-                            <input
-                              value={hospitalTxForm.fatherName}
-                              onChange={(e) => setHospitalTxForm({...hospitalTxForm, fatherName: e.target.value})}
-                              placeholder="e.g. Richard Doe"
-                              className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Reason / Symptoms</label>
-                            <input
-                              value={hospitalTxForm.reason}
-                              onChange={(e) => setHospitalTxForm({...hospitalTxForm, reason: e.target.value})}
-                              placeholder="e.g. Fever and Cough"
-                              className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
-                            />
-                          </div>
                         </div>
-                      </div>
+                      )
                     )}
                   </div>
 
@@ -2071,10 +2545,17 @@ export default function CashierStationPage() {
                         <div className="space-y-6">
                           <div className="flex items-center justify-between px-4">
                             <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Amount (PKR)</label>
-                            <div className="flex items-center gap-3">
-                              <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce" />
-                              <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Auto Calculated</span>
-                            </div>
+                            {(selectedEntity?.name?.toLowerCase().includes('common') && txnType === 'income' && hospitalIncomeType === 'medicine') ? (
+                              <div className="flex items-center gap-3">
+                                <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce" />
+                                <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Auto Summed From Items</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-3">
+                                <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce" />
+                                <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Auto Calculated</span>
+                              </div>
+                            )}
                           </div>
                           <div className="relative group/amount">
                             <div className="absolute inset-y-0 left-0 pl-4 sm:pl-6 flex items-center pointer-events-none">
@@ -2084,9 +2565,10 @@ export default function CashierStationPage() {
                               type="number"
                               step="0.01"
                               value={amount}
+                              disabled={selectedEntity?.name?.toLowerCase().includes('common') && txnType === 'income' && hospitalIncomeType === 'medicine'}
                               onChange={(e) => setAmount(e.target.value)}
                               placeholder="0.00"
-                              className="w-full h-12 sm:h-14 xl:h-16 bg-zinc-50 border-2 border-transparent rounded-2xl pl-12 sm:pl-14 pr-6 text-base sm:text-lg md:text-xl xl:text-2xl font-black text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200 tabular-nums"
+                              className="w-full h-12 sm:h-14 xl:h-16 bg-zinc-50 border-2 border-transparent rounded-2xl pl-12 sm:pl-14 pr-6 text-base sm:text-lg md:text-xl xl:text-2xl font-black text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200 tabular-nums disabled:opacity-75"
                             />
                           </div>
                         </div>
@@ -2161,47 +2643,49 @@ export default function CashierStationPage() {
                           </div>
                         </div>
 
-                        <div className="space-y-6">
-                          <div className="flex items-center justify-between px-4">
-                            <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Category</label>
-                            <button type="button" onClick={() => createCategory()} className="text-[9px] font-black text-indigo-600 hover:underline uppercase tracking-widest">+ Custom</button>
+                        {(!selectedEntity?.name?.toLowerCase().includes('common') || hospitalMode !== 'all_transactions') && (
+                          <div className="space-y-6">
+                            <div className="flex items-center justify-between px-4">
+                              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Category</label>
+                              <button type="button" onClick={() => createCategory()} className="text-[9px] font-black text-indigo-600 hover:underline uppercase tracking-widest">+ Custom</button>
+                            </div>
+                            <div className="relative">
+                              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300" size={20} />
+                              <input 
+                                value={categorySearch} 
+                                onChange={(e) => setCategorySearch(e.target.value)} 
+                                placeholder="Search classification..." 
+                                className="w-full h-14 md:h-16 bg-zinc-50 border-2 border-transparent rounded-[1.2rem] md:rounded-[1.5rem] pl-16 pr-6 text-sm font-bold outline-none focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner" 
+                              />
+                            </div>
+                            <div className="flex flex-wrap gap-2 max-h-36 md:max-h-48 overflow-y-auto pr-2 no-scrollbar">
+                              {categorySearch.trim() && !visibleCategories.some(c => c.name.toLowerCase() === categorySearch.trim().toLowerCase()) && (
+                                <button
+                                  type="button"
+                                  onClick={() => createCategory()}
+                                  className="px-4 md:px-6 py-2.5 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border-2 bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white cursor-pointer"
+                                >
+                                  + Create "{categorySearch}"
+                                </button>
+                              )}
+                              {visibleCategories.map((c) => (
+                                <button 
+                                  key={c.id} 
+                                  type="button" 
+                                  onClick={() => setSelectedCategoryId(c.id)} 
+                                  className={cn(
+                                    'px-4 md:px-6 py-2.5 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border-2', 
+                                    selectedCategoryId === c.id 
+                                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-600/20 -translate-y-0.5' 
+                                      : 'bg-white border-zinc-100 text-zinc-500 hover:border-indigo-200'
+                                  )}
+                                >
+                                  {c.name}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                          <div className="relative">
-                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300" size={20} />
-                            <input 
-                              value={categorySearch} 
-                              onChange={(e) => setCategorySearch(e.target.value)} 
-                              placeholder="Search classification..." 
-                              className="w-full h-14 md:h-16 bg-zinc-50 border-2 border-transparent rounded-[1.2rem] md:rounded-[1.5rem] pl-16 pr-6 text-sm font-bold outline-none focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner" 
-                            />
-                          </div>
-                          <div className="flex flex-wrap gap-2 max-h-36 md:max-h-48 overflow-y-auto pr-2 no-scrollbar">
-                            {categorySearch.trim() && !visibleCategories.some(c => c.name.toLowerCase() === categorySearch.trim().toLowerCase()) && (
-                              <button
-                                type="button"
-                                onClick={() => createCategory()}
-                                className="px-4 md:px-6 py-2.5 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border-2 bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white cursor-pointer"
-                              >
-                                + Create "{categorySearch}"
-                              </button>
-                            )}
-                            {visibleCategories.map((c) => (
-                              <button 
-                                key={c.id} 
-                                type="button" 
-                                onClick={() => setSelectedCategoryId(c.id)} 
-                                className={cn(
-                                  'px-4 md:px-6 py-2.5 md:py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border-2', 
-                                  selectedCategoryId === c.id 
-                                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-600/20 -translate-y-0.5' 
-                                    : 'bg-white border-zinc-100 text-zinc-500 hover:border-indigo-200'
-                                )}
-                              >
-                                {c.name}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                        )}
                       </>
                     )}
  
