@@ -226,6 +226,12 @@ export default function CashierStationPage() {
     category: '',
     categoryName: '',
     hospitalShift: 'combine',
+    hospitalPatientName: '',
+    hospitalReceiverName: '',
+    hospitalReason: '',
+    hospitalTime: '',
+    hospitalFeeType: 'none' as 'none' | 'checkup' | 'usg',
+    hospitalIncomeType: 'none' as 'none' | 'fee' | 'medicine',
   });
   const [updatingDetail, setUpdatingDetail] = useState(false);
   const [forwardModalTx, setForwardModalTx] = useState<any | null>(null);
@@ -1387,6 +1393,53 @@ export default function CashierStationPage() {
 
       const isApproved = detailModalTx.status === 'approved';
 
+      let finalDescription = editDetailForm.description;
+      let finalHospitalDetails = detailModalTx.hospitalPatientDetails ? { ...detailModalTx.hospitalPatientDetails } : null;
+
+      if (deptCode === 'hospital' && detailModalTx.hospitalPatientDetails) {
+        const details = detailModalTx.hospitalPatientDetails;
+        const isCommonTx = detailModalTx.patientId === 'hospital-inline' || (detailModalTx.patientName && String(detailModalTx.patientName).toLowerCase().includes('common')) || (selectedEntity && String(selectedEntity.name).toLowerCase().includes('common'));
+        
+        if (isCommonTx) {
+          if (detailModalTx.type === 'expense') {
+            finalHospitalDetails = {
+              ...details,
+              receiverName: editDetailForm.hospitalReceiverName.trim(),
+              reason: editDetailForm.hospitalReason.trim(),
+              time: editDetailForm.hospitalTime.trim(),
+              date: editDetailForm.date,
+            };
+            finalDescription = `Received by: ${editDetailForm.hospitalReceiverName.trim()} | Reason: ${editDetailForm.hospitalReason.trim()} | Time: ${editDetailForm.hospitalTime.trim()}${editDetailForm.description ? ` | Note: ${editDetailForm.description}` : ''}`;
+          } else if (editDetailForm.hospitalIncomeType === 'fee') {
+            finalHospitalDetails = {
+              ...details,
+              feeType: editDetailForm.hospitalFeeType,
+              patientName: editDetailForm.hospitalPatientName.trim(),
+              time: editDetailForm.hospitalTime.trim(),
+              date: editDetailForm.date,
+            };
+            finalDescription = `${editDetailForm.hospitalFeeType === 'checkup' ? 'Check-up Fee' : 'USG Fee'} for ${editDetailForm.hospitalPatientName.trim()} | Time: ${editDetailForm.hospitalTime.trim()}${editDetailForm.description ? ` | Note: ${editDetailForm.description}` : ''}`;
+          } else if (editDetailForm.hospitalIncomeType === 'medicine') {
+            finalHospitalDetails = {
+              ...details,
+              patientName: editDetailForm.hospitalPatientName.trim(),
+              time: editDetailForm.hospitalTime.trim(),
+              date: editDetailForm.date,
+            };
+            const itemsStr = details.items?.map((i: any) => `${i.name} (Rs ${i.price || i.amount})`).join(', ') || '';
+            finalDescription = `Medicine/Treatment for ${editDetailForm.hospitalPatientName.trim()} | Time: ${editDetailForm.hospitalTime.trim()}${itemsStr ? ` | Items: ${itemsStr}` : ''}${editDetailForm.description ? ` | Note: ${editDetailForm.description}` : ''}`;
+          }
+        } else {
+          finalHospitalDetails = {
+            ...details,
+            patientName: editDetailForm.hospitalPatientName.trim() || details.patientName,
+            receiverName: editDetailForm.hospitalReceiverName.trim() || details.receiverName,
+            reason: editDetailForm.hospitalReason.trim() || details.reason,
+            time: editDetailForm.hospitalTime.trim() || details.time,
+          };
+        }
+      }
+
       if (isApproved) {
         // If it is approved, call the server action
         const { editApprovedTransaction } = await import('@/app/hq/actions/approvals');
@@ -1395,10 +1448,11 @@ export default function CashierStationPage() {
           txId: detailModalTx.id,
           amount: amt,
           date: editDetailForm.date,
-          description: editDetailForm.description,
+          description: finalDescription,
           category: editDetailForm.category || undefined,
           categoryName: editDetailForm.categoryName || undefined,
           hospitalDayCloseShift: detailModalTx.hospitalDayCloseShift ? editDetailForm.hospitalShift : undefined,
+          hospitalPatientDetails: finalHospitalDetails || undefined,
           _collection: detailModalTx._collection,
         });
         if (!res.success) {
@@ -1413,7 +1467,7 @@ export default function CashierStationPage() {
           amount: amt,
           date: Timestamp.fromDate(newDate),
           transactionDate: Timestamp.fromDate(newDate),
-          description: editDetailForm.description,
+          description: finalDescription,
           updatedAt: Timestamp.now(),
         };
         if (editDetailForm.category) {
@@ -1425,6 +1479,9 @@ export default function CashierStationPage() {
         if (detailModalTx.hospitalDayCloseShift) {
           updatePayload.hospitalDayCloseShift = editDetailForm.hospitalShift;
         }
+        if (finalHospitalDetails) {
+          updatePayload.hospitalPatientDetails = finalHospitalDetails;
+        }
         await updateDoc(docRef, updatePayload);
       }
 
@@ -1434,10 +1491,11 @@ export default function CashierStationPage() {
         amount: amt,
         date: Timestamp.fromDate(new Date(`${editDetailForm.date}T12:00:00`)),
         transactionDate: Timestamp.fromDate(new Date(`${editDetailForm.date}T12:00:00`)),
-        description: editDetailForm.description,
+        description: finalDescription,
         ...(detailModalTx.hospitalDayCloseShift ? { hospitalDayCloseShift: editDetailForm.hospitalShift } : {}),
         ...(editDetailForm.category ? { category: editDetailForm.category } : {}),
         ...(editDetailForm.categoryName ? { categoryName: editDetailForm.categoryName } : {}),
+        ...(finalHospitalDetails ? { hospitalPatientDetails: finalHospitalDetails } : {}),
       };
 
       setDetailModalTx(updatedTx);
@@ -3068,7 +3126,11 @@ export default function CashierStationPage() {
       )}
 
       {detailModalTx && (() => {
-        const canEdit = !['approved', 'rejected'].includes(detailModalTx.status) || session?.role === 'superadmin';
+        const isHospitalTx = detailModalTx.departmentCode === 'hospital';
+        const isOwner = detailModalTx.cashierId === session?.customId;
+        const isSuperadmin = session?.role === 'superadmin';
+        const canEditHospitalTx = isHospitalTx && (isSuperadmin || isOwner);
+        const canEdit = !['approved', 'rejected'].includes(detailModalTx.status) || isSuperadmin || canEditHospitalTx;
         return (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-[#FCFBF8]/80 backdrop-blur-3xl animate-in fade-in duration-500">
             <div className="w-full max-w-xl bg-white border border-zinc-100 rounded-[4rem] overflow-hidden shadow-2xl shadow-indigo-600/10">
@@ -3124,6 +3186,101 @@ export default function CashierStationPage() {
                         className="w-full h-28 bg-zinc-50 border-2 border-transparent rounded-[1.5rem] px-6 py-4 text-xs font-bold text-zinc-900 outline-none focus:bg-white focus:border-indigo-600/20 resize-none transition-all shadow-inner"
                       />
                     </div>
+
+                    {/* Hospital Transaction Specific Inputs */}
+                    {detailModalTx.departmentCode === 'hospital' && detailModalTx.hospitalPatientDetails && (
+                      <div className="space-y-6 p-6 bg-zinc-50 border border-zinc-100 rounded-3xl">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Activity size={16} className="text-indigo-600" />
+                          <h4 className="text-[10px] font-black uppercase tracking-wider text-zinc-600">Hospital Patient Details</h4>
+                        </div>
+
+                        {/* If Fee or Medicine (Income) */}
+                        {detailModalTx.type === 'income' && (
+                          <>
+                            {/* Patient Name */}
+                            <div className="space-y-2">
+                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Patient Name</label>
+                              <input
+                                type="text"
+                                value={editDetailForm.hospitalPatientName}
+                                onChange={(e) => setEditDetailForm({ ...editDetailForm, hospitalPatientName: e.target.value })}
+                                className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20"
+                                placeholder="Enter patient name..."
+                              />
+                            </div>
+
+                            {/* Fee Type selection if fee */}
+                            {editDetailForm.hospitalIncomeType === 'fee' && (
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Fee Sub-type</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                  {([
+                                    { id: 'checkup', label: 'Checkup Fee' },
+                                    { id: 'usg', label: 'USG Fee' },
+                                  ] as const).map((t) => (
+                                    <button
+                                      key={t.id}
+                                      type="button"
+                                      onClick={() => setEditDetailForm({ ...editDetailForm, hospitalFeeType: t.id })}
+                                      className={cn(
+                                        "py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all",
+                                        editDetailForm.hospitalFeeType === t.id
+                                          ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/10"
+                                          : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-300"
+                                      )}
+                                    >
+                                      {t.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                        {/* If Expense */}
+                        {detailModalTx.type === 'expense' && (
+                          <>
+                            {/* Receiver Name */}
+                            <div className="space-y-2">
+                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Receiver Name</label>
+                              <input
+                                type="text"
+                                value={editDetailForm.hospitalReceiverName}
+                                onChange={(e) => setEditDetailForm({ ...editDetailForm, hospitalReceiverName: e.target.value })}
+                                className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20"
+                                placeholder="Receiver name..."
+                              />
+                            </div>
+
+                            {/* Expense Reason */}
+                            <div className="space-y-2">
+                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Reason</label>
+                              <input
+                                type="text"
+                                value={editDetailForm.hospitalReason}
+                                onChange={(e) => setEditDetailForm({ ...editDetailForm, hospitalReason: e.target.value })}
+                                className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20"
+                                placeholder="Reason..."
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {/* Common Time Field */}
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Transaction Time</label>
+                          <input
+                            type="text"
+                            value={editDetailForm.hospitalTime}
+                            onChange={(e) => setEditDetailForm({ ...editDetailForm, hospitalTime: e.target.value })}
+                            className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20"
+                            placeholder="e.g., 10:00 AM"
+                          />
+                        </div>
+                      </div>
+                    )}
 
                     {/* Shift Selector (Only for Hospital Day Close) */}
                     {detailModalTx.hospitalDayCloseShift && (
@@ -3227,13 +3384,30 @@ export default function CashierStationPage() {
                           type="button"
                           onClick={() => {
                             setIsEditingDetail(true);
+                            const details = detailModalTx.hospitalPatientDetails || {};
+                            const desc = detailModalTx.description || '';
+                            let extractedNote = desc;
+                            if (detailModalTx.departmentCode === 'hospital' && detailModalTx.hospitalPatientDetails) {
+                              const noteIndex = desc.indexOf('| Note:');
+                              if (noteIndex !== -1) {
+                                extractedNote = desc.substring(noteIndex + 7).trim(); // skip "| Note:" length (7 chars)
+                              } else if (desc.includes('for ') || desc.includes('Received by:') || desc.includes('Medicine/Treatment ')) {
+                                extractedNote = '';
+                              }
+                            }
                             setEditDetailForm({
                               amount: String(detailModalTx.amount || 0),
                               date: toDate(detailModalTx.date || detailModalTx.transactionDate || detailModalTx.createdAt).toISOString().split('T')[0],
-                              description: detailModalTx.description || '',
+                              description: extractedNote,
                               category: detailModalTx.category || '',
                               categoryName: detailModalTx.categoryName || '',
                               hospitalShift: detailModalTx.hospitalDayCloseShift || 'combine',
+                              hospitalPatientName: details.patientName || '',
+                              hospitalReceiverName: details.receiverName || '',
+                              hospitalReason: details.reason || '',
+                              hospitalTime: details.time || '',
+                              hospitalFeeType: details.feeType || 'none',
+                              hospitalIncomeType: details.type || 'none',
                             });
                           }}
                           className="h-16 bg-indigo-50 text-indigo-600 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-indigo-600 hover:text-white transition-all shadow-xl shadow-indigo-600/5"

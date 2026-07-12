@@ -3,7 +3,7 @@
 
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { requireHqSuperadmin } from './auth';
+import { requireHqSuperadmin, readHqSessionCookie } from './auth';
 import { sendHqPushServer } from '@/lib/hqNotificationsServer';
 import { toDate } from '@/lib/utils';
 
@@ -952,11 +952,14 @@ export async function editApprovedTransaction(params: {
   returnAmount?: number;
   stayDurationIndex?: number;
   hospitalDayCloseShift?: string;
+  hospitalPatientDetails?: any;
   /** Optional: override which Firestore collection to look in (e.g. 'spims_fees') */
   _collection?: string;
 }): Promise<{ success: boolean; error?: string }> {
-  const caller = await requireHqSuperadmin();
   try {
+    const session = await readHqSessionCookie();
+    if (!session) return { success: false, error: 'Unauthorized. Please login again.' };
+
     const app = getAdminApp();
     const adminDb = getFirestore(app);
 
@@ -969,6 +972,22 @@ export async function editApprovedTransaction(params: {
     if (oldData?.status !== 'approved') {
       return { success: false, error: 'Only approved transactions can be edited using this action.' };
     }
+
+    const isHospitalTx = params.dept === 'hospital';
+    const isOwner = oldData.cashierId === session.customId;
+    const isSuperadmin = session.role === 'superadmin';
+
+    if (isHospitalTx) {
+      if (!isSuperadmin && !isOwner) {
+        return { success: false, error: 'Unauthorized: Cashiers can only edit hospital transactions they created.' };
+      }
+    } else {
+      if (!isSuperadmin) {
+        return { success: false, error: 'Unauthorized: Only Super Admins can edit approved transactions.' };
+      }
+    }
+
+    const caller = session;
 
     const newAmount = Number(params.amount) || 0;
     const oldAmount = Number(oldData.amount) || 0;
@@ -1009,6 +1028,9 @@ export async function editApprovedTransaction(params: {
     }
     if (params.hospitalDayCloseShift !== undefined) {
       updatePayload.hospitalDayCloseShift = params.hospitalDayCloseShift;
+    }
+    if (params.hospitalPatientDetails !== undefined) {
+      updatePayload.hospitalPatientDetails = params.hospitalPatientDetails;
     }
     await ref.set(updatePayload, { merge: true });
 
