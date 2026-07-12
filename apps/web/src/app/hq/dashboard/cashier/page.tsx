@@ -1759,119 +1759,39 @@ export default function CashierStationPage() {
               )}
             </div>
           </div>
-          ) : !selectedEntity ? (
-            <div className="bg-white rounded-3xl border border-zinc-100 p-5 md:p-8 xl:p-10 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/5 rounded-full -mr-96 -mt-96 blur-[120px] transition-all duration-1000" />
-              <div className="relative z-10 space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-2xl">
-                      <User size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg sm:text-xl font-[1000] text-zinc-900 uppercase tracking-tighter">Select Hospital Account</h3>
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">Choose patient or general account to proceed</p>
-                    </div>
-                  </div>
-                  <div className="relative w-full sm:w-64">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-                    <input
-                      type="text"
-                      placeholder="Search accounts..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full h-10 bg-zinc-50 border border-zinc-200 rounded-xl pl-9 pr-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {allEntities
-                    .filter(p => p._deptCode === 'hospital' && (p._entityType === 'patient' || p._entityType === 'staff') &&
-                      (p.name || p.fullName || '').toLowerCase().includes(searchQuery.trim().toLowerCase()))
-                    .map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedEntity(p);
-                          setSelectedEntityType(p._entityType || 'patient');
-                          setSearchQuery('');
-                          if (p.name?.toLowerCase().includes('common')) {
-                            setHospitalMode('none');
-                          } else {
-                            setHospitalMode('all_transactions');
-                            setHospitalTxForm(prev => ({
-                              ...prev,
-                              patientName: p.name || p.fullName || '',
-                              serialNumber: p.serialNumber || '',
-                              fatherName: p.fatherName || '',
-                            }));
-                          }
-                        }}
-                        className="p-6 bg-zinc-50 border-2 border-zinc-100 rounded-2xl hover:border-indigo-500 hover:bg-white hover:shadow-xl transition-all text-left flex items-center justify-between group"
-                      >
-                        <div>
-                          <h4 className="text-base font-black text-zinc-900 uppercase tracking-tight">{p.name || p.fullName || 'Unknown'}</h4>
-                          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">ID: {p.patientId || p.customId || p.id.slice(0, 8)}</p>
-                        </div>
-                        <ChevronRight size={18} className="text-zinc-300 group-hover:text-indigo-600 transition-colors" />
-                      </button>
-                    ))}
-                  {allEntities.filter(p => p._deptCode === 'hospital' && (p._entityType === 'patient' || p._entityType === 'staff')).length === 0 && (
-                    <div className="col-span-full py-12 text-center bg-zinc-50 rounded-2xl border border-dashed border-zinc-200">
-                      <Loader2 className="animate-spin mx-auto text-indigo-600 mb-3" size={24} />
-                      <p className="text-xs font-black text-zinc-400 uppercase tracking-widest">Loading Hospital Accounts...</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : selectedEntity.name?.toLowerCase().includes('common') ? (
+          ) : hospitalMode === 'none' ? (
             <div className="bg-white rounded-3xl border border-zinc-100 p-5 md:p-8 xl:p-10 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden">
               <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/5 rounded-full -mr-96 -mt-96 blur-[120px] transition-all duration-1000" />
               <div className="relative z-10 space-y-8">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                   <div className="flex items-center gap-3 sm:gap-4">
                     <div className="w-10 h-10 md:w-16 md:h-16 bg-indigo-600 rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-2xl">
-                      <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
+                      <Plus className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.5} />
                     </div>
                     <div>
                       <h3 className="text-lg sm:text-2xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">Hospital Cashier</h3>
                       <p className="text-[8px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mt-0.5 sm:mt-1">Select Entry Mode</p>
                     </div>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <button
                     type="button"
                     onClick={() => setHospitalMode('day_close')}
-                    className={cn(
-                      "p-6 rounded-2xl border-2 text-left transition-all",
-                      hospitalMode === 'day_close'
-                        ? "bg-indigo-50 border-indigo-600 shadow-xl shadow-indigo-600/20"
-                        : "bg-white border-zinc-100 hover:border-indigo-200"
-                    )}
+                    className="p-6 rounded-2xl border-2 text-left transition-all bg-white border-zinc-100 hover:border-indigo-200"
                   >
-                    <h4 className={cn("text-lg font-black uppercase tracking-tight", hospitalMode === 'day_close' ? "text-indigo-900" : "text-zinc-900")}>Day Close</h4>
+                    <h4 className="text-lg font-black uppercase tracking-tight text-zinc-900">Day Close</h4>
                     <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-2">Enter final daily Income/Expense totals</p>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setHospitalMode('all_transactions')}
-                    className={cn(
-                      "p-6 rounded-2xl border-2 text-left transition-all",
-                      hospitalMode === 'all_transactions'
-                        ? "bg-indigo-50 border-indigo-600 shadow-xl shadow-indigo-600/20"
-                        : "bg-white border-zinc-100 hover:border-indigo-200"
-                    )}
+                    className="p-6 rounded-2xl border-2 text-left transition-all bg-white border-zinc-100 hover:border-indigo-200"
                   >
-                    <h4 className={cn("text-lg font-black uppercase tracking-tight", hospitalMode === 'all_transactions' ? "text-indigo-900" : "text-zinc-900")}>Enter All Transactions</h4>
+                    <h4 className="text-lg font-black uppercase tracking-tight text-zinc-900">Enter All Transactions</h4>
                     <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-2">Record individual patient transactions inline</p>
                   </button>
-                </div>
+                </div>          </div>
               </div>
             </div>
           ) : null}
@@ -1958,72 +1878,111 @@ export default function CashierStationPage() {
             <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-zinc-50 rounded-full -mr-64 -mt-64 blur-3xl group-hover/console:bg-indigo-50 transition-all duration-1000" />
             
             <div className="relative z-10 space-y-8 md:space-y-10">
-              {selectedEntity ? (
+              {(selectedEntity || (departmentCode === 'hospital' && hospitalMode !== 'none')) ? (
                 <div className="space-y-8 md:space-y-10 animate-in fade-in zoom-in-95 duration-700">
-                  <div className="w-full p-4 sm:p-6 xl:p-8 rounded-2xl sm:rounded-[2rem] bg-zinc-900 text-white min-w-0 shadow-[0_48px_80px_-24px_rgba(0,0,0,0.3)] group/profile relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-white/5 rounded-full -mr-64 -mt-64 blur-[100px] group-hover/profile:bg-white/10 transition-all duration-1000" />
-                    
-                    <div className="relative z-10">
-                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 md:gap-8">
-                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
-                          <div className="w-16 h-16 sm:w-20 sm:h-20 xl:w-24 xl:h-24 bg-white/10 backdrop-blur-2xl rounded-2xl sm:rounded-3xl flex items-center justify-center border-2 border-white/20 shadow-2xl relative group/avatar overflow-hidden flex-shrink-0">
-                            <User className="w-8 h-8 sm:w-10 sm:h-10 xl:w-12 xl:h-12 text-white/40 group-hover/avatar:scale-110 transition-transform duration-700" />
-                            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600/20 to-transparent opacity-0 group-hover/avatar:opacity-100 transition-opacity" />
-                            <div className="absolute -bottom-1 -right-1 w-6 h-6 sm:w-8 sm:h-8 bg-emerald-500 rounded-lg flex items-center justify-center border sm:border-2 border-zinc-900 shadow-xl">
-                              <ShieldCheck className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-white" />
+                  {selectedEntity ? (
+                    <div className="w-full p-4 sm:p-6 xl:p-8 rounded-2xl sm:rounded-[2rem] bg-zinc-900 text-white min-w-0 shadow-[0_48px_80px_-24px_rgba(0,0,0,0.3)] group/profile relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-white/5 rounded-full -mr-64 -mt-64 blur-[100px] group-hover/profile:bg-white/10 transition-all duration-1000" />
+                      
+                      <div className="relative z-10">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 md:gap-8">
+                          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 xl:w-24 xl:h-24 bg-white/10 backdrop-blur-2xl rounded-2xl sm:rounded-3xl flex items-center justify-center border-2 border-white/20 shadow-2xl relative group/avatar overflow-hidden flex-shrink-0">
+                              <User className="w-8 h-8 sm:w-10 sm:h-10 xl:w-12 xl:h-12 text-white/40 group-hover/avatar:scale-110 transition-transform duration-700" />
+                              <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600/20 to-transparent opacity-0 group-hover/avatar:opacity-100 transition-opacity" />
+                              <div className="absolute -bottom-1 -right-1 w-6 h-6 sm:w-8 sm:h-8 bg-emerald-500 rounded-lg flex items-center justify-center border sm:border-2 border-zinc-900 shadow-xl">
+                                <ShieldCheck className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-white" />
+                              </div>
                             </div>
+                            <div className="text-center sm:text-left space-y-4 min-w-0">
+                              <div className="flex items-center justify-center sm:justify-start gap-2">
+                                <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center gap-1.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                  <p className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.3em]">Active Protocol Target</p>
+                                </div>
+                              </div>
+                              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-[1000] tracking-tighter leading-tight uppercase break-words">{selectedEntity.name || selectedEntity.fullName || selectedEntity.companyName || 'Unknown'}</h2>
+                              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 md:gap-3">
+                                <div className="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest truncate max-w-full">
+                                  ID: <span className="text-indigo-400">{selectedEntity.patientId || selectedEntity.studentId || selectedEntity.employeeId || selectedEntity.rollNo || selectedEntity.donorNumber || selectedEntity.id.slice(0, 8)}</span>
+                                </div>
+                                <div className="px-4 py-2 bg-indigo-600 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-xl truncate">
+                                  {departmentCode}
+                                </div>
+                                <button 
+                                  onClick={() => setShowProfileModal(true)}
+                                  className="px-4 py-2 bg-white text-zinc-900 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all active:scale-95 shadow-2xl flex items-center gap-2 truncate cursor-pointer"
+                                >
+                                  <Eye size={14} />
+                                  Full Ledger
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => { setSelectedEntity(null); setAmount(''); }} 
+                            className="w-12 h-12 sm:w-14 sm:h-14 bg-white/10 hover:bg-rose-600 text-white rounded-xl sm:rounded-2xl flex items-center justify-center transition-all backdrop-blur-xl border border-white/10 shadow-2xl group/btn active:scale-90 self-center sm:self-start flex-shrink-0 cursor-pointer"
+                          >
+                            <X size={18} className="group-hover/btn:rotate-90 transition-transform" />
+                          </button>
+                        </div>
+   
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 md:mt-8">
+                          <div className="p-3 sm:p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl sm:rounded-2xl group/card hover:bg-white/10 transition-all">
+                            <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-2">Total Protocol Value</p>
+                            <h4 className="text-sm sm:text-base md:text-lg xl:text-xl font-[1000] tracking-tighter tabular-nums">Rs {(selectedEntity.totalPackage || selectedEntity.packageAmount || 0).toLocaleString()}</h4>
+                          </div>
+                          <div className="p-3 sm:p-4 bg-emerald-500/10 backdrop-blur-sm border border-emerald-500/20 rounded-xl sm:rounded-2xl group/card hover:bg-emerald-500/20 transition-all">
+                            <p className="text-[9px] font-black text-emerald-400/60 uppercase tracking-[0.2em] mb-2">Total Settled</p>
+                            <h4 className="text-sm sm:text-base md:text-lg xl:text-xl font-[1000] text-emerald-400 tracking-tighter tabular-nums">Rs {(selectedEntity.totalReceived || selectedEntity.totalReceivedFees || 0).toLocaleString()}</h4>
+                          </div>
+                          <div className="p-3 sm:p-4 bg-rose-500/10 backdrop-blur-sm border border-rose-500/20 rounded-xl sm:rounded-2xl group/card hover:bg-rose-500/20 transition-all">
+                            <p className="text-[9px] font-black text-rose-400/60 uppercase tracking-[0.2em] mb-2">Current Exposure</p>
+                            <h4 className="text-sm sm:text-base md:text-lg xl:text-xl font-[1000] text-rose-400 tracking-tighter tabular-nums">Rs {(selectedEntity.remaining || ((selectedEntity.totalPackage || selectedEntity.packageAmount || 0) - (selectedEntity.totalReceived || 0))).toLocaleString()}</h4>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full p-4 sm:p-6 xl:p-8 rounded-2xl sm:rounded-[2rem] bg-zinc-900 text-white min-w-0 shadow-[0_48px_80px_-24px_rgba(0,0,0,0.3)] group/profile relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-white/5 rounded-full -mr-64 -mt-64 blur-[100px] group-hover/profile:bg-white/10 transition-all duration-1000" />
+                      <div className="relative z-10 flex flex-col sm:flex-row sm:items-start justify-between gap-6 md:gap-8">
+                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 xl:w-24 xl:h-24 bg-white/10 backdrop-blur-2xl rounded-2xl sm:rounded-3xl flex items-center justify-center border-2 border-white/20 shadow-2xl relative overflow-hidden flex-shrink-0">
+                            <Activity className="w-8 h-8 sm:w-10 sm:h-10 xl:w-12 xl:h-12 text-white/40" />
                           </div>
                           <div className="text-center sm:text-left space-y-4 min-w-0">
                             <div className="flex items-center justify-center sm:justify-start gap-2">
-                              <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                <p className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.3em]">Active Protocol Target</p>
-                              </div>
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                              <p className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.3em]">Hospital Cashier Session</p>
                             </div>
-                            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-[1000] tracking-tighter leading-tight uppercase break-words">{selectedEntity.name || selectedEntity.fullName || selectedEntity.companyName || 'Unknown'}</h2>
+                            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-[1000] tracking-tighter leading-tight uppercase break-words">
+                              {hospitalMode === 'day_close' ? 'Hospital Day Close' : 'Hospital Transactions'}
+                            </h2>
                             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 md:gap-3">
-                              <div className="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest truncate max-w-full">
-                                ID: <span className="text-indigo-400">{selectedEntity.patientId || selectedEntity.studentId || selectedEntity.employeeId || selectedEntity.rollNo || selectedEntity.donorNumber || selectedEntity.id.slice(0, 8)}</span>
+                              <div className="px-4 py-2 bg-indigo-600 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-xl">
+                                {hospitalMode === 'day_close' ? 'Day Close Mode' : 'All Transactions Mode'}
                               </div>
-                              <div className="px-4 py-2 bg-indigo-600 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-xl truncate">
-                                {departmentCode}
-                              </div>
-                              <button 
-                                onClick={() => setShowProfileModal(true)}
-                                className="px-4 py-2 bg-white text-zinc-900 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all active:scale-95 shadow-2xl flex items-center gap-2 truncate cursor-pointer"
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setHospitalMode('none');
+                                  setAmount('');
+                                  setHospitalIncomeType('none');
+                                  setHospitalFeeType('none');
+                                }}
+                                className="px-4 py-2 bg-white text-zinc-900 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-600 hover:text-white transition-all active:scale-95 shadow-2xl flex items-center gap-2 cursor-pointer"
                               >
-                                <Eye size={14} />
-                                Full Ledger
+                                Change Mode
                               </button>
                             </div>
                           </div>
                         </div>
-                        <button 
-                          onClick={() => { setSelectedEntity(null); setAmount(''); }} 
-                          className="w-12 h-12 sm:w-14 sm:h-14 bg-white/10 hover:bg-rose-600 text-white rounded-xl sm:rounded-2xl flex items-center justify-center transition-all backdrop-blur-xl border border-white/10 shadow-2xl group/btn active:scale-90 self-center sm:self-start flex-shrink-0 cursor-pointer"
-                        >
-                          <X size={18} className="group-hover/btn:rotate-90 transition-transform" />
-                        </button>
-                      </div>
- 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 md:mt-8">
-                        <div className="p-3 sm:p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl sm:rounded-2xl group/card hover:bg-white/10 transition-all">
-                          <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-2">Total Protocol Value</p>
-                          <h4 className="text-sm sm:text-base md:text-lg xl:text-xl font-[1000] tracking-tighter tabular-nums">Rs {(selectedEntity.totalPackage || selectedEntity.packageAmount || 0).toLocaleString()}</h4>
-                        </div>
-                        <div className="p-3 sm:p-4 bg-emerald-500/10 backdrop-blur-sm border border-emerald-500/20 rounded-xl sm:rounded-2xl group/card hover:bg-emerald-500/20 transition-all">
-                          <p className="text-[9px] font-black text-emerald-400/60 uppercase tracking-[0.2em] mb-2">Total Settled</p>
-                          <h4 className="text-sm sm:text-base md:text-lg xl:text-xl font-[1000] text-emerald-400 tracking-tighter tabular-nums">Rs {(selectedEntity.totalReceived || selectedEntity.totalReceivedFees || 0).toLocaleString()}</h4>
-                        </div>
-                        <div className="p-3 sm:p-4 bg-rose-500/10 backdrop-blur-sm border border-rose-500/20 rounded-xl sm:rounded-2xl group/card hover:bg-rose-500/20 transition-all">
-                          <p className="text-[9px] font-black text-rose-400/60 uppercase tracking-[0.2em] mb-2">Current Exposure</p>
-                          <h4 className="text-sm sm:text-base md:text-lg xl:text-xl font-[1000] text-rose-400 tracking-tighter tabular-nums">Rs {(selectedEntity.remaining || ((selectedEntity.totalPackage || selectedEntity.packageAmount || 0) - (selectedEntity.totalReceived || 0))).toLocaleString()}</h4>
-                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
-                  {entityHistory.length > 0 && (
+                  {selectedEntity && entityHistory.length > 0 && (
                     <div className="space-y-8 px-4">
                       <div className="flex items-center justify-between">
                         <h4 className="text-xl font-[1000] text-zinc-900 uppercase tracking-tighter flex items-center gap-4">
@@ -2045,8 +2004,8 @@ export default function CashierStationPage() {
                                 {tx.type === 'income' ? <Plus size={24} /> : <Minus size={24} />}
                               </div>
                               <div>
-                                <p className="text-base font-black text-zinc-900 uppercase tracking-tight">{tx.categoryName || tx.category}</p>
-                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">{formatDateDMY(tx.date)}</p>
+                                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest truncate max-w-[120px]">{tx.categoryName || 'General'}</p>
+                                <p className="text-xs font-bold text-zinc-500 mt-1 truncate max-w-[120px]">{tx.description || '-'}</p>
                               </div>
                             </div>
                             <div className="text-right">
@@ -2067,7 +2026,7 @@ export default function CashierStationPage() {
                     </div>
                   )}
                 </div>
-              ) : departmentCode === 'hospital' ? null : (
+              ) : (
                 <div className="p-20 md:p-32 rounded-[4rem] bg-zinc-50 border-4 border-dashed border-zinc-200 flex flex-col items-center justify-center text-center group/empty hover:border-indigo-400 hover:bg-indigo-50/30 transition-all duration-1000">
                   <div className="relative">
                     <div className="absolute -inset-8 bg-white rounded-full blur-2xl opacity-0 group-hover/empty:opacity-100 transition-opacity" />
@@ -2084,8 +2043,6 @@ export default function CashierStationPage() {
               <form onSubmit={submitTx} className="space-y-10 pt-10 border-t border-zinc-100">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
                   <div className="space-y-8">
-
-
                     {!selectedEntity && departmentCode !== 'hospital' && (
                       <div className="p-6 bg-zinc-50 rounded-2xl border border-zinc-200/60 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="flex items-center gap-3">
@@ -2107,241 +2064,243 @@ export default function CashierStationPage() {
                     )}
 
                     {departmentCode === 'hospital' && hospitalMode === 'all_transactions' && (
-                      selectedEntity?.name?.toLowerCase().includes('common') ? (
-                        <div className="p-6 bg-zinc-50 rounded-2xl border border-zinc-200/60 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white">
-                              <Activity size={16} />
-                            </div>
-                            <h4 className="text-xs font-black text-zinc-900 uppercase tracking-wider">Common Hospital Transaction</h4>
+                      <div className="p-6 bg-zinc-50 rounded-2xl border border-zinc-200/60 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white">
+                            <Activity size={16} />
                           </div>
+                          <h4 className="text-xs font-black text-zinc-900 uppercase tracking-wider">Hospital Transaction</h4>
+                        </div>
 
-                          <div className="space-y-4">
-                            <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Flow Type</label>
-                            <div className="grid grid-cols-2 gap-3">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setTxnType('income');
-                                  setHospitalIncomeType('none');
-                                  setHospitalFeeType('none');
-                                  setAmount('');
-                                }}
-                                className={cn(
-                                  "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
-                                  txnType === 'income' ? "bg-emerald-600 border-emerald-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
-                                )}
-                              >
-                                Income
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setTxnType('expense');
-                                  setHospitalIncomeType('none');
-                                  setHospitalFeeType('none');
-                                  setAmount('');
-                                }}
-                                className={cn(
-                                  "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
-                                  txnType === 'expense' ? "bg-rose-600 border-rose-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
-                                )}
-                              >
-                                Expense
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Expense Fields */}
-                          {txnType === 'expense' && (
-                            <div className="space-y-4 pt-4 border-t border-zinc-200/60 animate-in fade-in duration-300">
-                              <div className="space-y-2">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Receiver Name (Who is taking?)</label>
-                                <input
-                                  value={hospitalExpenseReceiver}
-                                  onChange={(e) => setHospitalExpenseReceiver(e.target.value)}
-                                  placeholder="e.g. Aqsa Nasreen, Dr. Khan, Staff Member..."
-                                  className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Reason / Purpose</label>
-                                <input
-                                  value={hospitalExpenseReason}
-                                  onChange={(e) => setHospitalExpenseReason(e.target.value)}
-                                  placeholder="e.g. Medicine purchase, Petty cash, Equipment..."
-                                  className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Time</label>
-                                <input
-                                  type="time"
-                                  value={hospitalExpenseTime}
-                                  onChange={(e) => setHospitalExpenseTime(e.target.value)}
-                                  className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
-                                />
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Income Fields */}
-                          {txnType === 'income' && (
-                            <div className="space-y-6 pt-4 border-t border-zinc-200/60 animate-in fade-in duration-300">
-                              <div className="space-y-4">
-                                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Income Classification</label>
-                                <div className="grid grid-cols-2 gap-3">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setHospitalIncomeType('fee');
-                                      setHospitalFeeType('none');
-                                      setAmount('');
-                                    }}
-                                    className={cn(
-                                      "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
-                                      hospitalIncomeType === 'fee' ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-indigo-200"
-                                    )}
-                                  >
-                                    Fee
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setHospitalIncomeType('medicine');
-                                      setHospitalFeeType('none');
-                                      setAmount('');
-                                      setHospitalMedicineItems([]);
-                                    }}
-                                    className={cn(
-                                      "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
-                                      hospitalIncomeType === 'medicine' ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-indigo-200"
-                                    )}
-                                  >
-                                    Medicine
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Income Subcategory: Fee */}
-                              {hospitalIncomeType === 'fee' && (
-                                <div className="space-y-4 pt-4 border-t border-zinc-200/60 animate-in fade-in duration-300">
-                                  <div className="space-y-4">
-                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Fee Category</label>
-                                    <div className="grid grid-cols-2 gap-3">
-                                      <button
-                                        type="button"
-                                        onClick={() => setHospitalFeeType('checkup')}
-                                        className={cn(
-                                          "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
-                                          hospitalFeeType === 'checkup' ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-indigo-200"
-                                        )}
-                                      >
-                                        Checkup Fee
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => setHospitalFeeType('usg')}
-                                        className={cn(
-                                          "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
-                                          hospitalFeeType === 'usg' ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-indigo-200"
-                                        )}
-                                      >
-                                        USG Fee
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Patient Name</label>
-                                    <input
-                                      value={hospitalFeePatientName}
-                                      onChange={(e) => setHospitalFeePatientName(e.target.value)}
-                                      placeholder="e.g. Patient Name..."
-                                      className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Time</label>
-                                    <input
-                                      type="time"
-                                      value={hospitalFeeTime}
-                                      onChange={(e) => setHospitalFeeTime(e.target.value)}
-                                      className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
-                                    />
-                                  </div>
-                                </div>
+                        <div className="space-y-4">
+                          <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Flow Type</label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTxnType('income');
+                                setHospitalIncomeType('none');
+                                setHospitalFeeType('none');
+                                setAmount('');
+                              }}
+                              className={cn(
+                                "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                txnType === 'income' ? "bg-emerald-600 border-emerald-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
                               )}
+                            >
+                              Income
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTxnType('expense');
+                                setHospitalIncomeType('none');
+                                setHospitalFeeType('none');
+                                setAmount('');
+                              }}
+                              className={cn(
+                                "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                txnType === 'expense' ? "bg-rose-600 border-rose-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
+                              )}
+                            >
+                              Expense
+                            </button>
+                          </div>
+                        </div>
 
-                              {/* Income Subcategory: Medicine */}
-                              {hospitalIncomeType === 'medicine' && (
-                                <div className="space-y-4 pt-4 border-t border-zinc-200/60 animate-in fade-in duration-300">
-                                  <div className="space-y-2">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Patient Name</label>
-                                    <input
-                                      value={hospitalMedicinePatientName}
-                                      onChange={(e) => setHospitalMedicinePatientName(e.target.value)}
-                                      placeholder="e.g. Patient Name..."
-                                      className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Time</label>
-                                    <input
-                                      type="time"
-                                      value={hospitalMedicineTime}
-                                      onChange={(e) => setHospitalMedicineTime(e.target.value)}
-                                      className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
-                                    />
-                                  </div>
+                        {/* Expense Fields */}
+                        {txnType === 'expense' && (
+                          <div className="space-y-4 pt-4 border-t border-zinc-200/60 animate-in fade-in duration-300">
+                            <div className="space-y-2">
+                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Receiver Name (Who is taking?)</label>
+                              <input
+                                value={hospitalExpenseReceiver}
+                                onChange={(e) => setHospitalExpenseReceiver(e.target.value)}
+                                placeholder="e.g. Aqsa Nasreen, Dr. Khan, Staff Member..."
+                                className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Reason / Purpose</label>
+                              <input
+                                value={hospitalExpenseReason}
+                                onChange={(e) => setHospitalExpenseReason(e.target.value)}
+                                placeholder="e.g. Medicine purchase, Petty cash, Equipment..."
+                                className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Time</label>
+                              <input
+                                type="time"
+                                value={hospitalExpenseTime}
+                                onChange={(e) => setHospitalExpenseTime(e.target.value)}
+                                className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                              />
+                            </div>
+                          </div>
+                        )}
 
-                                  {/* Medicine Item Builder */}
-                                  <div className="p-4 bg-white rounded-xl border border-zinc-200 space-y-4">
-                                    <h5 className="text-[10px] font-black uppercase tracking-wider text-zinc-800">Add Medicine / Drip / Item</h5>
-                                    <div className="grid grid-cols-2 gap-2">
-                                      <input
-                                        value={newMedItemName}
-                                        onChange={(e) => setNewMedItemName(e.target.value)}
-                                        placeholder="Item Name (e.g. Drip)"
-                                        className="h-10 border border-zinc-200 rounded-lg px-3 text-xs font-bold outline-none text-gray-900"
-                                      />
-                                      <input
-                                        type="number"
-                                        value={newMedItemPrice}
-                                        onChange={(e) => setNewMedItemPrice(e.target.value)}
-                                        placeholder="Price (Rs)"
-                                        className="h-10 border border-zinc-200 rounded-lg px-3 text-xs font-bold outline-none text-gray-900"
-                                      />
-                                    </div>
+                        {/* Income Fields */}
+                        {txnType === 'income' && (
+                          <div className="space-y-6 pt-4 border-t border-zinc-200/60 animate-in fade-in duration-300">
+                            <div className="space-y-4">
+                              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Income Classification</label>
+                              <div className="grid grid-cols-2 gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setHospitalIncomeType('fee');
+                                    setHospitalFeeType('none');
+                                    setAmount('');
+                                  }}
+                                  className={cn(
+                                    "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                    hospitalIncomeType === 'fee' ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-indigo-200"
+                                  )}
+                                >
+                                  Fee
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setHospitalIncomeType('medicine');
+                                    setHospitalFeeType('none');
+                                    setAmount('');
+                                    setHospitalMedicineItems([]);
+                                  }}
+                                  className={cn(
+                                    "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                    hospitalIncomeType === 'medicine' ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-indigo-200"
+                                  )}
+                                >
+                                  Medicine
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Income Subcategory: Fee */}
+                            {hospitalIncomeType === 'fee' && (
+                              <div className="space-y-4 pt-4 border-t border-zinc-200/60 animate-in fade-in duration-300">
+                                <div className="space-y-4">
+                                  <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Fee Category</label>
+                                  <div className="grid grid-cols-2 gap-3">
                                     <button
                                       type="button"
-                                      onClick={() => {
-                                        const name = newMedItemName.trim();
-                                        const price = Number(newMedItemPrice) || 0;
-                                        if (!name || price <= 0) return;
-                                        const newItem = { id: Math.random().toString(), name, price };
-                                        const updated = [...hospitalMedicineItems, newItem];
-                                        setHospitalMedicineItems(updated);
-                                        setNewMedItemName('');
-                                        setNewMedItemPrice('');
-                                        // Auto-calculate amount
-                                        const total = updated.reduce((sum, item) => sum + item.price, 0);
-                                        setAmount(String(total));
-                                      }}
-                                      className="w-full h-9 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
+                                      onClick={() => setHospitalFeeType('checkup')}
+                                      className={cn(
+                                        "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                        hospitalFeeType === 'checkup' ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-indigo-200"
+                                      )}
                                     >
-                                      + Add Item
+                                      Checkup Fee
                                     </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setHospitalFeeType('usg')}
+                                      className={cn(
+                                        "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                        hospitalFeeType === 'usg' ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-indigo-200"
+                                      )}
+                                    >
+                                      USG Fee
+                                    </button>
+                                  </div>
+                                </div>
 
-                                    {/* Added items list */}
-                                    {hospitalMedicineItems.length > 0 && (
-                                      <div className="mt-3 space-y-2 max-h-32 overflow-y-auto pr-1">
-                                        {hospitalMedicineItems.map((item) => (
-                                          <div key={item.id} className="flex justify-between items-center bg-zinc-50 p-2 rounded border border-zinc-100 text-xs">
-                                            <div className="truncate max-w-[200px]">
-                                              <span className="font-extrabold text-zinc-900">{item.name}</span>
-                                              <span className="text-[10px] text-zinc-400 ml-2">Rs {item.price}</span>
-                                            </div>
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Patient Name</label>
+                                  <input
+                                    value={hospitalFeePatientName}
+                                    onChange={(e) => setHospitalFeePatientName(e.target.value)}
+                                    placeholder="e.g. Patient Name..."
+                                    className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Time</label>
+                                  <input
+                                    type="time"
+                                    value={hospitalFeeTime}
+                                    onChange={(e) => setHospitalFeeTime(e.target.value)}
+                                    className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Income Subcategory: Medicine */}
+                            {hospitalIncomeType === 'medicine' && (
+                              <div className="space-y-6 pt-4 border-t border-zinc-200/60 animate-in fade-in duration-300">
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Patient Name</label>
+                                  <input
+                                    value={hospitalMedicinePatientName}
+                                    onChange={(e) => setHospitalMedicinePatientName(e.target.value)}
+                                    placeholder="e.g. Patient Name..."
+                                    className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Time</label>
+                                  <input
+                                    type="time"
+                                    value={hospitalMedicineTime}
+                                    onChange={(e) => setHospitalMedicineTime(e.target.value)}
+                                    className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                  />
+                                </div>
+
+                                {/* Dynamic Item Builder */}
+                                <div className="space-y-4 pt-4 border-t border-zinc-100">
+                                  <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Medicine & Drips List</label>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                      <input
+                                        placeholder="Item Name (e.g. Drip)"
+                                        value={newMedItemName}
+                                        onChange={(e) => setNewMedItemName(e.target.value)}
+                                        className="w-full h-10 bg-white border border-zinc-200 rounded-lg px-3 text-xs font-bold outline-none text-gray-900"
+                                      />
+                                    </div>
+                                    <div className="space-y-1 flex gap-2">
+                                      <input
+                                        type="number"
+                                        placeholder="Price (PKR)"
+                                        value={newMedItemPrice}
+                                        onChange={(e) => setNewMedItemPrice(e.target.value)}
+                                        className="w-full h-10 bg-white border border-zinc-200 rounded-lg px-3 text-xs font-bold outline-none text-gray-900"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (!newMedItemName.trim() || !newMedItemPrice.trim()) return;
+                                          const item = {
+                                            id: Math.random().toString(),
+                                            name: newMedItemName.trim(),
+                                            price: Number(newMedItemPrice) || 0
+                                          };
+                                          const updated = [...hospitalMedicineItems, item];
+                                          setHospitalMedicineItems(updated);
+                                          setNewMedItemName('');
+                                          setNewMedItemPrice('');
+                                          const total = updated.reduce((sum, item) => sum + item.price, 0);
+                                          setAmount(String(total));
+                                        }}
+                                        className="px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-black uppercase"
+                                      >
+                                        Add
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {hospitalMedicineItems.length > 0 && (
+                                    <div className="bg-white rounded-xl border border-zinc-100 p-4 space-y-2 max-h-40 overflow-y-auto no-scrollbar">
+                                      {hospitalMedicineItems.map((item) => (
+                                        <div key={item.id} className="flex justify-between items-center text-xs font-bold border-b border-zinc-50 pb-2 last:border-0 last:pb-0">
+                                          <span className="text-zinc-700">{item.name}</span>
+                                          <div className="flex items-center gap-3">
+                                            <span className="text-zinc-900">Rs {item.price.toLocaleString()}</span>
                                             <button
                                               type="button"
                                               onClick={() => {
@@ -2355,79 +2314,16 @@ export default function CashierStationPage() {
                                               Remove
                                             </button>
                                           </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="p-6 bg-zinc-50 rounded-2xl border border-zinc-200/60 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white">
-                              <User size={16} />
-                            </div>
-                            <h4 className="text-xs font-black text-zinc-900 uppercase tracking-wider">Hospital Patient Entry</h4>
-                          </div>
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Serial Number</label>
-                                <input
-                                  value={hospitalTxForm.serialNumber}
-                                  onChange={(e) => setHospitalTxForm({...hospitalTxForm, serialNumber: e.target.value})}
-                                  placeholder="e.g. 104"
-                                  className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
-                                />
                               </div>
-                              <div className="space-y-2">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Category</label>
-                                <select
-                                  value={hospitalTxForm.category}
-                                  onChange={(e) => setHospitalTxForm({...hospitalTxForm, category: e.target.value})}
-                                  className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
-                                >
-                                  <option value="Check-up Patient">Check-up Patient</option>
-                                  <option value="USG Patient">USG Patient</option>
-                                  <option value="Operated Patient">Operated Patient</option>
-                                  <option value="Lab Test">Lab Test</option>
-                                  <option value="Other">Other</option>
-                                </select>
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Patient Name</label>
-                              <input
-                                value={hospitalTxForm.patientName}
-                                onChange={(e) => setHospitalTxForm({...hospitalTxForm, patientName: e.target.value})}
-                                placeholder="e.g. John Doe"
-                                className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Father/Husband Name</label>
-                              <input
-                                value={hospitalTxForm.fatherName}
-                                onChange={(e) => setHospitalTxForm({...hospitalTxForm, fatherName: e.target.value})}
-                                placeholder="e.g. Richard Doe"
-                                className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Reason / Symptoms</label>
-                              <input
-                                value={hospitalTxForm.reason}
-                                onChange={(e) => setHospitalTxForm({...hospitalTxForm, reason: e.target.value})}
-                                placeholder="e.g. Fever and Cough"
-                                className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
-                              />
-                            </div>
+                            )}
                           </div>
-                        </div>
-                      )
+                        )}
+                      </div>
                     )}
                   </div>
 
