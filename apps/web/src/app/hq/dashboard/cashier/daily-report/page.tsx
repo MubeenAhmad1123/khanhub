@@ -69,6 +69,50 @@ type Transaction = {
   createdAt: any;
   date?: any;
   transactionDate?: any;
+  hospitalPatientDetails?: any;
+};
+
+const getIsExpense = (tx: any): boolean => {
+  return (
+    tx.type === 'expense' ||
+    String(tx.categoryName || tx.category || '').toLowerCase().includes('expense')
+  );
+};
+
+const getTxDisplayName = (tx: any): string => {
+  if (tx.departmentCode === 'hospital' && tx.hospitalPatientDetails) {
+    return tx.hospitalPatientDetails.patientName || tx.hospitalPatientDetails.receiverName || tx.patientName || '—';
+  }
+  return tx.patientName || tx.studentName || tx.seekerName || tx.name || '—';
+};
+
+const getTxDisplayDescription = (tx: any): string => {
+  if (tx.departmentCode === 'hospital' && tx.hospitalPatientDetails) {
+    const details = tx.hospitalPatientDetails;
+    if (details.type === 'expense') {
+      return `Expense: ${details.reason || tx.description || 'General Expense'}`;
+    }
+    if (details.type === 'fee') {
+      const feeLabel = details.feeType === 'checkup' ? 'Checkup Fee' : 'USG Fee';
+      return `Fee: ${feeLabel}${tx.description ? ` (${tx.description})` : ''}`;
+    }
+    if (details.type === 'medicine') {
+      const itemsList = details.items?.map((it: any) => `${it.name} (Rs ${it.amount || it.price})`).join(', ') || '';
+      return `Medicine: ${itemsList || tx.description || 'Prescription items'}`;
+    }
+    // Standard hospital patient form fallback
+    const category = details.category || '';
+    const reason = details.reason || '';
+    return `${category}${reason ? ` - ${reason}` : ''}` || tx.description || 'Hospital Patient';
+  }
+  return tx.description || (getIsExpense(tx) ? 'Operational Cost' : 'General Receipt');
+};
+
+const getTxExpenseRecipient = (tx: any): string => {
+  if (tx.departmentCode === 'hospital' && tx.hospitalPatientDetails) {
+    return tx.hospitalPatientDetails.receiverName || tx.receivedBy || tx.cashierId || 'Staff';
+  }
+  return tx.receivedBy || tx.cashierId || 'Staff';
 };
 
 export default function DailyReportPage() {
@@ -586,7 +630,11 @@ export default function DailyReportPage() {
                             {data.txs.map(tx => (
                               <div key={tx.id} className="flex items-center justify-between p-3 bg-white rounded-2xl border border-zinc-100/50 shadow-sm">
                                 <div className="space-y-0.5">
-                                  <p className="text-xs font-bold text-zinc-800">{tx.description || 'General Receipt'}</p>
+                                  <p className="text-xs font-bold text-zinc-800">
+                                    {getTxDisplayName(tx) !== '—' && getTxDisplayName(tx) !== 'Inline Patient'
+                                      ? `${getTxDisplayName(tx)} • ${getTxDisplayDescription(tx)}`
+                                      : getTxDisplayDescription(tx)}
+                                  </p>
                                   <p className="text-[10px] font-black text-zinc-400 uppercase tracking-tighter">
                                     {tx.departmentName} • {tx.paymentMethod}
                                   </p>
@@ -643,9 +691,13 @@ export default function DailyReportPage() {
                             {data.txs.map(tx => (
                               <div key={tx.id} className="flex items-center justify-between p-3 bg-white rounded-2xl border border-zinc-100/50 shadow-sm">
                                 <div className="space-y-0.5">
-                                  <p className="text-xs font-bold text-zinc-800">{tx.description || 'Operational Cost'}</p>
+                                  <p className="text-xs font-bold text-zinc-800">
+                                    {getTxExpenseRecipient(tx) !== 'Staff'
+                                      ? `${getTxExpenseRecipient(tx)} • ${getTxDisplayDescription(tx)}`
+                                      : getTxDisplayDescription(tx)}
+                                  </p>
                                   <p className="text-[10px] font-black text-zinc-400 uppercase tracking-tighter">
-                                    {tx.departmentName} • {tx.receivedBy || tx.cashierId || 'Staff'}
+                                    {tx.departmentName} • {getTxExpenseRecipient(tx)}
                                   </p>
                                 </div>
                                 <span className="text-sm font-black text-rose-600">-{tx.amount.toLocaleString()}</span>
@@ -739,7 +791,13 @@ export default function DailyReportPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 max-w-xs truncate text-sm text-zinc-900 font-bold">
-                          {tx.description || '-'}
+                          {tx.type === 'expense'
+                            ? (getTxExpenseRecipient(tx) !== 'Staff'
+                              ? `${getTxExpenseRecipient(tx)} • ${getTxDisplayDescription(tx)}`
+                              : getTxDisplayDescription(tx))
+                            : (getTxDisplayName(tx) !== '—' && getTxDisplayName(tx) !== 'Inline Patient'
+                              ? `${getTxDisplayName(tx)} • ${getTxDisplayDescription(tx)}`
+                              : getTxDisplayDescription(tx))}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                           {tx.paymentMethod?.replace('_', ' ')}
@@ -802,7 +860,13 @@ export default function DailyReportPage() {
                       </div>
                     </div>
                     <div className="text-xs text-zinc-600 line-clamp-2 border-t border-zinc-50 pt-3 italic font-bold">
-                      {tx.description || 'No description'}
+                      {tx.type === 'expense'
+                        ? (getTxExpenseRecipient(tx) !== 'Staff'
+                          ? `${getTxExpenseRecipient(tx)} • ${getTxDisplayDescription(tx)}`
+                          : getTxDisplayDescription(tx))
+                        : (getTxDisplayName(tx) !== '—' && getTxDisplayName(tx) !== 'Inline Patient'
+                          ? `${getTxDisplayName(tx)} • ${getTxDisplayDescription(tx)}`
+                          : getTxDisplayDescription(tx))}
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-zinc-400 font-black uppercase tracking-[0.2em] pt-1">
                       <span>{tx.paymentMethod?.replace('_', ' ')}</span>

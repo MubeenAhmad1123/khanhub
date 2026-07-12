@@ -29,7 +29,44 @@ interface Transaction {
   createdAt: any;
   date?: any;
   transactionDate?: any;
+  hospitalPatientDetails?: any;
 }
+
+const getTxDisplayName = (tx: any): string => {
+  if (tx.departmentCode === 'hospital' && tx.hospitalPatientDetails) {
+    return tx.hospitalPatientDetails.patientName || tx.hospitalPatientDetails.receiverName || tx.patientName || '—';
+  }
+  return tx.patientName || tx.studentName || tx.seekerName || tx.name || '—';
+};
+
+const getTxDisplayDescription = (tx: any): string => {
+  if (tx.departmentCode === 'hospital' && tx.hospitalPatientDetails) {
+    const details = tx.hospitalPatientDetails;
+    if (details.type === 'expense') {
+      return `Expense: ${details.reason || tx.description || 'General Expense'}`;
+    }
+    if (details.type === 'fee') {
+      const feeLabel = details.feeType === 'checkup' ? 'Checkup Fee' : 'USG Fee';
+      return `Fee: ${feeLabel}${tx.description ? ` (${tx.description})` : ''}`;
+    }
+    if (details.type === 'medicine') {
+      const itemsList = details.items?.map((it: any) => `${it.name} (Rs ${it.amount || it.price})`).join(', ') || '';
+      return `Medicine: ${itemsList || tx.description || 'Prescription items'}`;
+    }
+    // Standard hospital patient form fallback
+    const category = details.category || '';
+    const reason = details.reason || '';
+    return `${category}${reason ? ` - ${reason}` : ''}` || tx.description || 'Hospital Patient';
+  }
+  return tx.description || (getIsExpense(tx) ? 'Operational Cost' : 'General Receipt');
+};
+
+const getTxExpenseRecipient = (tx: any): string => {
+  if (tx.departmentCode === 'hospital' && tx.hospitalPatientDetails) {
+    return tx.hospitalPatientDetails.receiverName || tx.receivedBy || tx.cashierId || 'Staff';
+  }
+  return tx.receivedBy || tx.cashierId || 'Staff';
+};
 
 interface Props {
   date: string; // YYYY-MM-DD or display format
@@ -287,8 +324,8 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
                               {tx.createdAt ? new Date(tx.createdAt.toMillis?.() || tx.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                             </td>
                             <td className="py-1.5 uppercase font-bold text-zinc-600">{tx.departmentName || tx._dept || tx.departmentCode}</td>
-                            <td className="py-1.5 font-bold truncate max-w-[120px]">{(tx as any).patientName || (tx as any).studentName || (tx as any).seekerName || (tx as any).name || '—'}</td>
-                            <td className="py-1.5 truncate max-w-[160px]">{tx.description || 'General Receipt'}</td>
+                            <td className="py-1.5 font-bold truncate max-w-[120px]">{getTxDisplayName(tx)}</td>
+                            <td className="py-1.5 truncate max-w-[160px]">{getTxDisplayDescription(tx)}</td>
                             <td className="py-1.5 uppercase text-zinc-500 text-[8px] tracking-wider">{tx.paymentMethod}</td>
                             <td className="py-1.5 text-right font-bold text-emerald-600">₨{tx.amount.toLocaleString()}</td>
                           </tr>
@@ -335,8 +372,8 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
                               {tx.createdAt ? new Date(tx.createdAt.toMillis?.() || tx.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                             </td>
                             <td className="py-1.5 uppercase font-bold text-zinc-600">{tx.departmentName || tx._dept || tx.departmentCode}</td>
-                            <td className="py-1.5 font-bold truncate max-w-[120px]">{tx.receivedBy || tx.cashierId || 'Staff'}</td>
-                            <td className="py-1.5 truncate max-w-[160px]">{tx.description || 'Operational Cost'}</td>
+                            <td className="py-1.5 font-bold truncate max-w-[120px]">{getTxExpenseRecipient(tx)}</td>
+                            <td className="py-1.5 truncate max-w-[160px]">{getTxDisplayDescription(tx)}</td>
                             <td className="py-1.5 uppercase text-zinc-500 text-[8px] tracking-wider">{tx.paymentMethod}</td>
                             <td className="py-1.5 text-right font-bold text-rose-600">₨{tx.amount.toLocaleString()}</td>
                           </tr>
