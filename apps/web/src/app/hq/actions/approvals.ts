@@ -1003,7 +1003,8 @@ export async function editApprovedTransaction(params: {
     const isSubtypeChanged = newSubtype !== oldSubtype;
 
     // 1. Update the transaction document
-    const transactionDate = new Date(`${params.date}T00:00:00`);
+    const [y, m, d] = params.date.split('-').map(Number);
+    const transactionDate = new Date(y, m - 1, d, 12, 0, 0);
     const updatePayload: Record<string, any> = {
       amount: newAmount,
       date: transactionDate,

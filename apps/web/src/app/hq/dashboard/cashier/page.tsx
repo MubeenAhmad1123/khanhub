@@ -167,7 +167,7 @@ export default function CashierStationPage() {
   const [newMedItemPrice, setNewMedItemPrice] = useState('');
 
   const [txnType, setTxnType] = useState<TxnType>('income');
-  const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
+  const [txDate, setTxDate] = useState(getLocalDateString(new Date()));
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [discount, setDiscount] = useState('');
@@ -1270,8 +1270,14 @@ export default function CashierStationPage() {
         } : {}),
         cashierId: session?.customId || 'HQ-CASHIER',
         proofRequired: true,
-        date: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
-        transactionDate: Timestamp.fromDate(new Date(`${txDate}T00:00:00`)),
+        date: (() => {
+          const [y, m, d] = txDate.split('-').map(Number);
+          return Timestamp.fromDate(new Date(y, m - 1, d, 12, 0, 0));
+        })(),
+        transactionDate: (() => {
+          const [y, m, d] = txDate.split('-').map(Number);
+          return Timestamp.fromDate(new Date(y, m - 1, d, 12, 0, 0));
+        })(),
         createdBy: session?.uid,
         createdByName: session?.displayName || session?.name || 'HQ Cashier',
         createdAt: Timestamp.now(),
@@ -1469,7 +1475,8 @@ export default function CashierStationPage() {
         // If it is not approved, update it directly in firestore
         const coll = detailModalTx._collection || dept.txCollection;
         const docRef = doc(db, coll, detailModalTx.id);
-        const newDate = new Date(`${editDetailForm.date}T12:00:00`);
+        const [y, m, d] = editDetailForm.date.split('-').map(Number);
+        const newDate = new Date(y, m - 1, d, 12, 0, 0);
         const updatePayload: Record<string, any> = {
           amount: amt,
           date: Timestamp.fromDate(newDate),
@@ -1497,8 +1504,14 @@ export default function CashierStationPage() {
       const updatedTx = {
         ...detailModalTx,
         amount: amt,
-        date: Timestamp.fromDate(new Date(`${editDetailForm.date}T12:00:00`)),
-        transactionDate: Timestamp.fromDate(new Date(`${editDetailForm.date}T12:00:00`)),
+        date: (() => {
+          const [y, m, d] = editDetailForm.date.split('-').map(Number);
+          return Timestamp.fromDate(new Date(y, m - 1, d, 12, 0, 0));
+        })(),
+        transactionDate: (() => {
+          const [y, m, d] = editDetailForm.date.split('-').map(Number);
+          return Timestamp.fromDate(new Date(y, m - 1, d, 12, 0, 0));
+        })(),
         description: finalDescription,
         ...(detailModalTx.hospitalDayCloseShift ? { hospitalDayCloseShift: editDetailForm.hospitalShift } : {}),
         ...(editDetailForm.category ? { category: editDetailForm.category } : {}),
@@ -1524,7 +1537,7 @@ export default function CashierStationPage() {
   const todayStr = getLocalDateString(new Date());
   
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString(new Date());
     const todayTxns = historyTxns.filter(t => t.date === today && t.status !== 'pending_cashier');
     
     const revenue = todayTxns.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount || 0), 0);
@@ -2760,7 +2773,7 @@ export default function CashierStationPage() {
                       if (mode === 'yesterday') {
                         const d = new Date();
                         d.setDate(d.getDate() - 1);
-                        const s = d.toISOString().split('T')[0];
+                        const s = getLocalDateString(d);
                         setHistoryFrom(s);
                         setHistoryTo(s);
                       }
@@ -3408,7 +3421,7 @@ export default function CashierStationPage() {
                             }
                             setEditDetailForm({
                               amount: String(detailModalTx.amount || 0),
-                              date: toDate(detailModalTx.date || detailModalTx.transactionDate || detailModalTx.createdAt).toISOString().split('T')[0],
+                              date: getLocalDateString(detailModalTx.date || detailModalTx.transactionDate || detailModalTx.createdAt),
                               description: extractedNote,
                               category: detailModalTx.category || '',
                               categoryName: detailModalTx.categoryName || '',
@@ -3525,11 +3538,11 @@ function EntityProfileModal({
   const [adjusting, setAdjusting] = useState(false);
   const [duesLogs, setDuesLogs] = useState<any[]>([]);
 
-  const todayIso = new Date().toISOString().split('T')[0];
+  const todayIso = getLocalDateString(new Date());
   const yesterdayIso = (() => {
     const d = new Date();
     d.setDate(d.getDate() - 1);
-    return d.toISOString().split('T')[0];
+    return getLocalDateString(d);
   })();
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -4812,7 +4825,7 @@ function EntityProfileModal({
                                           amount: tx.amount,
                                           category: tx.category || 'fee',
                                           categoryName: tx.categoryName || 'Admission / Fees',
-                                          date: toDate(tx.transactionDate || tx.date || tx.createdAt).toISOString().split('T')[0]
+                                          date: getLocalDateString(tx.transactionDate || tx.date || tx.createdAt)
                                         });
                                       }}
                                       className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center lg:opacity-0 lg:group-hover:opacity-100"
@@ -5039,7 +5052,7 @@ function EntityProfileModal({
                                     amount: tx.amount,
                                     category: tx.category || 'fee',
                                     categoryName: tx.categoryName || 'Admission / Fees',
-                                    date: toDate(tx.transactionDate || tx.date || tx.createdAt).toISOString().split('T')[0],
+                                    date: getLocalDateString(tx.transactionDate || tx.date || tx.createdAt),
                                     discount: tx.discount || 0,
                                     returnAmount: tx.returnAmount || tx.return || 0,
                                     stayDurationIndex: tx.stayDurationIndex !== undefined ? String(tx.stayDurationIndex) : '',
