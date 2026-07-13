@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Shield, Eye, FileText,
   UserCog, CalendarCheck, CheckCircle, CreditCard, History,
   LogOut, Menu, X, ArrowLeft, Calculator, Tag, DollarSign, TrendingUp, BarChart2, User,
-  Building2, GraduationCap, ChevronLeft, ExternalLink, Heart, KeyRound, Lock, Lightbulb
+  Building2, GraduationCap, ChevronLeft, ExternalLink, Heart, KeyRound, Lock, Lightbulb, Search
 } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
@@ -23,6 +23,7 @@ import VoiceAssistantProvider from '@/components/hq/VoiceAssistant/VoiceAssistan
 import VoiceAssistantButton from '@/components/hq/VoiceAssistant/VoiceAssistantButton';
 import VoiceCommandBar from '@/components/hq/VoiceAssistant/VoiceCommandBar';
 import VoiceDisambiguationCard from '@/components/hq/VoiceAssistant/VoiceDisambiguationCard';
+import HqGlobalSearch from '@/components/hq/HqGlobalSearch';
 
 const SESSION_KEY = 'hq_session';
 const SESSION_TIMEOUT = 604800000; // 7 days in milliseconds
@@ -151,6 +152,23 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
   const [activeDepts, setActiveDepts] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'hq' | string>('hq');
   const [activeRole, setActiveRole] = useState<HqRole | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Global search keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || e.key === '/') {
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.getAttribute('contenteditable') === 'true')) {
+          return;
+        }
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // FCM push notifications
   const { permission, isRequesting, requestPermission } = useFcmNotifications(user);
@@ -549,6 +567,13 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="p-2.5 rounded-xl border border-gray-150 bg-white text-gray-900 shadow-sm active:scale-95 transition-all"
+              title="Search (⌘K)"
+            >
+              <Search size={16} />
+            </button>
             {user ? <HqNotificationBell session={user} /> : null}
             {canUseVoice && <VoiceAssistantButton />}
             <div className="w-9 h-9 rounded-xl border border-gray-100 bg-white flex items-center justify-center text-xs font-black text-indigo-600 shadow-sm">
@@ -572,6 +597,14 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
             </span>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-150 bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50 shadow-sm rounded-xl active:scale-[0.98]"
+              title="Search HQ Portal (⌘K or /)"
+            >
+              <Search size={15} />
+              <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 hidden xl:inline">Search</span>
+            </button>
             <div className="w-px h-6 bg-gray-100 mx-1" />
             {user ? <HqNotificationBell session={user} /> : null}
             {canUseVoice && <VoiceAssistantButton />}
@@ -604,6 +637,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
       </div>
       <VoiceCommandBar />
       <VoiceDisambiguationCard />
+      <HqGlobalSearch userRole={currentRole} isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </VoiceAssistantProvider>
   );
 }
