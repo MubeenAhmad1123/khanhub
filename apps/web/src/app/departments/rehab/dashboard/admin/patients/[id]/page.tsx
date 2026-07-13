@@ -751,9 +751,24 @@ export default function PatientDetailPage() {
 
       const totalStayPackage = dueTillDate + historicalStayPackage;
       const finalMedicineCharges = typeof data.medicineCharges === 'number' ? data.medicineCharges : totalMedicineCharges;
-      const overallRemaining = typeof data.overallRemaining === 'number'
-        ? data.overallRemaining
-        : (totalStayPackage + finalMedicineCharges) - overallReceived - Number(data.totalDiscount || 0) + Number(data.manualRemainingAdjustment || 0);
+      const calculatedRemaining = Math.max(0, (totalStayPackage + finalMedicineCharges) - overallReceived - Number(data.totalDiscount || 0) + Number(data.manualRemainingAdjustment || 0));
+      
+      let overallRemaining = typeof data.overallRemaining === 'number' ? data.overallRemaining : calculatedRemaining;
+
+      // Auto-correction for discharged patients if database value is stale/incorrect
+      if (data.isActive === false && data.overallRemaining !== calculatedRemaining) {
+        overallRemaining = calculatedRemaining;
+        updateDoc(doc(db, 'rehab_patients', patientId), {
+          overallRemaining: calculatedRemaining,
+          remaining: calculatedRemaining,
+          remainingBalance: calculatedRemaining,
+          dueTillDate,
+          totalStayPackage,
+          billableMonths,
+          daysAdmitted,
+          durationFormatted
+        }).catch(err => console.warn("Failed to auto-correct discharged patient dues:", err));
+      }
 
       setPatient({
         id: pDoc.id,
@@ -1468,6 +1483,92 @@ export default function PatientDetailPage() {
 
       const monthlyPkg = Number(form.packageAmount);
 
+      const admission = new Date(form.admissionDate);
+      const endDate = patient.isActive === false && form.dischargeDate
+        ? new Date(form.dischargeDate)
+        : new Date();
+
+      const diffTimeMs = endDate.getTime() - admission.getTime();
+      const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
+
+      const rawMonths = (endDate.getFullYear() - admission.getFullYear()) * 12 + (endDate.getMonth() - admission.getMonth());
+      let completedMonths = rawMonths;
+      let hasExtraDays = false;
+
+      if (endDate.getDate() < admission.getDate()) {
+        completedMonths = rawMonths - 1;
+        hasExtraDays = true;
+      } else if (endDate.getDate() > admission.getDate()) {
+        completedMonths = rawMonths;
+        hasExtraDays = true;
+      } else {
+        completedMonths = rawMonths;
+        hasExtraDays = false;
+      }
+
+      const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+      const durationFormatted = formatStayDuration(daysAdmitted);
+      const dailyRate = Math.floor(monthlyPkg / 30);
+      const dueTillDate = billableMonths * monthlyPkg;
+
+      let historicalStayPackage = 0;
+      const history = patient.rejoinHistory || [];
+      history.forEach((stay: any) => {
+        let sAdmission = new Date();
+        const sa = stay.admissionDate;
+        if (sa) {
+          if (typeof sa.toDate === 'function') sAdmission = sa.toDate();
+          else if (typeof sa.seconds === 'number') sAdmission = new Date(sa.seconds * 1000);
+          else if (typeof sa._seconds === 'number') sAdmission = new Date(sa._seconds * 1000);
+          else {
+            const parsed = new Date(sa);
+            if (!isNaN(parsed.getTime())) sAdmission = parsed;
+          }
+        }
+
+        let sDischarge = new Date();
+        const sd = stay.dischargeDate;
+        if (sd) {
+          if (typeof sd.toDate === 'function') sDischarge = sd.toDate();
+          else if (typeof sd.seconds === 'number') sDischarge = new Date(sd.seconds * 1000);
+          else if (typeof sd._seconds === 'number') sDischarge = new Date(sd._seconds * 1000);
+          else {
+            const parsed = new Date(sd);
+            if (!isNaN(parsed.getTime())) sDischarge = parsed;
+          }
+        } else {
+          sDischarge = new Date();
+        }
+
+        const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || 0);
+
+        const sRawMonths = (sDischarge.getFullYear() - sAdmission.getFullYear()) * 12 + (sDischarge.getMonth() - sAdmission.getMonth());
+        let sCompletedMonths = sRawMonths;
+        let sHasExtraDays = false;
+
+        if (sDischarge.getDate() < sAdmission.getDate()) {
+          sCompletedMonths = sRawMonths - 1;
+          sHasExtraDays = true;
+        } else if (sDischarge.getDate() > sAdmission.getDate()) {
+          sCompletedMonths = sRawMonths;
+          sHasExtraDays = true;
+        } else {
+          sCompletedMonths = sRawMonths;
+          sHasExtraDays = false;
+        }
+
+        const sBillableMonths = Math.max(1, sCompletedMonths + (sHasExtraDays ? 1 : 0));
+        historicalStayPackage += sBillableMonths * sMonthlyPkg;
+      });
+
+      const totalStayPackage = dueTillDate + historicalStayPackage;
+      const finalMedicineCharges = patient.medicineCharges || 0;
+      const overallReceivedVal = patient.overallReceived || 0;
+      const totalDiscountVal = Number(patient.totalDiscount || 0);
+      const manualAdjustmentVal = Number(patient.manualRemainingAdjustment || 0);
+      
+      const overallRemaining = Math.max(0, (totalStayPackage + finalMedicineCharges) - overallReceivedVal - totalDiscountVal + manualAdjustmentVal);
+
       await updateDoc(doc(db, 'rehab_patients', patientId), {
         name: form.name,
         patientId: form.patientId || null,
@@ -1476,57 +1577,36 @@ export default function PatientDetailPage() {
         monthlyPackage: monthlyPkg,
         admissionDate: Timestamp.fromDate(new Date(form.admissionDate)),
         dischargeDate: form.dischargeDate ? Timestamp.fromDate(new Date(form.dischargeDate)) : null,
-        photoUrl: photoUrl || null
+        photoUrl: photoUrl || null,
+        daysAdmitted,
+        durationFormatted,
+        overallRemaining,
+        remaining: overallRemaining,
+        remainingBalance: overallRemaining,
+        dueTillDate,
+        totalStayPackage,
+        billableMonths,
+        dailyRate
       });
 
-      setPatient((prev: any) => {
-        const admission = new Date(form.admissionDate);
-        const endDate = prev.isActive === false && prev.dischargeDate
-          ? toDate(prev.dischargeDate)
-          : new Date();
-
-        const diffTimeMs = endDate.getTime() - admission.getTime();
-        const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
-
-        const rawMonths = (endDate.getFullYear() - admission.getFullYear()) * 12 + (endDate.getMonth() - admission.getMonth());
-        let completedMonths = rawMonths;
-        let hasExtraDays = false;
-
-        if (endDate.getDate() < admission.getDate()) {
-          completedMonths = rawMonths - 1;
-          hasExtraDays = true;
-        } else if (endDate.getDate() > admission.getDate()) {
-          completedMonths = rawMonths;
-          hasExtraDays = true;
-        } else {
-          completedMonths = rawMonths;
-          hasExtraDays = false;
-        }
-
-        const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
-        const durationFormatted = formatStayDuration(daysAdmitted);
-        const dailyRate = Math.floor(monthlyPkg / 30);
-        const dueTillDate = billableMonths * monthlyPkg;
-
-        return {
-          ...prev,
-          name: form.name,
-          patientId: form.patientId || null,
-          diagnosis: form.diagnosis,
-          packageAmount: monthlyPkg,
-          monthlyPackage: monthlyPkg,
-          daysAdmitted,
-          durationFormatted,
-          dailyRate,
-          dueTillDate,
-          billableMonths,
-          overallRemaining: typeof prev.overallRemaining === 'number'
-            ? prev.overallRemaining
-            : (dueTillDate + Number(prev.medicineCharges || 0)) - (prev.overallReceived || 0) - Number(prev.totalDiscount || 0) + Number(prev.manualRemainingAdjustment || 0),
-          photoUrl: photoUrl,
-          dischargeDate: form.dischargeDate ? Timestamp.fromDate(new Date(form.dischargeDate)) : null
-        };
-      });
+      setPatient((prev: any) => ({
+        ...prev,
+        name: form.name,
+        patientId: form.patientId || null,
+        diagnosis: form.diagnosis,
+        packageAmount: monthlyPkg,
+        monthlyPackage: monthlyPkg,
+        daysAdmitted,
+        durationFormatted,
+        dailyRate,
+        dueTillDate,
+        billableMonths,
+        overallRemaining,
+        remaining: overallRemaining,
+        remainingBalance: overallRemaining,
+        photoUrl: photoUrl,
+        dischargeDate: form.dischargeDate ? Timestamp.fromDate(new Date(form.dischargeDate)) : null
+      }));
       setEditForm(prev => ({ ...prev, photoUrl }));
       setIsEditing(false);
       toast.success('Profile updated');
@@ -1928,13 +2008,100 @@ export default function PatientDetailPage() {
         });
       }
 
+      // 2. Calculate remaining dues and stay package on discharge
+      const monthlyPkg = Number(patient.monthlyPackage || patient.packageAmount || 0);
+      
+      const rawMonths = (dischargeDateObj.getFullYear() - admissionDateObj.getFullYear()) * 12 + (dischargeDateObj.getMonth() - admissionDateObj.getMonth());
+      let completedMonths = rawMonths;
+      let hasExtraDays = false;
+
+      if (dischargeDateObj.getDate() < admissionDateObj.getDate()) {
+        completedMonths = rawMonths - 1;
+        hasExtraDays = true;
+      } else if (dischargeDateObj.getDate() > admissionDateObj.getDate()) {
+        completedMonths = rawMonths;
+        hasExtraDays = true;
+      } else {
+        completedMonths = rawMonths;
+        hasExtraDays = false;
+      }
+
+      const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+      const currentStayPackage = billableMonths * monthlyPkg;
+
+      let historicalStayPackage = 0;
+      const history = patient.rejoinHistory || [];
+      history.forEach((stay: any) => {
+        let sAdmission = new Date();
+        const sa = stay.admissionDate;
+        if (sa) {
+          if (typeof sa.toDate === 'function') sAdmission = sa.toDate();
+          else if (typeof sa.seconds === 'number') sAdmission = new Date(sa.seconds * 1000);
+          else if (typeof sa._seconds === 'number') sAdmission = new Date(sa._seconds * 1000);
+          else {
+            const parsed = new Date(sa);
+            if (!isNaN(parsed.getTime())) sAdmission = parsed;
+          }
+        }
+
+        let sDischarge = new Date();
+        const sd = stay.dischargeDate;
+        if (sd) {
+          if (typeof sd.toDate === 'function') sDischarge = sd.toDate();
+          else if (typeof sd.seconds === 'number') sDischarge = new Date(sd.seconds * 1000);
+          else if (typeof sd._seconds === 'number') sDischarge = new Date(sd._seconds * 1000);
+          else {
+            const parsed = new Date(sd);
+            if (!isNaN(parsed.getTime())) sDischarge = parsed;
+          }
+        } else {
+          sDischarge = new Date();
+        }
+
+        const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || 0);
+
+        const sRawMonths = (sDischarge.getFullYear() - sAdmission.getFullYear()) * 12 + (sDischarge.getMonth() - sAdmission.getMonth());
+        let sCompletedMonths = sRawMonths;
+        let sHasExtraDays = false;
+
+        if (sDischarge.getDate() < sAdmission.getDate()) {
+          sCompletedMonths = sRawMonths - 1;
+          sHasExtraDays = true;
+        } else if (sDischarge.getDate() > sAdmission.getDate()) {
+          sCompletedMonths = sRawMonths;
+          sHasExtraDays = true;
+        } else {
+          sCompletedMonths = sRawMonths;
+          sHasExtraDays = false;
+        }
+
+        const sBillableMonths = Math.max(1, sCompletedMonths + (sHasExtraDays ? 1 : 0));
+        historicalStayPackage += sBillableMonths * sMonthlyPkg;
+      });
+
+      const totalStayPackage = currentStayPackage + historicalStayPackage;
+      const finalMedicineCharges = patient.medicineCharges || 0;
+      const overallReceivedVal = patient.overallReceived || 0;
+      const totalDiscountVal = Number(patient.totalDiscount || 0);
+      const manualAdjustmentVal = Number(patient.manualRemainingAdjustment || 0);
+      const finalReceived = overallReceivedVal + amount;
+      const overallRemaining = Math.max(0, (totalStayPackage + finalMedicineCharges) - finalReceived - totalDiscountVal + manualAdjustmentVal);
+
       // 2. Update patient record
       await updateDoc(doc(db, 'rehab_patients', patientId), {
         isActive: false,
         dischargeDate: Timestamp.fromDate(dischargeDateObj),
         dischargeAmount: amount,
         dischargeNote: dNote || null,
-        totalStayDays: actualDays
+        totalStayDays: actualDays,
+        overallRemaining,
+        remaining: overallRemaining,
+        remainingBalance: overallRemaining,
+        dueTillDate: currentStayPackage,
+        totalStayPackage,
+        billableMonths,
+        daysAdmitted: actualDays,
+        durationFormatted: formatStayDuration(actualDays)
       });
 
       toast.success('Patient discharged successfully ✓');
