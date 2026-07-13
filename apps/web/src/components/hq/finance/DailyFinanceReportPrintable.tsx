@@ -77,9 +77,10 @@ interface Props {
   transactions: Transaction[];
   onClose: () => void;
   generatingUser?: string;
+  dischargedPatients?: any[];
 }
 
-export function DailyFinanceReportPrintable({ date, transactions, onClose, generatingUser }: Props) {
+export function DailyFinanceReportPrintable({ date, transactions, onClose, generatingUser, dischargedPatients = [] }: Props) {
   // Compute date string
   const dateStr = useMemo(() => {
     try {
@@ -290,6 +291,49 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
                       <td colSpan={5} className="px-4 py-6 text-center text-zinc-400 italic">No departmental transfers found.</td>
                     </tr>
                   )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 4. DISCHARGED PATIENTS TODAY */}
+            <div className="space-y-3 mb-8">
+              <div className="border-l-4 border-zinc-900 pl-3.5 py-0.5">
+                <h3 className="text-[10px] font-black text-zinc-900 uppercase tracking-widest leading-none">
+                  Patients Discharged Today
+                </h3>
+              </div>
+              <table className="w-full text-left border-collapse border border-zinc-200 rounded-lg overflow-hidden text-xs">
+                <thead>
+                  <tr className="bg-zinc-50 font-black text-[9px] uppercase tracking-wider text-zinc-500 border-b border-zinc-200">
+                    <th className="px-4 py-3">Inpatient #</th>
+                    <th className="px-4 py-3">Patient Name</th>
+                    <th className="px-4 py-3 text-right">Monthly Package</th>
+                    <th className="px-4 py-3 text-right">Discharge Settlement</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200 font-semibold">
+                  {dischargedPatients.length > 0 ? (
+                    dischargedPatients.map((p) => (
+                      <tr key={p.id} className="hover:bg-zinc-50/50">
+                        <td className="px-4 py-2.5 text-zinc-500 font-mono">{p.inpatientNumber || p.patientId || '—'}</td>
+                        <td className="px-4 py-2.5 font-bold uppercase text-zinc-700">{p.name}</td>
+                        <td className="px-4 py-2.5 text-right text-zinc-650">₨{Number(p.monthlyPackage || p.packageAmount || 0).toLocaleString()}</td>
+                        <td className="px-4 py-2.5 text-right font-black text-zinc-850">
+                          ₨{Number(p.dischargeAmount || 0).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-4 text-center text-zinc-400 italic">No patients left today.</td>
+                    </tr>
+                  )}
+                  <tr className="bg-zinc-50/50 font-black border-t border-zinc-300">
+                    <td colSpan={3} className="px-4 py-3 text-zinc-750 uppercase">Total Left Amount Today</td>
+                    <td className="px-4 py-3 text-right text-zinc-900">
+                      ₨{dischargedPatients.reduce((sum, p) => sum + (Number(p.dischargeAmount) || 0), 0).toLocaleString()}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
