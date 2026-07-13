@@ -134,7 +134,7 @@ export default function DailyReportPage() {
   const [reportDate, setReportDate] = useState(getLocalDateString());
   const [viewMode, setViewMode] = useState<'summary' | 'detail'>('summary');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [dischargedPatients, setDischargedPatients] = useState<any[]>([]);
+  const [leftPatients, setLeftPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
@@ -237,23 +237,23 @@ export default function DailyReportPage() {
       
       setTransactions(flattened);
 
-      // Fetch patients discharged today
-      let dischargedList: any[] = [];
+      // Fetch hospital left patients added today
+      let leftList: any[] = [];
       try {
         const patientsQ = query(
-          collection(db, 'rehab_patients'),
-          where('dischargeDate', '>=', startTimestamp),
-          where('dischargeDate', '<=', endTimestamp)
+          collection(db, 'hospital_patients'),
+          where('createdAt', '>=', startTimestamp),
+          where('createdAt', '<=', endTimestamp)
         );
         const patientsSnap = await getDocs(patientsQ);
-        dischargedList = patientsSnap.docs.map(doc => ({
+        leftList = patientsSnap.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
       } catch (err) {
-        console.warn('[DailyReport] Failed to fetch discharged patients:', err);
+        console.warn('[DailyReport] Failed to fetch hospital left patients:', err);
       }
-      setDischargedPatients(dischargedList);
+      setLeftPatients(leftList);
 
       // Check if already closed for this specific date
       let closedQ = query(
@@ -774,47 +774,47 @@ export default function DailyReportPage() {
                 </div>
             </div>
 
-            {/* Discharged Patients Breakdown */}
+            {/* Left Patients Breakdown */}
             <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-[3rem] border border-zinc-100 shadow-sm mt-10">
                 <div className="flex justify-between items-center mb-8 px-2">
                     <h2 className="text-lg font-black text-zinc-900 flex items-center gap-3">
                       <div className="w-2 h-8 bg-zinc-900 rounded-full" />
-                      Patients Discharged Today
+                      Left Patients Today (Hospital)
                     </h2>
-                    <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">{dischargedPatients.length} Left</span>
+                    <span className="text-xs font-black text-zinc-400 uppercase tracking-widest">{leftPatients.length} Left</span>
                 </div>
-                {dischargedPatients.length > 0 ? (
+                {leftPatients.length > 0 ? (
                   <div className="overflow-x-auto rounded-3xl border border-zinc-100 shadow-sm">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
                         <tr className="bg-zinc-50 text-[10px] uppercase tracking-widest font-black text-zinc-400 border-b border-zinc-150">
-                          <th className="px-6 py-4">Inpatient #</th>
                           <th className="px-6 py-4">Patient Name</th>
-                          <th className="px-6 py-4 text-right">Monthly Package</th>
-                          <th className="px-6 py-4 text-right">Discharge Settlement</th>
+                          <th className="px-6 py-4">Phone</th>
+                          <th className="px-6 py-4">Disease</th>
+                          <th className="px-6 py-4 text-right">Left Amount</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-55">
-                        {dischargedPatients.map((p) => (
+                        {leftPatients.map((p) => (
                           <tr key={p.id} className="hover:bg-zinc-50/50 transition-colors">
-                            <td className="px-6 py-4 font-mono text-zinc-500 font-bold">
-                              {p.inpatientNumber || p.patientId || '—'}
-                            </td>
                             <td className="px-6 py-4 font-black text-zinc-900 uppercase">
-                              {p.name}
+                              {p.fullName || p.name || '—'}
                             </td>
-                            <td className="px-6 py-4 text-right text-zinc-800 font-bold">
-                              PKR {Number(p.monthlyPackage || p.packageAmount || 0).toLocaleString()}
+                            <td className="px-6 py-4 text-zinc-600 font-bold">
+                              {p.phone || '—'}
+                            </td>
+                            <td className="px-6 py-4 text-zinc-600 font-bold uppercase">
+                              {p.disease || '—'}
                             </td>
                             <td className="px-6 py-4 text-right text-zinc-900 font-black">
-                              PKR {Number(p.dischargeAmount || 0).toLocaleString()}
+                              PKR {Number(p.remaining || 0).toLocaleString()}
                             </td>
                           </tr>
                         ))}
                         <tr className="bg-zinc-50 font-black border-t border-zinc-200">
                           <td colSpan={3} className="px-6 py-4 text-zinc-500 uppercase tracking-widest">Total Left Amount Today</td>
                           <td className="px-6 py-4 text-right text-zinc-900">
-                            PKR {dischargedPatients.reduce((sum, p) => sum + (Number(p.dischargeAmount) || 0), 0).toLocaleString()}
+                            PKR {leftPatients.reduce((sum, p) => sum + (Number(p.remaining) || 0), 0).toLocaleString()}
                           </td>
                         </tr>
                       </tbody>
@@ -822,7 +822,7 @@ export default function DailyReportPage() {
                   </div>
                 ) : (
                   <div className="py-10 text-center bg-zinc-50/50 rounded-3xl border border-dashed border-zinc-200">
-                    <p className="text-zinc-400 font-bold italic">No Patients Discharged Today</p>
+                    <p className="text-zinc-400 font-bold italic">No Left Patients Added Today</p>
                   </div>
                 )}
             </div>
@@ -1032,7 +1032,7 @@ export default function DailyReportPage() {
           transactions={transactions}
           onClose={() => setReportOpen(false)}
           generatingUser={session?.name || session?.displayName || 'Cashier'}
-          dischargedPatients={dischargedPatients}
+          leftPatients={leftPatients}
         />
       )}
     </div>
