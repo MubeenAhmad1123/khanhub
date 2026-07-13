@@ -30,6 +30,7 @@ interface Transaction {
   date?: any;
   transactionDate?: any;
   hospitalPatientDetails?: any;
+  patientName?: string;
 }
 
 const getTxDisplayName = (tx: any): string => {
@@ -96,6 +97,11 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
   const stats = useMemo(() => {
     let totalIncome = 0;
     let totalExpense = 0;
+    let incomeCount = 0;
+    let expenseCount = 0;
+    let usgCount = 0;
+    let checkupCount = 0;
+    const uniquePatients = new Set<string>();
     const deptTotals: Record<string, { income: number; expense: number; count: number }> = {};
     const incomeCategories: Record<string, { total: number; txs: Transaction[] }> = {};
     const expenseCategories: Record<string, { total: number; txs: Transaction[] }> = {};
@@ -113,6 +119,7 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
       deptTotals[deptKey].count++;
 
       if (isExp) {
+        expenseCount++;
         totalExpense += amt;
         deptTotals[deptKey].expense += amt;
 
@@ -122,6 +129,7 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
         expenseCategories[catKey].total += amt;
         expenseCategories[catKey].txs.push(tx);
       } else {
+        incomeCount++;
         totalIncome += amt;
         deptTotals[deptKey].income += amt;
 
@@ -130,6 +138,31 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
         }
         incomeCategories[catKey].total += amt;
         incomeCategories[catKey].txs.push(tx);
+      }
+
+      // Hospital specific stats
+      if (tx.departmentCode === 'hospital') {
+        const details = tx.hospitalPatientDetails;
+        if (details) {
+          if (details.type === 'fee') {
+            if (details.feeType === 'usg') {
+              usgCount++;
+            } else if (details.feeType === 'checkup' || details.feeType === 'none' || !details.feeType) {
+              checkupCount++;
+            }
+          }
+          if (details.type === 'fee' || details.type === 'medicine') {
+            const pName = details.patientName || tx.patientName;
+            if (pName && pName !== '—' && pName !== 'Inline Patient' && pName !== 'Day Close Transaction') {
+              uniquePatients.add(pName.trim().toLowerCase());
+            }
+          }
+        } else if (!isExp) {
+          const pName = tx.patientName;
+          if (pName && pName !== '—' && pName !== 'Inline Patient' && pName !== 'Day Close Transaction') {
+            uniquePatients.add(pName.trim().toLowerCase());
+          }
+        }
       }
     });
 
@@ -140,6 +173,11 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
       deptTotals,
       incomeCategories,
       expenseCategories,
+      incomeCount,
+      expenseCount,
+      usgCount,
+      checkupCount,
+      uniquePatients
     };
   }, [transactions]);
 
@@ -253,6 +291,41 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
                 </div>
                 <div className="bg-white/10 p-1.5 rounded-lg text-white">
                   <Building2 size={16} />
+                </div>
+              </div>
+            </div>
+
+            {/* DAILY ACTIVITY & PATIENT STATS SUMMARY */}
+            <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className="p-4 rounded-xl border border-zinc-200 bg-zinc-50/20">
+                <span className="text-[9px] font-black text-zinc-450 uppercase tracking-widest block mb-3">Daily Activity Summary</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-emerald-50/30 p-2.5 rounded-lg border border-emerald-100/50">
+                    <span className="text-[8px] font-bold text-emerald-700 uppercase tracking-wider block">Income Entries</span>
+                    <span className="text-sm font-black text-emerald-600">{stats.incomeCount} entries</span>
+                  </div>
+                  <div className="bg-rose-50/30 p-2.5 rounded-lg border border-rose-100/50">
+                    <span className="text-[8px] font-bold text-rose-700 uppercase tracking-wider block">Expense Entries</span>
+                    <span className="text-sm font-black text-rose-600">{stats.expenseCount} entries</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-zinc-200 bg-zinc-50/20">
+                <span className="text-[9px] font-black text-zinc-450 uppercase tracking-widest block mb-3">Hospital Metrics Summary</span>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-zinc-50/50 p-2 rounded-lg border border-zinc-150">
+                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block">Patients</span>
+                    <span className="text-xs font-black text-zinc-800">{stats.uniquePatients.size} unique</span>
+                  </div>
+                  <div className="bg-zinc-50/50 p-2 rounded-lg border border-zinc-150">
+                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block">Checkups</span>
+                    <span className="text-xs font-black text-zinc-800">{stats.checkupCount} entries</span>
+                  </div>
+                  <div className="bg-zinc-50/50 p-2 rounded-lg border border-zinc-150">
+                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block">USG</span>
+                    <span className="text-xs font-black text-zinc-800">{stats.usgCount} entries</span>
+                  </div>
                 </div>
               </div>
             </div>
