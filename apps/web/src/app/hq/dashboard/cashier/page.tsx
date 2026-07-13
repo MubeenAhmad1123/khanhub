@@ -141,6 +141,11 @@ export default function CashierStationPage() {
 
   // Hospital Specific States
   const [hospitalMode, setHospitalMode] = useState<'none' | 'day_close' | 'all_transactions'>('none');
+  
+  // Job Center Specific States
+  const [jobCenterMode, setJobCenterMode] = useState<'none' | 'day_close' | 'all_transactions'>('none');
+  const [jobCenterIncomeAmount, setJobCenterIncomeAmount] = useState('');
+  const [jobCenterExpenseAmount, setJobCenterExpenseAmount] = useState('');
   const [hospitalTxForm, setHospitalTxForm] = useState({
     serialNumber: '',
     patientName: '',
@@ -273,6 +278,7 @@ export default function CashierStationPage() {
 
   const isStaffMode = selectedEntity?._entityType === 'staff';
   const isHospitalDayClose = departmentCode === 'hospital' && hospitalMode === 'day_close';
+  const isJobCenterDayClose = departmentCode === 'job-center' && jobCenterMode === 'day_close';
   
   useEffect(() => {
     if (selectedCategoryId === 'medicine_charge') {
@@ -937,10 +943,11 @@ export default function CashierStationPage() {
     setMessage(null);
 
     const isHospitalDayClose = departmentCode === 'hospital' && hospitalMode === 'day_close';
+    const isJobCenterDayClose = departmentCode === 'job-center' && jobCenterMode === 'day_close';
     const isHospitalCommonAllTx = departmentCode === 'hospital' && hospitalMode === 'all_transactions';
     const missingReason = proofReason.trim();
 
-    if (!isHospitalDayClose) {
+    if (!isHospitalDayClose && !isJobCenterDayClose) {
       if (!selectedEntity && departmentCode !== 'hospital' && !customTargetName.trim()) {
         const txt = 'Select account or enter a Target Person / Purpose Name.';
         toast.error(txt);
@@ -1021,8 +1028,8 @@ export default function CashierStationPage() {
         }
       }
     } else {
-      const inc = Number(hospitalIncomeAmount) || 0;
-      const exp = Number(hospitalExpenseAmount) || 0;
+      const inc = isHospitalDayClose ? (Number(hospitalIncomeAmount) || 0) : (Number(jobCenterIncomeAmount) || 0);
+      const exp = isHospitalDayClose ? (Number(hospitalExpenseAmount) || 0) : (Number(jobCenterExpenseAmount) || 0);
       if (inc <= 0 && exp <= 0) {
         const txt = 'Enter a valid Income Amount or Expense Amount.';
         toast.error(txt);
@@ -1070,6 +1077,102 @@ export default function CashierStationPage() {
       };
       if (proofUrl) commonPayload.proofUrl = proofUrl;
       if (!proofUrl && missingReason) commonPayload.proofMissingReason = missingReason;
+
+      if (isJobCenterDayClose) {
+        const inc = Number(jobCenterIncomeAmount) || 0;
+        const exp = Number(jobCenterExpenseAmount) || 0;
+
+        if (inc > 0) {
+          const incPayload = {
+            ...commonPayload,
+            type: 'income',
+            amount: inc,
+            category: 'day_close',
+            categoryName: 'Job Center Day Close',
+            seekerId: 'jobcenter-day-close',
+            seekerName: 'Day Close Transaction',
+            description: description ? description : 'Job Center Day Close Income',
+          };
+          const txRef = await addDoc(collection(db, activeDepartment.txCollection), incPayload);
+
+          if (!isSuperadmin) {
+            void sendHqPushNotification({
+              recipientId: superadminRecipient.customId,
+              recipientUid: superadminRecipient.id,
+              recipientRole: 'superadmin',
+              type: 'tx_forwarded',
+              title: 'New Transaction Submitted',
+              body: `${session?.name || 'Cashier'} submitted a Rs ${inc.toLocaleString()} Day Close Income for Job Center.`,
+              relatedId: txRef.id,
+              actionUrl: '/hq/dashboard/superadmin/approvals',
+            });
+          } else {
+            try {
+              const { syncDirectApprovedTransaction } = await import('@/app/hq/actions/approvals');
+              await syncDirectApprovedTransaction({ 
+                dept: activeDepartment.code as any, 
+                txId: txRef.id,
+                approvedBy: session?.customId || 'SUPERADMIN'
+              });
+            } catch (syncErr) {
+              console.error('[HQ Cashier] Sync direct approved transaction failed:', syncErr);
+            }
+          }
+        }
+
+        if (exp > 0) {
+          const expPayload = {
+            ...commonPayload,
+            type: 'expense',
+            amount: exp,
+            category: 'day_close',
+            categoryName: 'Job Center Day Close',
+            seekerId: 'jobcenter-day-close',
+            seekerName: 'Day Close Transaction',
+            description: description ? description : 'Job Center Day Close Expense',
+          };
+          const txRef = await addDoc(collection(db, activeDepartment.txCollection), expPayload);
+
+          if (!isSuperadmin) {
+            void sendHqPushNotification({
+              recipientId: superadminRecipient.customId,
+              recipientUid: superadminRecipient.id,
+              recipientRole: 'superadmin',
+              type: 'tx_forwarded',
+              title: 'New Transaction Submitted',
+              body: `${session?.name || 'Cashier'} submitted a Rs ${exp.toLocaleString()} Day Close Expense for Job Center.`,
+              relatedId: txRef.id,
+              actionUrl: '/hq/dashboard/superadmin/approvals',
+            });
+          } else {
+            try {
+              const { syncDirectApprovedTransaction } = await import('@/app/hq/actions/approvals');
+              await syncDirectApprovedTransaction({ 
+                dept: activeDepartment.code as any, 
+                txId: txRef.id,
+                approvedBy: session?.customId || 'SUPERADMIN'
+              });
+            } catch (syncErr) {
+              console.error('[HQ Cashier] Sync direct approved transaction failed:', syncErr);
+            }
+          }
+        }
+
+        toast.success(isSuperadmin ? 'Transaction approved & synced successfully ✓' : 'Transaction submitted successfully ✓');
+        
+        setJobCenterIncomeAmount('');
+        setJobCenterExpenseAmount('');
+        setJobCenterMode('none');
+        setDescription('');
+        setReferenceNo('');
+        setProofFile(null);
+        setProofReason('');
+        setSearchQuery('');
+        setProofUploading(false);
+        await fetchHistory();
+        setProcessing(false);
+        return;
+      }
 
       if (isHospitalDayClose) {
         const inc = Number(hospitalIncomeAmount) || 0;
@@ -1759,6 +1862,9 @@ export default function CashierStationPage() {
                       setHospitalMedicineItems([]);
                       setNewMedItemName('');
                       setNewMedItemPrice('');
+                      setJobCenterMode('none');
+                      setJobCenterIncomeAmount('');
+                      setJobCenterExpenseAmount('');
                     }}
                     className={cn(
                       "h-14 sm:h-16 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all border-2 group/dept",
@@ -1774,7 +1880,7 @@ export default function CashierStationPage() {
             </div>
           </div>
 
-          {departmentCode !== 'hospital' ? (
+          {((departmentCode !== 'hospital' && departmentCode !== 'job-center') || (departmentCode === 'job-center' && jobCenterMode === 'all_transactions')) ? (
           <div className="bg-white rounded-3xl border border-zinc-100 p-5 md:p-8 xl:p-10 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden group/search">
             <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/5 rounded-full -mr-96 -mt-96 blur-[120px] group-hover/search:bg-indigo-600/10 transition-all duration-1000" />
             
@@ -1886,7 +1992,7 @@ export default function CashierStationPage() {
               )}
             </div>
           </div>
-          ) : hospitalMode === 'none' ? (
+          ) : (departmentCode === 'hospital' && hospitalMode === 'none') || (departmentCode === 'job-center' && jobCenterMode === 'none') ? (
             <div className="bg-white rounded-3xl border border-zinc-100 p-5 md:p-8 xl:p-10 shadow-[0_64px_96px_-32px_rgba(0,0,0,0.08)] relative overflow-hidden">
               <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/5 rounded-full -mr-96 -mt-96 blur-[120px] transition-all duration-1000" />
               <div className="relative z-10 space-y-8">
@@ -1896,14 +2002,22 @@ export default function CashierStationPage() {
                       <Plus className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.5} />
                     </div>
                     <div>
-                      <h3 className="text-lg sm:text-2xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">Hospital Cashier</h3>
+                      <h3 className="text-lg sm:text-2xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">
+                        {departmentCode === 'hospital' ? 'Hospital Cashier' : 'Job Center Cashier'}
+                      </h3>
                       <p className="text-[8px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mt-0.5 sm:mt-1">Select Entry Mode</p>
                     </div>
                   </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <button
                     type="button"
-                    onClick={() => setHospitalMode('day_close')}
+                    onClick={() => {
+                      if (departmentCode === 'hospital') {
+                        setHospitalMode('day_close');
+                      } else {
+                        setJobCenterMode('day_close');
+                      }
+                    }}
                     className="p-6 rounded-2xl border-2 text-left transition-all bg-white border-zinc-100 hover:border-indigo-200"
                   >
                     <h4 className="text-lg font-black uppercase tracking-tight text-zinc-900">Day Close</h4>
@@ -1912,11 +2026,23 @@ export default function CashierStationPage() {
 
                   <button
                     type="button"
-                    onClick={() => setHospitalMode('all_transactions')}
+                    onClick={() => {
+                      if (departmentCode === 'hospital') {
+                        setHospitalMode('all_transactions');
+                      } else {
+                        setJobCenterMode('all_transactions');
+                      }
+                    }}
                     className="p-6 rounded-2xl border-2 text-left transition-all bg-white border-zinc-100 hover:border-indigo-200"
                   >
-                    <h4 className="text-lg font-black uppercase tracking-tight text-zinc-900">Enter All Transactions</h4>
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-2">Record individual patient transactions inline</p>
+                    <h4 className="text-lg font-black uppercase tracking-tight text-zinc-900">
+                      {departmentCode === 'hospital' ? 'Enter All Transactions' : 'Search & Record'}
+                    </h4>
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-2">
+                      {departmentCode === 'hospital' 
+                        ? 'Record individual patient transactions inline' 
+                        : 'Search jobseekers/users and record individual transactions'}
+                    </p>
                   </button>
                 </div>          </div>
               </div>
@@ -2480,34 +2606,36 @@ export default function CashierStationPage() {
                       />
                     </div>
  
-                    {isHospitalDayClose ? (
+                    {isHospitalDayClose || isJobCenterDayClose ? (
                       <>
                         {/* Shift Selector */}
-                        <div className="space-y-6">
-                          <div className="flex items-center justify-between px-4">
-                            <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Shift</label>
-                            <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest">Required</span>
+                        {isHospitalDayClose && (
+                          <div className="space-y-6">
+                            <div className="flex items-center justify-between px-4">
+                              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Shift</label>
+                              <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest">Required</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              {([
+                                { id: 'morning_shift', label: 'Morning Shift' },
+                                { id: 'night_shift', label: 'Night Shift' },
+                                { id: 'combine', label: 'Combine' },
+                              ] as const).map((s) => (
+                                <button
+                                  key={s.id}
+                                  type="button"
+                                  onClick={() => setHospitalShift(s.id)}
+                                  className={cn(
+                                    "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                    hospitalShift === s.id ? "bg-zinc-900 border-zinc-900 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
+                                  )}
+                                >
+                                  {s.label}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                          <div className="grid grid-cols-3 gap-3">
-                            {([
-                              { id: 'morning_shift', label: 'Morning Shift' },
-                              { id: 'night_shift', label: 'Night Shift' },
-                              { id: 'combine', label: 'Combine' },
-                            ] as const).map((s) => (
-                              <button
-                                key={s.id}
-                                type="button"
-                                onClick={() => setHospitalShift(s.id)}
-                                className={cn(
-                                  "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
-                                  hospitalShift === s.id ? "bg-zinc-900 border-zinc-900 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-zinc-300"
-                                )}
-                              >
-                                {s.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                        )}
 
                         {/* Income and Expense Amounts */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -2522,8 +2650,8 @@ export default function CashierStationPage() {
                               <input
                                 type="number"
                                 step="0.01"
-                                value={hospitalIncomeAmount}
-                                onChange={(e) => setHospitalIncomeAmount(e.target.value)}
+                                value={isHospitalDayClose ? hospitalIncomeAmount : jobCenterIncomeAmount}
+                                onChange={(e) => isHospitalDayClose ? setHospitalIncomeAmount(e.target.value) : setJobCenterIncomeAmount(e.target.value)}
                                 placeholder="0.00"
                                 className="w-full h-12 sm:h-14 bg-zinc-50 border-2 border-transparent rounded-2xl pl-12 sm:pl-14 pr-6 text-sm sm:text-base font-black text-zinc-900 outline-none focus:ring-8 focus:ring-emerald-600/5 focus:bg-white focus:border-emerald-600/20 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200 tabular-nums"
                               />
@@ -2541,8 +2669,8 @@ export default function CashierStationPage() {
                               <input
                                 type="number"
                                 step="0.01"
-                                value={hospitalExpenseAmount}
-                                onChange={(e) => setHospitalExpenseAmount(e.target.value)}
+                                value={isHospitalDayClose ? hospitalExpenseAmount : jobCenterExpenseAmount}
+                                onChange={(e) => isHospitalDayClose ? setHospitalExpenseAmount(e.target.value) : setJobCenterExpenseAmount(e.target.value)}
                                 placeholder="0.00"
                                 className="w-full h-12 sm:h-14 bg-zinc-50 border-2 border-transparent rounded-2xl pl-12 sm:pl-14 pr-6 text-sm sm:text-base font-black text-zinc-900 outline-none focus:ring-8 focus:ring-rose-600/5 focus:bg-white focus:border-rose-600/20 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200 tabular-nums"
                               />
@@ -2788,7 +2916,7 @@ export default function CashierStationPage() {
 
                       <button 
                         type="submit" 
-                        disabled={processing || (!isHospitalDayClose && !selectedEntity && departmentCode !== 'hospital' && !customTargetName.trim())} 
+                        disabled={processing || (!isHospitalDayClose && !isJobCenterDayClose && !selectedEntity && departmentCode !== 'hospital' && !customTargetName.trim())} 
                         className="w-full h-16 md:h-32 bg-zinc-900 hover:bg-indigo-600 text-white font-[1000] text-sm md:text-xl uppercase tracking-[0.4em] rounded-[1.5rem] md:rounded-[3.5rem] transition-all shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] disabled:opacity-20 flex items-center justify-center gap-4 md:gap-8 group/submit active:scale-[0.98]"
                       >
                         {processing ? <Loader2 size={24} className="animate-spin md:w-8 md:h-8" /> : (
