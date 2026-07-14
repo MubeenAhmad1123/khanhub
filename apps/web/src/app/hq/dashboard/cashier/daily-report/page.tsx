@@ -70,6 +70,7 @@ type Transaction = {
   date?: any;
   transactionDate?: any;
   hospitalPatientDetails?: any;
+  patientName?: string;
 };
 
 const getIsExpense = (tx: any): boolean => {
@@ -83,7 +84,7 @@ const getTxDisplayName = (tx: any): string => {
   if (tx.departmentCode === 'hospital' && tx.hospitalPatientDetails) {
     return tx.hospitalPatientDetails.patientName || tx.hospitalPatientDetails.receiverName || tx.patientName || '—';
   }
-  return tx.patientName || tx.studentName || tx.seekerName || tx.name || '—';
+  return tx.patientName || tx.studentName || tx.seekerName || tx.staffName || tx.name || '—';
 };
 
 const getTxDisplayDescription = (tx: any): string => {
@@ -368,7 +369,12 @@ export default function DailyReportPage() {
         expense: {} as Record<string, { total: number, txs: Transaction[] }>
       },
       methodTotals: {} as Record<string, number>,
-      cashExpected: 0
+      cashExpected: 0,
+      incomeEntriesCount: 0,
+      expenseEntriesCount: 0,
+      usgCount: 0,
+      checkupCount: 0,
+      uniquePatients: new Set<string>()
     };
 
     transactions.forEach(tx => {
@@ -381,6 +387,7 @@ export default function DailyReportPage() {
       const deptName = tx.departmentName || 'Unknown';
       
       if (type === 'income') {
+        summary.incomeEntriesCount += 1;
         summary.totalIncome += amt;
         if (!summary.categoryBreakdown.income[catKey]) {
           summary.categoryBreakdown.income[catKey] = { total: 0, txs: [] };
@@ -391,6 +398,7 @@ export default function DailyReportPage() {
         if (!summary.deptTotals[deptName]) summary.deptTotals[deptName] = { income: 0, expense: 0 };
         summary.deptTotals[deptName].income += amt;
       } else {
+        summary.expenseEntriesCount += 1;
         summary.totalExpense += amt;
         if (!summary.categoryBreakdown.expense[catKey]) {
           summary.categoryBreakdown.expense[catKey] = { total: 0, txs: [] };
@@ -400,6 +408,31 @@ export default function DailyReportPage() {
 
         if (!summary.deptTotals[deptName]) summary.deptTotals[deptName] = { income: 0, expense: 0 };
         summary.deptTotals[deptName].expense += amt;
+      }
+
+      // Hospital specific stats
+      if (tx.departmentCode === 'hospital') {
+        const details = tx.hospitalPatientDetails;
+        if (details) {
+          if (details.type === 'fee') {
+            if (details.feeType === 'usg') {
+              summary.usgCount += 1;
+            } else if (details.feeType === 'checkup' || details.feeType === 'none' || !details.feeType) {
+              summary.checkupCount += 1;
+            }
+          }
+          if (details.type === 'fee' || details.type === 'medicine') {
+            const pName = details.patientName || tx.patientName;
+            if (pName && pName !== '—' && pName !== 'Inline Patient' && pName !== 'Day Close Transaction') {
+              summary.uniquePatients.add(pName.trim().toLowerCase());
+            }
+          }
+        } else if (type === 'income') {
+          const pName = tx.patientName;
+          if (pName && pName !== '—' && pName !== 'Inline Patient' && pName !== 'Day Close Transaction') {
+            summary.uniquePatients.add(pName.trim().toLowerCase());
+          }
+        }
       }
 
       if (tx.paymentMethod === 'cash') {
@@ -611,6 +644,59 @@ export default function DailyReportPage() {
                   <div className="flex-1 min-w-0">
                     <span className="text-[9px] sm:text-[10px] font-black text-indigo-200/60 uppercase tracking-widest block truncate">Digital / Bank</span>
                     <span className="text-white text-sm sm:text-base font-black truncate block">PKR {(stats.netTotal - stats.cashExpected).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Daily Activity & Hospital Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Daily Activity Card */}
+              <div className="bg-white p-7 rounded-[2.5rem] border border-zinc-100 shadow-sm relative overflow-hidden group">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-1">Daily Activity</h3>
+                    <p className="text-3xl font-black text-zinc-900 tracking-tight">
+                      {stats.incomeEntriesCount + stats.expenseEntriesCount} <span className="text-sm font-bold text-zinc-400">Total Entries</span>
+                    </p>
+                  </div>
+                  <div className="bg-indigo-50 p-3 rounded-2xl">
+                    <List className="w-6 h-6 text-indigo-600" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100/50">
+                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider block mb-1">Income Entries</span>
+                    <span className="text-xl font-black text-emerald-600">{stats.incomeEntriesCount}</span>
+                  </div>
+                  <div className="bg-rose-50/50 p-4 rounded-2xl border border-rose-100/50">
+                    <span className="text-[10px] font-black text-rose-700 uppercase tracking-wider block mb-1">Expense Entries</span>
+                    <span className="text-xl font-black text-rose-600">{stats.expenseEntriesCount}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hospital Stats Card */}
+              <div className="bg-white p-7 rounded-[2.5rem] border border-zinc-100 shadow-sm relative overflow-hidden group">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-1">Hospital Metrics</h3>
+                    <p className="text-3xl font-black text-zinc-900 tracking-tight">
+                      {stats.uniquePatients.size} <span className="text-sm font-bold text-zinc-400">Unique Patients</span>
+                    </p>
+                  </div>
+                  <div className="bg-zinc-50 p-3 rounded-2xl">
+                    <CheckCircle2 className="w-6 h-6 text-zinc-600" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
+                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-wider block mb-1">Checkups</span>
+                    <span className="text-xl font-black text-zinc-800">{stats.checkupCount}</span>
+                  </div>
+                  <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
+                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-wider block mb-1">USG Fees</span>
+                    <span className="text-xl font-black text-zinc-800">{stats.usgCount}</span>
                   </div>
                 </div>
               </div>

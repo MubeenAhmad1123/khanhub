@@ -982,7 +982,8 @@ export async function editApprovedTransaction(params: {
         return { success: false, error: 'Unauthorized: Cashiers can only edit hospital transactions they created.' };
       }
     } else {
-      if (!isSuperadmin) {
+      const isHoldSettlement = oldData.isHold === true && oldData.holdStatus === 'held' && isOwner;
+      if (!isSuperadmin && !isHoldSettlement) {
         return { success: false, error: 'Unauthorized: Only Super Admins can edit approved transactions.' };
       }
     }

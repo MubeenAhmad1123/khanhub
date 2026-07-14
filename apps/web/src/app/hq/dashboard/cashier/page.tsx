@@ -185,6 +185,19 @@ export default function CashierStationPage() {
   const [proofReason, setProofReason] = useState('');
   const [proofUploading, setProofUploading] = useState(false);
   const [customTargetName, setCustomTargetName] = useState('');
+  
+  // Cash Hold states
+  const [isHold, setIsHold] = useState(false);
+  const [activeHolds, setActiveHolds] = useState<any[]>([]);
+  const [activeHoldsLoading, setActiveHoldsLoading] = useState(false);
+
+  // Cash Hold Settlement modal states
+  const [settleModalTx, setSettleModalTx] = useState<any | null>(null);
+  const [settleSpentAmount, setSettleSpentAmount] = useState('');
+  const [settleDescription, setSettleDescription] = useState('');
+  const [settleProofFile, setSettleProofFile] = useState<File | null>(null);
+  const [settleProofReason, setSettleProofReason] = useState('');
+  const [settlingHold, setSettlingHold] = useState(false);
 
   const [customCategories, setCustomCategories] = useState<{ id: string; name: string; appliesTo: 'income' | 'expense' | 'both' }[]>([]);
   const [categorySearch, setCategorySearch] = useState('');
@@ -254,11 +267,20 @@ export default function CashierStationPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const activeDepartment = DEPARTMENTS.find((d) => d.code === departmentCode) || DEPARTMENTS[0];
+  const isStaffMode = selectedEntity?._entityType === 'staff';
   const allCategories = useMemo(() => {
+    if (isStaffMode) {
+      return [
+        { id: 'staff_salary', name: 'Staff Salary', appliesTo: 'expense' },
+        { id: 'staff_advance', name: 'Staff Advance', appliesTo: 'expense' },
+        ...BASE_CATEGORIES,
+        ...customCategories
+      ];
+    }
     return [...BASE_CATEGORIES, ...customCategories].filter(
       (c) => c.id !== 'staff_salary' && c.id !== 'salary' && !c.name.toLowerCase().includes('salary') && !c.name.toLowerCase().includes('staff')
     );
-  }, [customCategories]);
+  }, [customCategories, isStaffMode]);
   const selectedCategory = allCategories.find((c) => c.id === selectedCategoryId);
   const visibleCategories = allCategories.filter((c) => (c.appliesTo === 'both' || c.appliesTo === txnType) && (!categorySearch.trim() || c.name.toLowerCase().includes(categorySearch.toLowerCase())));
   
@@ -276,7 +298,6 @@ export default function CashierStationPage() {
     return list;
   }, [departmentCode, selectedEntity]);
 
-  const isStaffMode = selectedEntity?._entityType === 'staff';
   const isHospitalDayClose = departmentCode === 'hospital' && hospitalMode === 'day_close';
   const isJobCenterDayClose = departmentCode === 'job-center' && jobCenterMode === 'day_close';
   
@@ -340,6 +361,39 @@ export default function CashierStationPage() {
 
     return result;
   }, [historyTxns, searchQuery, historyDepartment, historyStatus, historyType, showDuplicatesOnly, sortConfig]);
+
+  const fetchActiveHolds = useCallback(async () => {
+    if (!session) return;
+    try {
+      setActiveHoldsLoading(true);
+      const dept = activeDepartment;
+      const q = query(
+        collection(db, dept.txCollection),
+        where('isHold', '==', true)
+      );
+      const snap = await getDocs(q);
+      const docs = snap.docs
+        .map((d) => ({
+          id: d.id,
+          departmentCode: dept.code,
+          departmentName: dept.label,
+          ...d.data(),
+        }))
+        .filter((tx: any) => tx.holdStatus === 'held');
+      
+      docs.sort((a: any, b: any) => {
+        const tA = toDate(a.transactionDate || a.date || a.createdAt)?.getTime() || 0;
+        const tB = toDate(b.transactionDate || b.date || b.createdAt)?.getTime() || 0;
+        return tB - tA;
+      });
+
+      setActiveHolds(docs);
+    } catch (err) {
+      console.error('[HQ Cashier] fetchActiveHolds Error:', err);
+    } finally {
+      setActiveHoldsLoading(false);
+    }
+  }, [session, activeDepartment]);
 
   // Optimized fetchHistory that uses filters and aggregation
   const fetchHistory = useCallback(async () => {
@@ -636,6 +690,99 @@ export default function CashierStationPage() {
     setRejecting(false);
   }
 
+  const openSettleModal = (tx: any) => {
+    setSettleModalTx(tx);
+    setSettleSpentAmount(String(tx.amount || ''));
+    setSettleDescription('');
+    setSettleProofFile(null);
+    setSettleProofReason('');
+  };
+
+  const handleSettleHoldSubmit = async () => {
+    if (!settleModalTx) return;
+    const spent = Number(settleSpentAmount);
+    const original = Number(settleModalTx.amount);
+    if (isNaN(spent) || spent < 0 || spent > original) {
+      toast.error("Invalid spent amount");
+      return;
+    }
+
+    setSettlingHold(true);
+    try {
+      // 1. Upload proof file if provided
+      let proofUrl = settleModalTx.proofUrl || "";
+      if (settleProofFile) {
+        proofUrl = await uploadToCloudinary(settleProofFile, 'Khan Hub/hq/receipts');
+      }
+
+      const returned = original - spent;
+      const finalDescription = `[HOLD SETTLED] ${settleModalTx.description || ''} | Spent: Rs ${spent.toLocaleString()} | Returned: Rs ${returned.toLocaleString()} | Details: ${settleDescription.trim()}`.trim();
+
+      const dept = DEPARTMENTS.find(d => d.code === settleModalTx.departmentCode) || activeDepartment;
+      const isApproved = settleModalTx.status === 'approved';
+
+      if (isApproved) {
+        // Use editApprovedTransaction server action
+        const { editApprovedTransaction } = await import('@/app/hq/actions/approvals');
+        const res = await editApprovedTransaction({
+          dept: settleModalTx.departmentCode as any,
+          txId: settleModalTx.id,
+          amount: spent,
+          date: getLocalDateString(settleModalTx.date || settleModalTx.transactionDate || settleModalTx.createdAt),
+          description: finalDescription,
+          _collection: settleModalTx._collection,
+        });
+
+        if (!res.success) {
+          throw new Error(res.error || 'Failed to update approved transaction');
+        }
+
+        // Merge hold fields on the transaction document (since editApprovedTransaction doesn't update hold fields)
+        const coll = settleModalTx._collection || dept.txCollection;
+        await updateDoc(doc(db, coll, settleModalTx.id), {
+          isHold: true,
+          holdStatus: 'settled',
+          holdOriginalAmount: original,
+          holdSpentAmount: spent,
+          holdReturnedAmount: returned,
+          settledAt: Timestamp.now(),
+          ...(proofUrl ? { proofUrl } : {}),
+          ...(settleProofReason ? { proofMissingReason: settleProofReason.trim() } : {}),
+        });
+
+      } else {
+        // For pending, update directly
+        const coll = settleModalTx._collection || dept.txCollection;
+        const docRef = doc(db, coll, settleModalTx.id);
+        const updatePayload: Record<string, any> = {
+          amount: spent,
+          description: finalDescription,
+          isHold: true,
+          holdStatus: 'settled',
+          holdOriginalAmount: original,
+          holdSpentAmount: spent,
+          holdReturnedAmount: returned,
+          settledAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+          ...(proofUrl ? { proofUrl } : {}),
+          ...(settleProofReason ? { proofMissingReason: settleProofReason.trim() } : {}),
+        };
+        await updateDoc(docRef, updatePayload);
+      }
+
+      toast.success(`Hold settled! Rs ${returned.toLocaleString()} returned to drawer ✓`);
+      setSettleModalTx(null);
+      await fetchHistory();
+      await fetchActiveHolds();
+      if (selectedEntity) fetchEntityHistory(selectedEntity);
+    } catch (err: any) {
+      console.error('[Cashier] Settlement error:', err);
+      toast.error('Settlement failed: ' + (err.message || 'Error'));
+    } finally {
+      setSettlingHold(false);
+    }
+  };
+
   async function confirmRejectIncoming() {
     if (!rejectModalTx?.id) return;
     if (rejecting) return;
@@ -760,6 +907,12 @@ export default function CashierStationPage() {
     }
   }, [selectedEntity]);
 
+  useEffect(() => {
+    if (session && mounted) {
+      void fetchActiveHolds();
+    }
+  }, [session, departmentCode, mounted, fetchActiveHolds]);
+
 
 
 
@@ -808,33 +961,42 @@ export default function CashierStationPage() {
     try {
       const all: any[] = [];
       const sources = [
-        { coll: 'rehab_patients', code: 'rehab', label: 'Rehab' },
-        { coll: 'spims_students', code: 'spims', label: 'SPIMS' },
-        { coll: 'hospital_patients', code: 'hospital', label: 'Hospital' },
-        { coll: 'sukoon_clients', code: 'sukoon-center', label: 'Sukoon' },
-        { coll: 'welfare_donors', code: 'welfare', label: 'Welfare' },
-        { coll: 'jobcenter_seekers', code: 'job-center', label: 'Job Center' },
-        { coll: 'jobcenter_employers', code: 'job-center', label: 'Company' },
-        { coll: 'hq_staff', code: 'hq', label: 'HQ Staff' },
-        { coll: 'rehab_staff', code: 'rehab', label: 'Rehab Staff' },
-        { coll: 'hospital_staff', code: 'hospital', label: 'Hospital Staff' },
-        { coll: 'it_staff', code: 'it', label: 'IT Staff' },
-        { coll: 'jobcenter_staff', code: 'job-center', label: 'Job Center Staff' },
-        { coll: 'spims_staff', code: 'spims', label: 'Spims Staff' },
-        { coll: 'sukoon_staff', code: 'sukoon-center', label: 'Sukoon Staff' },
-        { coll: 'welfare_staff', code: 'welfare', label: 'Welfare Staff' },
+        { coll: 'rehab_patients', code: 'rehab', label: 'Rehab', type: 'patient' },
+        { coll: 'spims_students', code: 'spims', label: 'SPIMS', type: 'student' },
+        { coll: 'hospital_patients', code: 'hospital', label: 'Hospital', type: 'patient' },
+        { coll: 'sukoon_clients', code: 'sukoon-center', label: 'Sukoon', type: 'client' },
+        { coll: 'welfare_donors', code: 'welfare', label: 'Welfare', type: 'donor' },
+        { coll: 'jobcenter_seekers', code: 'job-center', label: 'Job Center', type: 'seeker' },
+        { coll: 'jobcenter_employers', code: 'job-center', label: 'Company', type: 'employer' },
+        { coll: 'hq_users', code: 'hq', label: 'HQ Staff', type: 'staff' },
+        { coll: 'rehab_users', code: 'rehab', label: 'Rehab Staff', type: 'staff' },
+        { coll: 'hospital_users', code: 'hospital', label: 'Hospital Staff', type: 'staff' },
+        { coll: 'it_users', code: 'it', label: 'IT Staff', type: 'staff' },
+        { coll: 'jobcenter_users', code: 'job-center', label: 'Job Center Staff', type: 'staff' },
+        { coll: 'spims_users', code: 'spims', label: 'Spims Staff', type: 'staff' },
+        { coll: 'sukoon_users', code: 'sukoon-center', label: 'Sukoon Staff', type: 'staff' },
+        { coll: 'welfare_users', code: 'welfare', label: 'Welfare Staff', type: 'staff' },
       ];
 
       for (const source of sources) {
         try {
           const snap = await getDocs(query(collection(db, source.coll), limit(1000)));
-          const docs = snap.docs.map(d => ({ 
-            ...d.data(), 
-            id: d.id, 
-            _deptCode: source.code, 
-            _deptLabel: source.label,
-            _entityType: source.coll.includes('staff') ? 'staff' : source.coll.split('_')[1].slice(0, -1)
-          }));
+          const docs = snap.docs.map(d => {
+            const data = d.data();
+            // Strict Active Check for staff
+            if (source.type === 'staff') {
+              const statusStr = String(data.status || '').toLowerCase().trim();
+              const isActuallyActive = data.isActive !== false && statusStr !== 'inactive' && statusStr !== 'resigned' && statusStr !== 'terminated' && statusStr !== 'active_vacancy';
+              if (!isActuallyActive) return null;
+            }
+            return { 
+              ...data, 
+              id: d.id, 
+              _deptCode: source.code, 
+              _deptLabel: source.label,
+              _entityType: source.type
+            };
+          }).filter(Boolean);
           all.push(...docs);
         } catch (err) {
           console.error(`[HQ Cashier] Failed to fetch entities for ${source.coll}:`, err);
@@ -1314,7 +1476,11 @@ export default function CashierStationPage() {
         departmentCode: activeDepartment.code,
         departmentName: activeDepartment.label,
         ...(isStaffMode
-          ? { staffId: selectedEntity?.id, staffName: selectedEntity?.name || selectedEntity?.employeeId || 'Unknown' }
+          ? { 
+              staffId: selectedEntity?.id, 
+              staffName: selectedEntity?.name || selectedEntity?.employeeId || 'Unknown',
+              patientName: selectedEntity?.name || selectedEntity?.employeeId || 'Unknown' 
+            }
           : departmentCode === 'welfare' 
             ? { 
                 donorId: selectedEntity?.id || 'welfare-general', 
@@ -1406,6 +1572,13 @@ export default function CashierStationPage() {
         returnAmount: Number(returnAmount) || 0,
         ...(stayDurationIndex !== '' ? { stayDurationIndex: Number(stayDurationIndex) } : {}),
         ...(departmentCode === 'spims' && resolvedCategory.id === 'fee' ? { spimsFeeSubtype } : {}),
+        ...(txnType === 'expense' && isHold ? {
+          isHold: true,
+          holdStatus: 'held',
+          holdOriginalAmount: Number(amount),
+          holdReturnedAmount: 0,
+          holdSpentAmount: 0,
+        } : {}),
       };
       if (proofUrl) createPayload.proofUrl = proofUrl;
       if (!proofUrl && missingReason) createPayload.proofMissingReason = missingReason;
@@ -1502,7 +1675,9 @@ export default function CashierStationPage() {
       setNewMedItemPrice('');
 
       setProofUploading(false);
+      setIsHold(false);
       await fetchHistory();
+      await fetchActiveHolds();
     } catch (err: any) {
       console.error('[HQ Cashier] submitTx error:', err);
       toast.error(err?.message || 'Transaction failed');
@@ -2904,6 +3079,27 @@ export default function CashierStationPage() {
                         />
                       </div>
 
+                      {/* Hold Cash Checkbox */}
+                      {txnType === 'expense' && (
+                        <div className="p-6 bg-amber-50/50 border-2 border-dashed border-amber-200 rounded-[1.5rem] space-y-3 animate-in fade-in duration-300">
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              id="isHold"
+                              checked={isHold}
+                              onChange={(e) => setIsHold(e.target.checked)}
+                              className="w-5 h-5 text-amber-600 border-zinc-300 rounded focus:ring-amber-500 focus:ring-2 cursor-pointer"
+                            />
+                            <label htmlFor="isHold" className="text-xs font-black text-amber-900 uppercase tracking-wider cursor-pointer select-none">
+                              Hold Cash Amount (Temporary Cash Hold/Advance)
+                            </label>
+                          </div>
+                          <p className="text-[10px] font-bold text-amber-700/80 leading-relaxed pl-8">
+                            Check this if you are giving this cash to someone for future purchases. You can settle the exact spent amount and get the remaining cash back later from the dashboard.
+                          </p>
+                        </div>
+                      )}
+
                       {message && (
                         <div className={cn(
                           "p-5 rounded-[1.5rem] border-2 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2",
@@ -2936,6 +3132,62 @@ export default function CashierStationPage() {
         </div>
         
         <div className="mt-16 md:mt-24 space-y-12 lg:col-span-12">
+          {/* Active Cash Holds Section */}
+          {activeHolds.length > 0 && (
+            <div className="space-y-8 pb-12 border-b-2 border-dashed border-zinc-150 animate-in fade-in duration-700">
+              <div className="flex items-center gap-6">
+                <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-amber-500/20">
+                  <Clock size={24} />
+                </div>
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tight leading-none">
+                    Active <span className="text-amber-600">Cash Holds</span>
+                  </h2>
+                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mt-2">
+                    Temporary cash advances awaiting settlement details
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {activeHolds.map((tx) => (
+                  <div key={tx.id} className="bg-white p-6 rounded-3xl border-2 border-amber-100 shadow-lg shadow-amber-500/[0.02] hover:border-amber-300 transition-all flex flex-col justify-between gap-4 group">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="text-sm font-black text-zinc-900 uppercase tracking-tight truncate max-w-[150px]">
+                            {tx.patientName || tx.staffName || 'General'}
+                          </h4>
+                          <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-1">
+                            {formatDateDMY(tx.transactionDate || tx.date || tx.createdAt)}
+                          </p>
+                        </div>
+                        <span className="text-lg font-[1000] text-amber-600 tabular-nums">
+                          Rs {Number(tx.amount || 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="text-xs font-bold text-zinc-500 line-clamp-2 italic">
+                        "{tx.description || 'No description provided'}"
+                      </p>
+                    </div>
+                    <div className="pt-4 border-t border-zinc-50 flex items-center justify-between">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-[9px] font-black uppercase tracking-widest border border-amber-100">
+                        On Hold
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => openSettleModal(tx)}
+                        className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-95"
+                      >
+                        Settle Hold
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
             <div className="flex items-center gap-8">
               <div className="w-16 h-16 md:w-24 md:h-24 bg-zinc-900 rounded-[2rem] md:rounded-[3rem] flex items-center justify-center text-white shadow-2xl shadow-indigo-600/10">
@@ -3183,6 +3435,136 @@ export default function CashierStationPage() {
             fetchEntityHistory(selectedEntity);
           }}
         />
+      )}
+
+      {settleModalTx && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-[#FCFBF8]/85 backdrop-blur-3xl animate-in fade-in duration-500">
+          <div className="w-full max-w-xl bg-white border border-zinc-100 rounded-[4rem] overflow-hidden shadow-2xl shadow-amber-500/10">
+            <div className="relative p-12">
+              <button 
+                type="button"
+                onClick={() => setSettleModalTx(null)}
+                className="absolute top-10 right-10 w-14 h-14 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-900 hover:bg-zinc-900 hover:text-white transition-all group"
+              >
+                <X size={24} strokeWidth={3} className="group-hover:rotate-90 transition-transform" />
+              </button>
+
+              <div className="flex flex-col items-center text-center mb-10">
+                <div className="w-20 h-20 bg-amber-500 rounded-[2rem] flex items-center justify-center text-white mb-6 shadow-2xl shadow-amber-500/20">
+                  <Calculator size={32} strokeWidth={2.5} />
+                </div>
+                <h3 className="text-2xl md:text-3xl font-[1000] text-zinc-900 uppercase tracking-tighter">
+                  Settle Cash Hold
+                </h3>
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.5em] mt-3">
+                  Original Hold: Rs {Number(settleModalTx.amount || 0).toLocaleString()}
+                </p>
+              </div>
+
+              <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-2 no-scrollbar">
+                {/* Hold Details Summary */}
+                <div className="p-5 bg-amber-50/50 rounded-2xl border border-amber-100 space-y-2">
+                  <div className="flex justify-between text-xs font-black uppercase text-amber-900 tracking-wider">
+                    <span>Given To:</span>
+                    <span>{settleModalTx.patientName || settleModalTx.staffName || 'General'}</span>
+                  </div>
+                  <div className="text-[11px] font-bold text-amber-800/80">
+                    {settleModalTx.description}
+                  </div>
+                </div>
+
+                {/* Actual Spent Amount Input */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Actual Spent Amount (Rs)</label>
+                  <input
+                    type="number"
+                    max={settleModalTx.amount}
+                    value={settleSpentAmount}
+                    onChange={(e) => setSettleSpentAmount(e.target.value)}
+                    className="w-full h-16 bg-zinc-50 border-2 border-transparent rounded-[1.5rem] px-6 text-sm font-bold text-zinc-900 outline-none focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner"
+                    placeholder="Enter actual spent amount..."
+                  />
+                </div>
+
+                {/* Returned Cash Display */}
+                <div className="flex items-center justify-between px-6 py-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Cash Returned to Drawer:</span>
+                  <span className="text-lg font-[1000] text-indigo-600 tabular-nums">
+                    Rs {Math.max(0, Number(settleModalTx.amount || 0) - (Number(settleSpentAmount) || 0)).toLocaleString()}
+                  </span>
+                </div>
+
+                {/* Spent Details Input */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 ml-4">Expense Details / Purchase Items</label>
+                  <textarea
+                    value={settleDescription}
+                    onChange={(e) => setSettleDescription(e.target.value)}
+                    placeholder="e.g. Bought office stationery, tea and snacks for meeting..."
+                    className="w-full h-24 bg-zinc-50 border-2 border-transparent rounded-[1.5rem] px-6 py-4 text-xs font-bold text-zinc-900 outline-none focus:bg-white focus:border-indigo-600/20 resize-none transition-all shadow-inner"
+                  />
+                </div>
+
+                {/* Proof Upload in settlement */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <label className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-400 ml-4">Receipt Image (.webp/.pdf)</label>
+                    <div className="relative group/settleproof">
+                      <input
+                        type="file"
+                        accept="image/webp,application/pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file && file.type.startsWith('image/') && file.type !== 'image/webp') {
+                            toast.error("Only .webp images are allowed");
+                            e.target.value = '';
+                            return;
+                          }
+                          setSettleProofFile(file || null);
+                        }}
+                        className="w-full opacity-0 absolute inset-0 cursor-pointer z-10 h-20"
+                      />
+                      <div className="w-full bg-zinc-50 border border-dashed border-zinc-200 rounded-2xl px-4 py-4 text-center transition-all group-hover/settleproof:border-indigo-500 group-hover/settleproof:bg-indigo-500/5 h-20 flex flex-col justify-center items-center">
+                        <p className="text-[10px] font-[1000] text-zinc-900 truncate max-w-[180px]">
+                          {settleProofFile ? settleProofFile.name : 'Upload Receipt'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-400 ml-4">Missing Receipt Reason</label>
+                    <input
+                      type="text"
+                      value={settleProofReason}
+                      onChange={(e) => setSettleProofReason(e.target.value)}
+                      placeholder="Why is receipt missing..."
+                      className="w-full h-20 bg-zinc-50 border border-zinc-200 rounded-2xl px-4 text-xs font-bold text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-600/5 transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setSettleModalTx(null)}
+                  className="flex-1 h-14 bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-black text-xs uppercase tracking-widest rounded-2xl transition-all active:scale-[0.98]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={settlingHold || !settleSpentAmount || Number(settleSpentAmount) > settleModalTx.amount || Number(settleSpentAmount) < 0}
+                  onClick={handleSettleHoldSubmit}
+                  className="flex-1 h-14 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-md disabled:opacity-20 active:scale-[0.98]"
+                >
+                  {settlingHold ? <Loader2 size={20} className="animate-spin mx-auto" /> : 'Confirm Settlement'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {forwardModalTx && (

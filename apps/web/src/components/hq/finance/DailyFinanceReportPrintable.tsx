@@ -37,7 +37,7 @@ const getTxDisplayName = (tx: any): string => {
   if (tx.departmentCode === 'hospital' && tx.hospitalPatientDetails) {
     return tx.hospitalPatientDetails.patientName || tx.hospitalPatientDetails.receiverName || tx.patientName || '—';
   }
-  return tx.patientName || tx.studentName || tx.seekerName || tx.name || '—';
+  return tx.patientName || tx.studentName || tx.seekerName || tx.staffName || tx.name || '—';
 };
 
 const getTxDisplayDescription = (tx: any): string => {
