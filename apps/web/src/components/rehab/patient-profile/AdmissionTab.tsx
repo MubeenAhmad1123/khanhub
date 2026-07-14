@@ -318,9 +318,28 @@ export default function AdmissionTab({
                   <span className="block text-[10px] text-teal-600 font-black uppercase tracking-widest mb-1">Billable Months</span>
                   <span className="text-xl font-black text-teal-900">
                     {(() => {
-                      const adm = toDate(patient.admissionDate);
-                      const now = new Date();
-                      const billableMonths = (now.getFullYear() - adm.getFullYear()) * 12 + (now.getMonth() - adm.getMonth()) + 1;
+                      const adm = toDate(form.admissionDate || patient.admissionDate);
+                      if (!adm || isNaN(adm.getTime())) return '—';
+                      const endDate = form.isActive === false && (form.dischargeDate || patient.dischargeDate)
+                        ? toDate(form.dischargeDate || patient.dischargeDate)
+                        : new Date();
+                      
+                      const rawMonths = (endDate.getFullYear() - adm.getFullYear()) * 12 + (endDate.getMonth() - adm.getMonth());
+                      let completedMonths = rawMonths;
+                      let hasExtraDays = false;
+
+                      if (endDate.getDate() < adm.getDate()) {
+                        completedMonths = rawMonths - 1;
+                        hasExtraDays = true;
+                      } else if (endDate.getDate() > adm.getDate()) {
+                        completedMonths = rawMonths;
+                        hasExtraDays = true;
+                      } else {
+                        completedMonths = rawMonths;
+                        hasExtraDays = false;
+                      }
+
+                      const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
                       return `${billableMonths} ${billableMonths === 1 ? 'Month' : 'Months'}`;
                     })()}
                   </span>
@@ -330,9 +349,28 @@ export default function AdmissionTab({
                   <span className="block text-[10px] text-teal-600 font-black uppercase tracking-widest mb-1">Total Due (Month-based)</span>
                   <span className="text-xl font-black text-teal-900">
                     PKR {(() => {
-                      const adm = toDate(patient.admissionDate);
-                      const now = new Date();
-                      const billableMonths = (now.getFullYear() - adm.getFullYear()) * 12 + (now.getMonth() - adm.getMonth()) + 1;
+                      const adm = toDate(form.admissionDate || patient.admissionDate);
+                      if (!adm || isNaN(adm.getTime())) return '0';
+                      const endDate = form.isActive === false && (form.dischargeDate || patient.dischargeDate)
+                        ? toDate(form.dischargeDate || patient.dischargeDate)
+                        : new Date();
+                      
+                      const rawMonths = (endDate.getFullYear() - adm.getFullYear()) * 12 + (endDate.getMonth() - adm.getMonth());
+                      let completedMonths = rawMonths;
+                      let hasExtraDays = false;
+
+                      if (endDate.getDate() < adm.getDate()) {
+                        completedMonths = rawMonths - 1;
+                        hasExtraDays = true;
+                      } else if (endDate.getDate() > adm.getDate()) {
+                        completedMonths = rawMonths;
+                        hasExtraDays = true;
+                      } else {
+                        completedMonths = rawMonths;
+                        hasExtraDays = false;
+                      }
+
+                      const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
                       const monthlyPkg = Number(form.monthlyPackage || form.packageAmount || 0);
                       return (billableMonths * monthlyPkg).toLocaleString();
                     })()}
