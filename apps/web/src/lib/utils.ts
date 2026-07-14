@@ -19,6 +19,19 @@ export function toDate(val: any): Date {
       return new Date(seconds * 1000 + Math.floor((nanoseconds || 0) / 1000000));
     }
   }
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    const parts = trimmed.split(/[\s-/]+/);
+    if (parts.length === 3) {
+      if (parts[2].length === 4 && parts[0].length <= 2) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const year = parseInt(parts[2], 10);
+        const d = new Date(year, month, day);
+        if (!isNaN(d.getTime())) return d;
+      }
+    }
+  }
   const parsed = new Date(val);
   return isNaN(parsed.getTime()) ? new Date() : parsed;
 }
