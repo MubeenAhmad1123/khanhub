@@ -1485,10 +1485,10 @@ export default function CashierStationPage() {
             ? { 
                 donorId: selectedEntity?.id || 'welfare-general', 
                 donorName: selectedEntity?.name || selectedEntity?.fullName || customTargetName.trim() || 'General Welfare Account',
-                childId: selectedEntity?.linkedChildId || undefined,
-                childName: selectedEntity?.linkedChildName || undefined,
-                donationScope: selectedEntity?.donationScope || undefined,
-                donationType: selectedEntity?.donationType || undefined
+                ...(selectedEntity?.linkedChildId ? { childId: selectedEntity.linkedChildId } : {}),
+                ...(selectedEntity?.linkedChildName ? { childName: selectedEntity.linkedChildName } : {}),
+                ...(selectedEntity?.donationScope ? { donationScope: selectedEntity.donationScope } : {}),
+                ...(selectedEntity?.donationType ? { donationType: selectedEntity.donationType } : {})
               }
             : departmentCode === 'hospital'
               ? {
@@ -1540,9 +1540,9 @@ export default function CashierStationPage() {
                 }
             : { 
                 patientId: selectedEntity?.id || `${departmentCode}-general`, 
-                studentId: departmentCode === 'spims' ? (selectedEntity?.id || 'spims-general') : undefined,
-                employerId: selectedEntity?._entityType === 'employer' ? selectedEntity?.id : undefined,
-                seekerId: selectedEntity?._entityType === 'seeker' ? selectedEntity?.id : undefined,
+                ...(departmentCode === 'spims' ? { studentId: selectedEntity?.id || 'spims-general' } : {}),
+                ...(selectedEntity?._entityType === 'employer' ? { employerId: selectedEntity?.id } : {}),
+                ...(selectedEntity?._entityType === 'seeker' ? { seekerId: selectedEntity?.id } : {}),
                 patientName: selectedEntity?.name || selectedEntity?.companyName || selectedEntity?.fullName || customTargetName.trim() || `General ${activeDepartment.label} Account` 
               }),
         description: finalDescription,
