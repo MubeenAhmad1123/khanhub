@@ -11,27 +11,21 @@ import {
   limit,
   addDoc,
   serverTimestamp,
-  Timestamp,
-  QueryConstraint
+  Timestamp
 } from 'firebase/firestore';
 import { 
-  AlertCircle,
   ArrowLeft, 
   Calculator,
   Calendar, 
   CheckCircle2,
   ChevronDown, 
   ChevronUp, 
-  Coins,
-  Download, 
   FileCheck,
-  Filter, 
   LayoutDashboard, 
   List, 
   Loader2,
   Printer, 
   Save,
-  Search, 
   TrendingDown, 
   TrendingUp,
   Wallet,
@@ -40,7 +34,7 @@ import {
 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { cn, formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
+import { cn, formatDateDMY, toDate } from '@/lib/utils';
 import { DailyFinanceReportPrintable } from '@/components/hq/finance/DailyFinanceReportPrintable';
 
 // Shared with main cashier page
@@ -148,12 +142,17 @@ export default function DailyReportPage() {
   const [isDayClosed, setIsDayClosed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Helper to get selected report date as timezone-independent local Date object
+  const getReportDateAsLocalDate = useCallback((dateStr: string) => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }, []);
+
   const fetchData = useCallback(async () => {
     if (!session) return;
     setLoading(true);
     setError(null);
     try {
-      const allTxs: Transaction[] = [];
       const [year, month, day] = reportDate.split('-').map(Number);
       const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
       const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
@@ -188,7 +187,7 @@ export default function DailyReportPage() {
           })) as Transaction[];
         } catch (err) {
           console.warn(`[DailyReport] Failed optimized fetch for ${dept.code}, falling back...`, err);
-          // Fallback if index not yet propagation
+          // Fallback if index not yet propagated
           const qFallback = query(
             collection(db, dept.txCollection),
             orderBy('createdAt', 'desc'),
@@ -259,7 +258,7 @@ export default function DailyReportPage() {
       // Check if already closed for this specific date
       let closedQ = query(
         collection(db, 'hq_reconciliation'),
-        where('date', '==', formatDateDMY(new Date(reportDate))),
+        where('date', '==', formatDateDMY(getReportDateAsLocalDate(reportDate))),
         limit(1)
       );
 
@@ -268,7 +267,7 @@ export default function DailyReportPage() {
         const cashierId = (session.customId || '').toUpperCase();
         closedQ = query(
           collection(db, 'hq_reconciliation'),
-          where('date', '==', formatDateDMY(new Date(reportDate))),
+          where('date', '==', formatDateDMY(getReportDateAsLocalDate(reportDate))),
           where('cashierId', '==', cashierId),
           limit(1)
         );
@@ -283,7 +282,7 @@ export default function DailyReportPage() {
     } finally {
       setLoading(false);
     }
-  }, [session, reportDate]);
+  }, [session, reportDate, getReportDateAsLocalDate]);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -331,7 +330,7 @@ export default function DailyReportPage() {
       const variance = actual - expected;
 
       await addDoc(collection(db, 'hq_reconciliation'), {
-        date: formatDateDMY(new Date(reportDate)),
+        date: formatDateDMY(getReportDateAsLocalDate(reportDate)),
         openingBalance,
         totalInflow: stats.totalIncome,
         totalOutflow: stats.totalExpense,
@@ -488,23 +487,22 @@ export default function DailyReportPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-            <div className="relative group overflow-hidden rounded-2xl border border-zinc-100 shadow-sm bg-white w-full sm:w-48">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-hover:text-indigo-600 transition-colors z-10" />
+            <div className="relative group overflow-hidden rounded-2xl border border-zinc-100 shadow-sm bg-white w-full sm:w-48 flex items-center">
+              <Calendar className="absolute left-3 w-4 h-4 text-zinc-400 group-hover:text-indigo-600 transition-colors pointer-events-none z-10" />
               <input 
-                type="text" 
-                placeholder="DD MM YYYY"
-                value={formatDateDMY(reportDate)}
-                onChange={(e) => setReportDate(e.target.value)}
-                onBlur={(e) => {
-                  const parsed = parseDateDMY(e.target.value);
-                  if (parsed) {
-                    const year = parsed.getFullYear();
-                    const month = String(parsed.getMonth() + 1).padStart(2, '0');
-                    const day = String(parsed.getDate()).padStart(2, '0');
-                    setReportDate(`${year}-${month}-${day}`);
+                type="date" 
+                value={reportDate}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setReportDate(e.target.value);
                   }
                 }}
-                className="pl-9 pr-4 py-2.5 bg-transparent focus:bg-zinc-50 border-none rounded-2xl text-sm font-bold text-zinc-900 outline-none transition-all cursor-pointer relative z-0 w-full"
+                onClick={(e) => {
+                  try {
+                    (e.target as any).showPicker?.();
+                  } catch (err) {}
+                }}
+                className="pl-9 pr-4 py-2.5 bg-transparent focus:bg-zinc-50 border-none rounded-2xl text-sm font-bold text-zinc-900 outline-none transition-all cursor-pointer relative z-0 w-full [color-scheme:light]"
               />
             </div>
             <div className="grid grid-cols-3 sm:flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
@@ -1124,4 +1122,3 @@ export default function DailyReportPage() {
     </div>
   );
 }
-

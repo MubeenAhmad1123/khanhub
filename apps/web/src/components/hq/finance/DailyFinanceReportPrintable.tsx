@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { Printer, Download, X, TrendingUp, TrendingDown, Building2, Receipt } from 'lucide-react';
-import { toDate, downloadElementAsPng } from '@/lib/utils';
+import React, { useMemo, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { Printer, Download, X, TrendingUp, TrendingDown, Building2 } from 'lucide-react';
+import { downloadElementAsPng } from '@/lib/utils';
 
 // Helper to determine if transaction is an expense
 const getIsExpense = (tx: any): boolean => {
@@ -82,9 +83,22 @@ interface Props {
 }
 
 export function DailyFinanceReportPrintable({ date, transactions, onClose, generatingUser, leftPatients = [] }: Props) {
-  // Compute date string
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Compute date string timezone-safely
   const dateStr = useMemo(() => {
     try {
+      if (typeof date === 'string' && date.includes('-')) {
+        const [year, month, day] = date.split('-').map(Number);
+        const d = new Date(year, month - 1, day);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+      }
       const d = new Date(date);
       if (isNaN(d.getTime())) return date;
       return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -188,8 +202,95 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
     await downloadElementAsPng(el, `daily-financial-report-${date}.png`, { scale: 2 });
   };
 
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto print:bg-transparent print:p-0 print:fixed print:inset-0">
+  if (!mounted) return null;
+
+  return createPortal(
+    <div id="daily-finance-report-overlay-wrapper" className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto print:bg-transparent print:p-0 print:fixed print:inset-0">
+      <style>{`
+        @media print {
+          body {
+            background: white !important;
+            color: black !important;
+          }
+          /* Hide everything except our print overlay container */
+          body > *:not(#daily-finance-report-overlay-wrapper) {
+            display: none !important;
+          }
+          #daily-finance-report-overlay-wrapper {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: block !important;
+          }
+          #daily-finance-report-overlay-wrapper * {
+            overflow: visible !important;
+            max-height: none !important;
+          }
+          /* Hide non-print elements */
+          .sticky, .print\\:hidden {
+            display: none !important;
+          }
+          /* Remove layout container padding and backdrop during printing */
+          .print-content-container {
+            padding: 0 !important;
+            background: white !important;
+          }
+          #daily-finance-report-root {
+            max-width: 100% !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            display: block !important;
+          }
+          /* Boost text contrast and density for faded text issues */
+          .text-zinc-400, .text-zinc-300, .text-zinc-500, .text-zinc-450, .text-zinc-550, .text-zinc-555, .text-gray-400, .text-gray-500 {
+            color: #1f2937 !important; /* Dark Slate Gray */
+            font-weight: 600 !important;
+          }
+          .text-zinc-900, .text-zinc-800, .text-zinc-850, .text-gray-900 {
+            color: #000000 !important;
+            font-weight: 800 !important;
+          }
+          /* Ensure borders print crisply */
+          .border, .border-zinc-200, .border-zinc-300, .border-zinc-150, .border-zinc-200\\/60 {
+            border-color: #9ca3af !important; /* Visible borders */
+          }
+          /* Make background blocks visible on paper */
+          .bg-zinc-50, .bg-zinc-50\\/20, .bg-zinc-50\\/30, .bg-zinc-50\\/50, .bg-zinc-100\\/50 {
+            background-color: #f3f4f6 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .bg-zinc-900 {
+            background-color: #111827 !important;
+            color: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .text-indigo-600 {
+            color: #4f46e5 !important;
+          }
+          .bg-indigo-50 {
+            background-color: #e0e7ff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          /* Prevent layout segments breaking halfway across pages */
+          table, tr, td, th, .grid, .p-4, .space-y-3 {
+            page-break-inside: avoid !important;
+          }
+        }
+      `}</style>
+      
       {/* Container holding controls and the printable page */}
       <div className="relative bg-zinc-50 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col print:max-h-none print:h-auto print:w-full print:shadow-none print:rounded-none print:bg-white overflow-hidden">
         
@@ -222,12 +323,12 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
         </div>
 
         {/* The Printable Page Sheet */}
-        <div className="flex-1 overflow-y-auto p-8 print:p-0 print:overflow-visible bg-zinc-100/50 print:bg-white">
+        <div className="flex-1 overflow-y-auto p-8 print:p-0 print:overflow-visible bg-zinc-100/50 print:bg-white print-content-container">
           
           {/* Printable Layout Page */}
           <div
             id="daily-finance-report-root"
-            className="bg-white text-gray-900 p-10 md:p-12 w-full max-w-[800px] mx-auto print:block print:p-0 print:max-w-full print:bg-white select-none border border-zinc-200/60 print:border-none shadow-sm print:shadow-none rounded-2xl print:rounded-none"
+            className="bg-white text-gray-900 p-10 md:p-12 w-full max-w-[800px] mx-auto print:block print:p-0 print:max-w-full print:bg-white border border-zinc-200/60 print:border-none shadow-sm print:shadow-none rounded-2xl print:rounded-none"
           >
             {/* 1. LETTERHEAD HEADER */}
             <div className="flex justify-between items-center pb-5 border-b border-zinc-300">
@@ -543,6 +644,7 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
