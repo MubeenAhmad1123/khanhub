@@ -680,7 +680,7 @@ export default function DailyReportPage() {
                   <div>
                     <h3 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-1">Hospital Metrics</h3>
                     <p className="text-3xl font-black text-zinc-900 tracking-tight">
-                      {stats.uniquePatients.size} <span className="text-sm font-bold text-zinc-400">Unique Patients</span>
+                      {stats.uniquePatients.size} <span className="text-sm font-bold text-zinc-400">Total Patients</span>
                     </p>
                   </div>
                   <div className="bg-zinc-50 p-3 rounded-2xl">

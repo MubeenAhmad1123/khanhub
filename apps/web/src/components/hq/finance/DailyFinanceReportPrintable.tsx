@@ -416,8 +416,8 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
                 <span className="text-[9px] font-black text-zinc-450 uppercase tracking-widest block mb-3">Hospital Metrics Summary</span>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="bg-zinc-50/50 p-2 rounded-lg border border-zinc-150">
-                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block">Patients</span>
-                    <span className="text-xs font-black text-zinc-800">{stats.uniquePatients.size} unique</span>
+                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block">Total Patients</span>
+                    <span className="text-xs font-black text-zinc-800">{stats.uniquePatients.size} total</span>
                   </div>
                   <div className="bg-zinc-50/50 p-2 rounded-lg border border-zinc-150">
                     <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block">Checkups</span>
