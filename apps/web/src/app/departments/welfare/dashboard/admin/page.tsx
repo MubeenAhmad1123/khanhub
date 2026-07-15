@@ -11,7 +11,7 @@ import {
 import {
   Heart, UserCog, TrendingUp,
   Users, ChevronRight, Activity, Loader2,
-  Plus, BarChart3
+  Plus, BarChart3, GitFork
 } from 'lucide-react';
 import { LogoLoader } from '@/components/ui';
 import { formatDateDMY } from '@/lib/utils';
@@ -235,6 +235,16 @@ export default function AdminDashboardPage() {
             </Link>
 
             <Link 
+              href="/departments/welfare/dashboard/admin/donor-tree"
+              className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 flex-shrink-0 group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                <GitFork size={16} className="rotate-180 text-teal-600" />
+              </div>
+              <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900">Donor Referral Tree</span>
+            </Link>
+
+            <Link 
               href="/departments/welfare/dashboard/profile"
               className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all group"
             >
@@ -256,4 +266,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-

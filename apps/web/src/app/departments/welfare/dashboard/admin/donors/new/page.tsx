@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { collection, addDoc, Timestamp, doc, getDocs, query, orderBy, limit, where, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { createWelfareUserServer } from '@/app/departments/welfare/actions/createWelfareUser';
-import { Child } from '@/types/welfare';
+import { Child, Donor } from '@/types/welfare';
 import { 
   ArrowLeft, Heart, Save, Loader2, User, Phone, MapPin, 
   Eye, EyeOff, Shield, Banknote, Search, X
@@ -46,6 +46,8 @@ export default function RegisterDonorPage() {
   const [district, setDistrict] = useState('');
   const [province, setProvince] = useState('');
   
+  // Referrer Info
+  const [selectedReferrerId, setSelectedReferrerId] = useState('');
   const [referringMemberName, setReferringMemberName] = useState('');
   const [referringMemberFatherName, setReferringMemberFatherName] = useState('');
   const [referringMemberId, setReferringMemberId] = useState('');
@@ -60,6 +62,7 @@ export default function RegisterDonorPage() {
   // Specific Child Link
   const [childrenList, setChildrenList] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState('');
+  const [donorsList, setDonorsList] = useState<Donor[]>([]);
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
@@ -73,18 +76,27 @@ export default function RegisterDonorPage() {
       router.push('/departments/welfare/login');
       return;
     }
-    fetchChildren();
+    fetchInitialData();
   }, [router]);
 
-  const fetchChildren = async () => {
+  const fetchInitialData = async () => {
     try {
-      const q = query(collection(db, 'welfare_children'), where('isActive', '==', true), orderBy('name'));
-      const snap = await getDocs(q);
-      setChildrenList(snap.docs.map(d => ({ id: d.id, ...d.data() } as Child)));
+      // 1. Fetch children
+      const qChildren = query(collection(db, 'welfare_children'), where('isActive', '==', true), orderBy('name'));
+      const snapChildren = await getDocs(qChildren);
+      setChildrenList(snapChildren.docs.map(d => ({ id: d.id, ...d.data() } as Child)));
+
+      // 2. Fetch existing active donors for referral selection (adhering to index rules by sorting client-side)
+      const qDonors = query(collection(db, 'welfare_donors'), where('isActive', '==', true));
+      const snapDonors = await getDocs(qDonors);
+      const list = snapDonors.docs.map(d => ({ id: d.id, ...d.data() } as Donor));
+      list.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
+      setDonorsList(list);
+
       setLoading(false);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to load children list');
+      toast.error('Failed to load initial data');
       setLoading(false);
     }
   };
@@ -220,14 +232,6 @@ export default function RegisterDonorPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
-      </div>
-    );
-  }
-
   const SectionHeader = ({ icon: Icon, title }: { icon: any, title: string }) => (
     <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
       <Icon size={16} className="text-teal-500" />
@@ -340,6 +344,42 @@ export default function RegisterDonorPage() {
             <div className="space-y-4 mt-10">
               <SectionHeader icon={User} title="Referring Member Details" />
               
+              <div className="grid grid-cols-1 gap-4 bg-teal-50/20 p-4 border border-teal-150 rounded-xl mb-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-teal-800 uppercase px-1">Link to Existing Donor Profile</label>
+                  <select 
+                    className={inputStyle} 
+                    value={selectedReferrerId}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSelectedReferrerId(val);
+                      if (val === '') {
+                        setReferringMemberId('');
+                        setReferringMemberName('');
+                        setReferringMemberFatherName('');
+                        setReferringMemberMobile('');
+                        setReferringMemberAddress('');
+                      } else {
+                        const selectedDnr = donorsList.find(d => d.id === val);
+                        if (selectedDnr) {
+                          setReferringMemberId(selectedDnr.id);
+                          setReferringMemberName(selectedDnr.fullName);
+                          setReferringMemberFatherName(selectedDnr.fatherName || '');
+                          setReferringMemberMobile(selectedDnr.contactNumber || '');
+                          setReferringMemberAddress(selectedDnr.address || '');
+                        }
+                      }
+                    }}
+                  >
+                    <option value="">-- Write name manually --</option>
+                    {donorsList.map(d => (
+                      <option key={d.id} value={d.id}>{d.fullName} ({d.donorNumber})</option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-gray-400 font-medium px-1">Select from previously added donor profiles to link them automatically, or choose manual typing.</p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase px-1">Referring Member Name</label>

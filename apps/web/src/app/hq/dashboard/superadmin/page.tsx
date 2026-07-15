@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   Activity, BadgeCheck, Building2, ClipboardList, CreditCard, 
-  Users2, UserPlus, TrendingUp, Search, ShieldCheck, ChevronRight, Wallet, FileText 
+  Users2, UserPlus, TrendingUp, ShieldCheck, Wallet, FileText, GitFork
 } from 'lucide-react';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { fetchOverviewStats } from '@/lib/hq/superadmin/stats';
@@ -17,7 +17,7 @@ import { RemainingFlowModal } from '@/components/hq/superadmin/RemainingFlowModa
 import { TransactionsFlowModal } from '@/components/hq/superadmin/TransactionsFlowModal';
 import { DailyFinanceReportPrintable } from '@/components/hq/finance/DailyFinanceReportPrintable';
 import { isSuperadminEmail } from '@/lib/hq/auth/superadminWhitelist';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { cn } from '@/lib/utils';
 
@@ -33,10 +33,6 @@ const DEPT_LABELS: Record<string, string> = {
   job_center: 'Job Center',
   'job-center': 'Job Center',
 };
-
-// ─── Components ───────────────────────────────────────────────────────────────
-
-
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -321,12 +317,13 @@ export default function HqSuperadminPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-8">
               {[
                 { label: 'Personnel',   href: '/hq/dashboard/superadmin/staff',       icon: Users2, tone: 'rehab', desc: 'Staff registry & compliance' },
                 { label: 'Analytics',   href: '/hq/dashboard/superadmin/analytics',   icon: Activity, tone: 'spims', desc: 'Real-time data overview' },
                 { label: 'Departments', href: '/hq/dashboard/superadmin/departments', icon: Building2, tone: 'hq', desc: 'Institutional structure' },
                 { label: 'Finance',     href: '/hq/dashboard/superadmin/finance',     icon: CreditCard, tone: 'primary', desc: 'Global financial ledger' },
+                { label: 'Welfare Tree', href: '/hq/dashboard/superadmin/welfare/donor-tree', icon: GitFork, tone: 'welfare', desc: 'Welfare donor referral network' },
                 { label: 'Manager Panel', href: '/hq/dashboard/manager',              icon: Users2, tone: 'manager', desc: 'Manage roster, attendance & salary' },
                 { label: 'Cashier Panel', href: '/hq/dashboard/cashier',              icon: CreditCard, tone: 'cashier', desc: 'Direct station & day closings' },
               ].map((btn) => {
@@ -335,6 +332,7 @@ export default function HqSuperadminPage() {
                   spims: 'from-sky-400 to-blue-500 text-white shadow-sky-500/30',
                   hq: 'from-violet-400 to-purple-500 text-white shadow-violet-500/30',
                   primary: 'from-rose-400 to-pink-500 text-white shadow-rose-500/30',
+                  welfare: 'from-teal-400 to-emerald-500 text-white shadow-teal-500/30',
                   manager: 'from-emerald-500 to-green-600 text-white shadow-emerald-600/30',
                   cashier: 'from-blue-500 to-indigo-600 text-white shadow-blue-600/30'
                 };
@@ -348,7 +346,7 @@ export default function HqSuperadminPage() {
                       <btn.icon size={40} strokeWidth={2} />
                     </div>
                     <div className="flex flex-col gap-3">
-                      <span className="text-xs font-black uppercase tracking-[0.2em] text-gray-900">{btn.label}</span>
+                      <span className="text-xs font-black uppercase tracking-[0.2em] text-gray-900 leading-tight">{btn.label}</span>
                       <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest max-w-[140px] leading-relaxed group-hover:text-gray-500 transition-colors">{btn.desc}</span>
                     </div>
                   </Link>
