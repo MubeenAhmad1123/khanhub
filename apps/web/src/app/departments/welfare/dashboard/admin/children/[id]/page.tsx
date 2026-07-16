@@ -80,6 +80,7 @@ export default function ChildDetailPage() {
   const [photoPreview, setPhotoPreview] = useState<string>('');
   const [photoUploading, setPhotoUploading] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const directPhotoInputRef = useRef<HTMLInputElement>(null);
 
   // Upload State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -514,6 +515,32 @@ export default function ChildDetailPage() {
     }
   };
 
+  const handleDpUpload = async (file: File) => {
+    if (!file) return;
+    if (file.type.startsWith('image/') && file.type !== 'image/webp') {
+      toast.error('Only WebP images are allowed');
+      return;
+    }
+    setPhotoUploading(true);
+    const loadingToast = toast.loading('Uploading display picture...');
+    try {
+      const url = await uploadToCloudinary(file, 'khanhub/welfare/children');
+      await updateDoc(doc(db, 'welfare_children', childId), {
+        photoUrl: url
+      });
+      setChild((prev: any) => prev ? { ...prev, photoUrl: url } : null);
+      setEditForm(prev => ({ ...prev, photoUrl: url }));
+      setPhotoPreview(url);
+      toast.success('Display picture updated successfully ✓');
+    } catch (err) {
+      console.error("Direct DP upload failed", err);
+      toast.error('Failed to upload display picture');
+    } finally {
+      setPhotoUploading(false);
+      toast.dismiss(loadingToast);
+    }
+  };
+
   const handleDeactivate = async () => {
     if (!window.confirm("Are you sure you want to deactivate this child?")) return;
     try {
@@ -736,12 +763,47 @@ export default function ChildDetailPage() {
           <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-full opacity-50 -z-0"></div>
           
           <div className="relative z-10">
-            {child.photoUrl ? (
-              <img src={child.photoUrl} alt={child.name} className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md bg-gray-100" />
-            ) : (
-              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-4xl border-4 border-white shadow-md">
-                {child.name?.charAt(0)?.toUpperCase() || '?'}
+            {(session?.role === 'admin' || session?.role === 'superadmin') ? (
+              <div 
+                onClick={() => directPhotoInputRef.current?.click()}
+                className="relative group cursor-pointer w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-white shadow-md bg-gray-100"
+              >
+                {child.photoUrl ? (
+                  <img src={child.photoUrl} alt={child.name} className="w-full h-full object-cover group-hover:opacity-75 transition-opacity" />
+                ) : (
+                  <div className="w-full h-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-4xl group-hover:bg-teal-200 transition-colors">
+                    {child.name?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  {photoUploading ? (
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                  ) : (
+                    <>
+                      <Camera className="w-6 h-6 text-white mb-0.5" />
+                      <span className="text-[9px] font-black text-white uppercase tracking-wider">Change DP</span>
+                    </>
+                  )}
+                </div>
+                <input 
+                  type="file"
+                  ref={directPhotoInputRef}
+                  accept="image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleDpUpload(file);
+                  }}
+                />
               </div>
+            ) : (
+              child.photoUrl ? (
+                <img src={child.photoUrl} alt={child.name} className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md bg-gray-100" />
+              ) : (
+                <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-4xl border-4 border-white shadow-md">
+                  {child.name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+              )
             )}
           </div>
           
@@ -824,7 +886,7 @@ export default function ChildDetailPage() {
               onClick={() => scrollToSection('videos')}
               className="px-3 py-2.5 text-xs whitespace-nowrap font-black flex items-center gap-1.5 transition-all text-teal-600 hover:bg-teal-50 rounded-xl cursor-pointer"
             >
-              <Video className="w-4 h-4" /> Videos ({videos.length})
+              <Video className="w-4 h-4" /> Media ({videos.length})
             </button>
             <button
               onClick={() => scrollToSection('visits')}
@@ -1325,7 +1387,7 @@ export default function ChildDetailPage() {
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <Upload className="w-5 h-5 text-teal-600" />
-                Upload File
+                Upload Media (Photo / Video)
               </h2>
               <button onClick={() => setIsUploadModalOpen(false)} className="text-gray-400 hover:bg-gray-100 p-2 rounded-lg transition-colors">
                 <X className="w-5 h-5" />
@@ -1334,13 +1396,13 @@ export default function ChildDetailPage() {
 
             <form onSubmit={handleUpload} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title / Caption *</label>
                 <input
                   type="text"
                   value={videoTitle}
                   onChange={e => setVideoTitle(e.target.value)}
                   className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-teal-500 bg-gray-50 focus:bg-white"
-                  placeholder="e.g. Weekly Progress Video"
+                  placeholder="e.g. Activity photo caption or video title"
                   required
                 />
               </div>
