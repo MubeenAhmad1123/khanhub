@@ -49,6 +49,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Audit Log', href: '/hq/dashboard/superadmin/audit', icon: <FileText size={16} />, roles: ['superadmin'] },
   { label: 'Reconciliation', href: '/hq/dashboard/superadmin/reconciliation', icon: <Calculator size={16} />, roles: ['superadmin'] },
   { label: 'Passwords', href: '/hq/dashboard/superadmin/passwords', icon: <KeyRound size={16} />, roles: ['superadmin'] },
+  { label: 'Welfare Tree', href: '/hq/dashboard/superadmin/welfare/donor-tree', icon: <GitFork size={16} className="rotate-180 text-teal-600" />, roles: ['superadmin'] },
   { label: 'Settings', href: '/hq/dashboard/superadmin/settings', icon: <User size={16} />, roles: ['superadmin'] },
   { label: 'Overview', href: '/hq/dashboard/manager', icon: <LayoutDashboard size={16} />, roles: ['manager'] },
   { label: 'Staff List', href: '/hq/dashboard/manager/staff', icon: <UserCog size={16} />, roles: ['manager'] },

@@ -17,6 +17,8 @@ const navItems: NavItem[] = [
   { label: 'Cashier Dashboard', href: '/departments/welfare/dashboard/cashier', roles: ['cashier', 'superadmin'] },
   { label: 'Admin Overview', href: '/departments/welfare/dashboard/admin', roles: ['admin', 'superadmin'] },
   { label: 'Children', href: '/departments/welfare/dashboard/admin/children', roles: ['admin', 'superadmin'] },
+  { label: 'Donors', href: '/departments/welfare/dashboard/admin/donors', roles: ['admin', 'superadmin'] },
+  { label: 'Donor Tree', href: '/departments/welfare/dashboard/admin/donor-tree', roles: ['admin', 'superadmin'] },
   { label: 'Staff Management', href: '/departments/welfare/dashboard/admin/staff', roles: ['admin', 'superadmin'] },
   { label: 'Finance', href: '/departments/welfare/dashboard/admin/finance', roles: ['admin', 'superadmin'] },
   { label: 'Reports', href: '/departments/welfare/dashboard/admin/reports', roles: ['admin', 'superadmin'] },
