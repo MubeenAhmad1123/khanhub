@@ -252,6 +252,8 @@ export default function PatientDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const isEditingRef = useRef(false);
   useEffect(() => { isEditingRef.current = isEditing; }, [isEditing]);
+  
+  const directPhotoInputRef = useRef<HTMLInputElement>(null);
   const [editForm, setEditForm] = useState({
     name: '',
     patientId: '',
@@ -1636,6 +1638,31 @@ export default function PatientDetailPage() {
     await handleSaveFromForm(form, photoFile);
   }, [handleSaveFromForm]);
 
+  const handleDpUpload = async (file: File) => {
+    if (!file) return;
+    if (file.type.startsWith('image/') && file.type !== 'image/webp') {
+      toast.error('Only WebP images are allowed');
+      return;
+    }
+    setPhotoUploading(true);
+    const loadingToast = toast.loading('Uploading display picture...');
+    try {
+      const url = await uploadToCloudinary(file, 'khanhub/rehab/patients');
+      await updateDoc(doc(db, 'rehab_patients', patientId), {
+        photoUrl: url
+      });
+      setPatient((prev: any) => prev ? { ...prev, photoUrl: url } : null);
+      setEditForm(prev => ({ ...prev, photoUrl: url }));
+      toast.success('Display picture updated successfully ✓');
+    } catch (err) {
+      console.error("Direct DP upload failed", err);
+      toast.error('Failed to upload display picture');
+    } finally {
+      setPhotoUploading(false);
+      toast.dismiss(loadingToast);
+    }
+  };
+
   // Freeze editForm at the moment editing starts so Firestore
   // onSnapshot re-renders don't push new object references into
   // the form while the user is typing (which would cause React.memo
@@ -2400,18 +2427,53 @@ export default function PatientDetailPage() {
           <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-bl-full transition-colors group-hover:bg-teal-100 -mr-4 -mt-4"></div>
 
           <div className="relative z-10 shrink-0">
-            {patient.photoUrl ? (
-              <div className="relative">
-                <img src={patient.photoUrl} alt={patient.name} className="w-24 h-24 md:w-36 md:h-36 rounded-2xl sm:rounded-[2rem] object-cover border-4 border-white shadow-xl bg-gray-100" />
-                <div className="absolute -bottom-2 -right-2 h-6 w-6 rounded-full bg-emerald-500 border-4 border-white" />
+            {(session?.role === 'admin' || session?.role === 'superadmin') ? (
+              <div 
+                onClick={() => directPhotoInputRef.current?.click()}
+                className="relative group cursor-pointer w-24 h-24 md:w-36 md:h-36 rounded-2xl sm:rounded-[2rem] overflow-hidden border-4 border-white shadow-xl bg-gray-100"
+              >
+                {patient.photoUrl ? (
+                  <img src={patient.photoUrl} alt={patient.name} className="w-full h-full object-cover group-hover:opacity-75 transition-opacity" />
+                ) : (
+                  <div className="w-full h-full bg-teal-600 text-white flex items-center justify-center font-black text-4xl sm:text-6xl group-hover:bg-teal-700 transition-colors">
+                    {patient.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  {photoUploading ? (
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                  ) : (
+                    <>
+                      <Camera className="w-6 h-6 text-white mb-0.5" />
+                      <span className="text-[9px] font-black text-white uppercase tracking-wider">Change DP</span>
+                    </>
+                  )}
+                </div>
+                <input 
+                  type="file"
+                  ref={directPhotoInputRef}
+                  accept="image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleDpUpload(file);
+                  }}
+                />
               </div>
             ) : (
-              <div className="relative">
-                <div className="w-24 h-24 md:w-36 md:h-36 rounded-2xl sm:rounded-[2rem] bg-teal-600 text-white flex items-center justify-center font-black text-4xl sm:text-6xl border-4 border-white shadow-xl shadow-teal-600/20">
-                  {patient.name.charAt(0).toUpperCase()}
+              patient.photoUrl ? (
+                <div className="relative">
+                  <img src={patient.photoUrl} alt={patient.name} className="w-24 h-24 md:w-36 md:h-36 rounded-2xl sm:rounded-[2rem] object-cover border-4 border-white shadow-xl bg-gray-100" />
+                  <div className="absolute -bottom-2 -right-2 h-6 w-6 rounded-full bg-emerald-500 border-4 border-white" />
                 </div>
-                <div className="absolute -bottom-2 -right-2 h-6 w-6 rounded-full bg-emerald-500 border-4 border-white" />
-              </div>
+              ) : (
+                <div className="relative">
+                  <div className="w-24 h-24 md:w-36 md:h-36 rounded-2xl sm:rounded-[2rem] bg-teal-600 text-white flex items-center justify-center font-black text-4xl sm:text-6xl border-4 border-white shadow-xl shadow-teal-600/20">
+                    {patient.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="absolute -bottom-2 -right-2 h-6 w-6 rounded-full bg-emerald-500 border-4 border-white" />
+                </div>
+              )
             )}
           </div>
 
