@@ -7,7 +7,8 @@ import {
   LayoutDashboard, Users, Shield, Eye, FileText,
   UserCog, CalendarCheck, CheckCircle, CreditCard, History,
   LogOut, Menu, X, ArrowLeft, Calculator, Tag, DollarSign, TrendingUp, BarChart2, User,
-  Building2, GraduationCap, ChevronLeft, ExternalLink, Heart, KeyRound, Lock, Lightbulb, Search
+  Building2, GraduationCap, ChevronLeft, ExternalLink, Heart, KeyRound, Lock, Lightbulb, Search,
+  GitFork
 } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
@@ -122,6 +123,8 @@ const DEPARTMENT_NAV: Record<string, NavItem[]> = {
   welfare: [
     { label: 'Welfare Overview', href: '/departments/welfare/dashboard/admin', icon: <LayoutDashboard size={16}/>, roles: ['superadmin'] },
     { label: 'Children', href: '/departments/welfare/dashboard/admin/children', icon: <Users size={16}/>, roles: ['superadmin'] },
+    { label: 'Donors', href: '/departments/welfare/dashboard/admin/donors', icon: <CreditCard size={16}/>, roles: ['superadmin'] },
+    { label: 'Donor Tree', href: '/departments/welfare/dashboard/admin/donor-tree', icon: <GitFork size={16}/>, roles: ['superadmin'] },
     { label: 'Staff', href: '/departments/welfare/dashboard/admin/staff', icon: <UserCog size={16}/>, roles: ['superadmin'] },
     { label: 'Finance', href: '/departments/welfare/dashboard/admin/finance', icon: <TrendingUp size={16}/>, roles: ['superadmin'] },
     { label: 'Credentials', href: '/departments/welfare/dashboard/admin/passwords', icon: <Shield size={16}/>, roles: ['superadmin'] },

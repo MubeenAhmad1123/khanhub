@@ -116,6 +116,7 @@ export default function SuperAdminReportsPage() {
     rollNo: true,
     studentId: true,
     course: true,
+    session: true,
     contact: true,
     admissionDate: true,
     monthlyFee: true,
@@ -131,6 +132,7 @@ export default function SuperAdminReportsPage() {
     { key: 'rollNo', label: 'Roll Number' },
     { key: 'studentId', label: 'Student ID' },
     { key: 'course', label: 'Course' },
+    { key: 'session', label: 'Session' },
     { key: 'contact', label: 'Contact Number' },
     { key: 'admissionDate', label: 'Admission Date' },
     { key: 'monthlyFee', label: 'Monthly Fee' },
@@ -348,6 +350,7 @@ export default function SuperAdminReportsPage() {
             rollNo: d.rollNo || d.serialNumber || '—',
             studentId: d.studentId || d.customId || '—',
             course: d.course || '—',
+            session: d.session || '—',
             contact: d.contact || d.phone || d.guardianPhone || d.fatherContact || '—',
             status: d.status || '',
             activity: d.activity || 'Active',
@@ -1058,6 +1061,18 @@ export default function SuperAdminReportsPage() {
                               </div>
                             </th>
                           )}
+                          {selectedColumns.session && (
+                             <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('session')}>
+                               <div className="flex items-center gap-1">
+                                 Session
+                                 {sortField === 'session' ? (
+                                   sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                 ) : (
+                                   <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                 )}
+                               </div>
+                             </th>
+                           )}
                           {selectedColumns.contact && (
                             <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('contact')}>
                               <div className="flex items-center gap-1">
@@ -1157,6 +1172,7 @@ export default function SuperAdminReportsPage() {
                             {selectedColumns.rollNo && <td className="px-3 py-2.5 text-gray-550 font-mono">{s.rollNo}</td>}
                             {selectedColumns.studentId && <td className="px-3 py-2.5 text-gray-550 font-mono">{s.studentId}</td>}
                             {selectedColumns.course && <td className="px-3 py-2.5 text-gray-600">{s.course}</td>}
+                            {selectedColumns.session && <td className="px-3 py-2.5 text-gray-600">{s.session}</td>}
                             {selectedColumns.contact && <td className="px-3 py-2.5 text-gray-600">{s.contact}</td>}
                             {selectedColumns.admissionDate && <td className="px-3 py-2.5 text-gray-650">{s.admissionDate ? formatDateDMY(s.admissionDate) : '—'}</td>}
                             {selectedColumns.monthlyFee && <td className="px-3 py-2.5 text-right text-gray-800">{formatPKR(s.monthlyFee)}</td>}
