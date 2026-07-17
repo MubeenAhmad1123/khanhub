@@ -384,7 +384,7 @@ service cloud.firestore {
         || (isRehabRole('family') && rehabPatientId() == resource.data.patientId);
       allow create: if isRehabRole('cashier')
         || isRehabAdminOrAbove()
-        || isHqCashier()
+        || isHqTier1()
         || (isRehabAdminOrAbove() && request.resource.data.status == 'pending_cashier');
       allow update: if isRehabAdminOrAbove()
         || isHqSuperOrManager()
@@ -751,7 +751,7 @@ service cloud.firestore {
         || (isHospitalRole('patient') && hospitalPatientId() == resource.data.patientId);
       allow create: if isHospitalRole('cashier')
         || isHospitalAdminOrAbove()
-        || isHqCashier()
+        || isHqTier1()
         || (isHospitalAdminOrAbove() && request.resource.data.status == 'pending_cashier');
       allow update: if isHospitalAdminOrAbove()
         || isHqSuperOrManager()
@@ -919,7 +919,7 @@ service cloud.firestore {
         || (isSpimsRole('student') && resource.data.patientId == spimsStudentId());
       allow create: if isSpimsRole('cashier')
         || isSpimsAdminOrAbove()
-        || isHqCashier()
+        || isHqTier1()
         || (isSpimsAdminOrAbove() && request.resource.data.status == 'pending_cashier');
       allow update: if isSpimsAdminOrAbove() || isHqSuperOrManager()
         || (
@@ -1524,7 +1524,7 @@ service cloud.firestore {
       allow read: if isSukoonAdminOrAbove() || isSukoonRole('cashier') || isHqTier1();
       allow create: if isSukoonRole('cashier')
         || isSukoonAdminOrAbove()
-        || isHqCashier()
+        || isHqTier1()
         || (isSukoonAdminOrAbove() && request.resource.data.status == 'pending_cashier');
       allow update: if isSukoonAdminOrAbove()
         || isHqSuperOrManager()
@@ -1703,7 +1703,7 @@ service cloud.firestore {
         || isHqTier1();
       allow create: if isWelfareRole('cashier')
         || isWelfareAdminOrAbove()
-        || isHqCashier()
+        || isHqTier1()
         || (isWelfareAdminOrAbove() && request.resource.data.status == 'pending_cashier');
       allow update: if isWelfareAdminOrAbove()
         || isHqSuperOrManager()
@@ -1955,7 +1955,7 @@ service cloud.firestore {
       allow read: if isJobCenterAdminOrAbove() || isJobCenterRole('cashier') || isHqTier1();
       allow create: if isJobCenterRole('cashier')
         || isJobCenterAdminOrAbove()
-        || isHqCashier()
+        || isHqTier1()
         || (isJobCenterAdminOrAbove() && request.resource.data.status == 'pending_cashier');
       allow update: if isJobCenterAdminOrAbove()
         || isHqSuperOrManager()
@@ -1983,7 +1983,7 @@ service cloud.firestore {
       allow read: if isJobCenterAdminOrAbove() || isJobCenterRole('cashier') || isHqTier1();
       allow create: if isJobCenterRole('cashier')
         || isJobCenterAdminOrAbove()
-        || isHqCashier()
+        || isHqTier1()
         || (isJobCenterAdminOrAbove() && request.resource.data.status == 'pending_cashier');
       allow update: if isJobCenterAdminOrAbove()
         || isHqSuperOrManager()
