@@ -194,11 +194,15 @@ export async function addTherapySession(data: Omit<TherapySession, 'id' | 'creat
   return res.id;
 }
 
-export async function updateTherapySession(sessionId: string, sessionNotes: string): Promise<void> {
-  await updateDoc(doc(db, 'rehab_therapy_sessions', sessionId), {
+export async function updateTherapySession(sessionId: string, sessionNotes: string, date?: string): Promise<void> {
+  const updateData: any = {
     sessionNotes,
     updatedAt: Timestamp.now()
-  });
+  };
+  if (date) {
+    updateData.date = date;
+  }
+  await updateDoc(doc(db, 'rehab_therapy_sessions', sessionId), updateData);
 }
 
 // ─── MEDICATION RECORDS ──────────────────────────────────────────────────────
