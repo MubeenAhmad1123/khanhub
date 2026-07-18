@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -4550,18 +4551,25 @@ export default function PatientDetailPage() {
       )}
 
       {/* Lightbox / Image Preview Modal */}
-      {previewImage && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-950/95 backdrop-blur-md overflow-y-auto no-print">
-          <div className="relative max-w-4xl w-full flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-200">
-            {/* Close button */}
-            <button
-              onClick={() => setPreviewImage(null)}
-              className="absolute -top-14 right-0 bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-full transition-colors z-10"
-              title="Close"
-            >
-              <X className="w-6 h-6" />
-            </button>
+      {previewImage && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={() => setPreviewImage(null)}
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-950/95 backdrop-blur-md overflow-y-auto no-print cursor-zoom-out animate-in fade-in duration-200"
+        >
+          {/* Fixed Close button at top right of the viewport */}
+          <button
+            type="button"
+            onClick={() => setPreviewImage(null)}
+            className="fixed top-4 right-4 sm:top-6 sm:right-6 bg-white/10 hover:bg-white/20 text-white p-3 rounded-full transition-colors z-[10000] cursor-pointer shadow-lg border border-white/10"
+            title="Close"
+          >
+            <X className="w-6 h-6" />
+          </button>
 
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-4xl w-full flex flex-col items-center justify-center animate-in zoom-in-95 duration-200 cursor-default"
+          >
             {/* Image display container */}
             <div className="w-full bg-black/40 rounded-3xl overflow-hidden border border-white/10 flex items-center justify-center max-h-[75vh] shadow-2xl relative">
               <img
@@ -4591,7 +4599,8 @@ export default function PatientDetailPage() {
               </a>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>
