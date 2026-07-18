@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -9,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { 
-  ArrowLeft, User, DollarSign, ShoppingCart, Video, 
+  ArrowLeft, User, DollarSign, ShoppingCart, Video, Eye, 
   Edit3, Save, X, Loader2, Heart, Calendar, Upload, Trash2, Play, FileText, Camera,
   ChevronLeft, ChevronRight, Plus, Minus, Shield, Users, Phone, Activity, TrendingUp, Brain, Pill, ClipboardList, Palette, BookOpen, Utensils
 } from 'lucide-react';
@@ -87,6 +88,7 @@ export default function ChildDetailPage() {
   const [videoTitle, setVideoTitle] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<{ url: string; title: string; createdAt?: any } | null>(null);
 
   // Fee Tab State
   const [feeMonth, setFeeMonth] = useState(() => {
@@ -256,6 +258,17 @@ export default function ChildDetailPage() {
     if (!childId || !session) return;
     fetchCanteenRecord();
   }, [canteenMonth]);
+
+  useEffect(() => {
+    if (previewImage) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [previewImage]);
 
   const fetchFeeRecord = async () => {
     try {
@@ -1256,7 +1269,7 @@ export default function ChildDetailPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {videos.map(vid => {
                   const isVideo = vid.fileType?.startsWith('video/') || vid.url?.includes('.mp4');
-                  const isImage = vid.fileType?.startsWith('image/');
+                  const isImage = vid.fileType?.startsWith('image/') || vid.url?.match(/\.(webp|jpg|jpeg|gif|png|bmp)/i);
                   const isPdf = vid.fileType === 'application/pdf';
 
                   return (
@@ -1270,20 +1283,32 @@ export default function ChildDetailPage() {
                           <Trash2 className="w-4 h-4" />
                         </button>
                       )}
-                      <div className="aspect-video bg-gray-950 flex items-center justify-center relative overflow-hidden">
+                      <div className="aspect-video bg-gray-900 flex items-center justify-center relative overflow-hidden">
                         {isImage ? (
-                          <img src={vid.url} alt={vid.title} className="w-full h-full object-cover opacity-80" />
+                          <img src={vid.url} alt={vid.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                         ) : isPdf ? (
                           <FileText className="w-10 h-10 text-gray-600 z-0" />
                         ) : (
                           <Video className="w-10 h-10 text-gray-600 z-0" />
                         )}
                         
-                        <a href={vid.url} target="_blank" rel="noreferrer" className="absolute inset-0 z-10 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
-                          <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-teal-600 transform scale-90 group-hover:scale-100 transition-transform">
-                            <Play className="w-5 h-5 ml-1" />
-                          </div>
-                        </a>
+                        {isImage ? (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewImage({ url: vid.url, title: vid.title, createdAt: vid.createdAt })}
+                            className="absolute inset-0 z-10 flex items-center justify-center bg-black/0 group-hover:bg-black/45 transition-colors cursor-pointer"
+                          >
+                            <div className="w-12 h-12 bg-white/95 rounded-full flex items-center justify-center text-teal-600 shadow-lg transform scale-90 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-300">
+                              <Eye className="w-5 h-5" />
+                            </div>
+                          </button>
+                        ) : (
+                          <a href={vid.url} target="_blank" rel="noreferrer" className="absolute inset-0 z-10 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
+                            <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-teal-600 transform scale-90 group-hover:scale-100 transition-transform">
+                              <Play className="w-5 h-5 ml-1" />
+                            </div>
+                          </a>
+                        )}
                       </div>
                       <div className="p-4">
                         <h4 className="font-bold text-gray-900 truncate mb-1" title={vid.title}>{vid.title || 'Untitled'}</h4>
@@ -1674,6 +1699,59 @@ export default function ChildDetailPage() {
           </div>
         </div>
       )}
+      {/* Lightbox / Image Preview Modal */}
+      {previewImage && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={() => setPreviewImage(null)}
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-950/95 backdrop-blur-md overflow-y-auto no-print cursor-zoom-out animate-in fade-in duration-200"
+        >
+          {/* Fixed Close button at top right of the viewport */}
+          <button
+            type="button"
+            onClick={() => setPreviewImage(null)}
+            className="fixed top-4 right-4 sm:top-6 sm:right-6 bg-white/10 hover:bg-white/20 text-white p-3 rounded-full transition-colors z-[10000] cursor-pointer shadow-lg border border-white/10"
+            title="Close"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-4xl w-full flex flex-col items-center justify-center animate-in zoom-in-95 duration-200 cursor-default"
+          >
+            {/* Image display container */}
+            <div className="w-full bg-black/40 rounded-3xl overflow-hidden border border-white/10 flex items-center justify-center max-h-[75vh] shadow-2xl relative">
+              <img
+                src={previewImage.url}
+                alt={previewImage.title}
+                className="max-w-full max-h-[75vh] object-contain select-none"
+              />
+            </div>
+
+            {/* Metadata overlay */}
+            <div className="w-full mt-4 flex items-center justify-between text-white px-2">
+              <div>
+                <h3 className="text-lg font-bold">{previewImage.title || 'Untitled'}</h3>
+                {previewImage.createdAt && (
+                  <p className="text-xs text-gray-400">
+                    Uploaded: {formatDateDMY(previewImage.createdAt)}
+                  </p>
+                )}
+              </div>
+              <a
+                href={previewImage.url}
+                target="_blank"
+                rel="noreferrer"
+                className="bg-teal-600 hover:bg-teal-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors active:scale-95 duration-150"
+              >
+                Open Original
+              </a>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
     </div>
   );
 }
