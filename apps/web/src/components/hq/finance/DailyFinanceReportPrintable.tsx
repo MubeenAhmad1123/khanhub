@@ -74,6 +74,30 @@ const getTxExpenseRecipient = (tx: any): string => {
   return tx.receivedBy || tx.cashierId || 'Staff';
 };
 
+const getTxDisplayTime = (tx: any): string => {
+  if (tx.hospitalPatientDetails?.time) {
+    const timeStr = tx.hospitalPatientDetails.time;
+    try {
+      const [hoursStr, minutesStr] = timeStr.split(':');
+      const hours = parseInt(hoursStr, 10);
+      const minutes = parseInt(minutesStr, 10);
+      if (!isNaN(hours) && !isNaN(minutes)) {
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+        const displayMinutes = String(minutes).padStart(2, '0');
+        return `${displayHours}:${displayMinutes} ${ampm}`;
+      }
+    } catch (e) {
+      return timeStr;
+    }
+    return timeStr;
+  }
+  if (tx.createdAt) {
+    return new Date(tx.createdAt.toMillis?.() || tx.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  return 'N/A';
+};
+
 interface Props {
   date: string; // YYYY-MM-DD or display format
   transactions: Transaction[];
@@ -543,7 +567,7 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
                         {data.txs.map((tx) => (
                           <tr key={tx.id}>
                             <td className="py-1.5 text-zinc-400 whitespace-nowrap">
-                              {tx.createdAt ? new Date(tx.createdAt.toMillis?.() || tx.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                              {getTxDisplayTime(tx)}
                             </td>
                             <td className="py-1.5 uppercase font-bold text-zinc-600">{tx.departmentName || tx._dept || tx.departmentCode}</td>
                             <td className="py-1.5 font-bold truncate max-w-[120px]">{getTxDisplayName(tx)}</td>
@@ -591,7 +615,7 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
                         {data.txs.map((tx) => (
                           <tr key={tx.id}>
                             <td className="py-1.5 text-zinc-400 whitespace-nowrap">
-                              {tx.createdAt ? new Date(tx.createdAt.toMillis?.() || tx.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                              {getTxDisplayTime(tx)}
                             </td>
                             <td className="py-1.5 uppercase font-bold text-zinc-600">{tx.departmentName || tx._dept || tx.departmentCode}</td>
                             <td className="py-1.5 font-bold truncate max-w-[120px]">{getTxExpenseRecipient(tx)}</td>

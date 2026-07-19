@@ -114,6 +114,30 @@ const getTxExpenseRecipient = (tx: any): string => {
   return tx.receivedBy || tx.cashierId || 'Staff';
 };
 
+const getTxDisplayTime = (tx: any): string => {
+  if (tx.hospitalPatientDetails?.time) {
+    const timeStr = tx.hospitalPatientDetails.time;
+    try {
+      const [hoursStr, minutesStr] = timeStr.split(':');
+      const hours = parseInt(hoursStr, 10);
+      const minutes = parseInt(minutesStr, 10);
+      if (!isNaN(hours) && !isNaN(minutes)) {
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+        const displayMinutes = String(minutes).padStart(2, '0');
+        return `${displayHours}:${displayMinutes} ${ampm}`;
+      }
+    } catch (e) {
+      return timeStr;
+    }
+    return timeStr;
+  }
+  if (tx.createdAt) {
+    return new Date(tx.createdAt.toMillis?.() || tx.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  return 'N/A';
+};
+
 export default function DailyReportPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
@@ -938,7 +962,7 @@ export default function DailyReportPage() {
                     {transactions.map((tx) => (
                       <tr key={tx.id} className="hover:bg-zinc-50/50 transition-colors group">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-600 font-bold">
-                          {tx.createdAt ? new Date(tx.createdAt.toMillis?.() || tx.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                          {getTxDisplayTime(tx)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-[10px] font-black text-zinc-900 px-2.5 py-1 bg-zinc-100 rounded-lg uppercase tracking-wider border border-zinc-200/50">
@@ -1000,7 +1024,7 @@ export default function DailyReportPage() {
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
                           <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none">
-                            {tx.createdAt ? new Date(tx.createdAt.toMillis?.() || (tx.createdAt.seconds * 1000)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                            {getTxDisplayTime(tx)}
                           </p>
                           <span className="text-[9px] font-black text-zinc-900 px-2 py-0.5 bg-zinc-100 rounded-lg uppercase tracking-wider border border-zinc-200/50">
                             {tx.departmentCode}
