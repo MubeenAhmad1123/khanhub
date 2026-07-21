@@ -3806,19 +3806,11 @@ export default function PatientDetailPage() {
               </button>
             </div>
             <form onSubmit={handleUpdateVisit} className="p-6 space-y-4">
-              <div className="space-y-1">
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Visit Date *</label>
-                <input 
-                  required 
-                  type="text"
-                  placeholder="DD MM YYYY"
-                  value={formatDateDMY(vDate)}
-                  onChange={e => setVDate(e.target.value)}
-                  onBlur={e => {
-                    const parsed = parseDateDMY(e.target.value);
-                    if (parsed) setVDate(parsed.toISOString().split('T')[0]);
-                  }}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none" 
+              <div className="space-y-1.5">
+                <BrutalistCalendar
+                  label="Visit Date *"
+                  value={vDate}
+                  onChange={setVDate}
                 />
               </div>
               <div className="space-y-1">

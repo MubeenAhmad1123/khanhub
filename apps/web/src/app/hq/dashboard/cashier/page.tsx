@@ -172,6 +172,12 @@ export default function CashierStationPage() {
   const [newMedItemName, setNewMedItemName] = useState('');
   const [newMedItemPrice, setNewMedItemPrice] = useState('');
 
+  // General Transaction States
+  const [itemizedList, setItemizedList] = useState<{ id: string; name: string; price: number }[]>([]);
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemPrice, setNewItemPrice] = useState('');
+  const [showGeneralTxForm, setShowGeneralTxForm] = useState(false);
+
   const [txnType, setTxnType] = useState<TxnType>('income');
   const [txDate, setTxDate] = useState(getLocalDateString(new Date()));
   const [amount, setAmount] = useState('');
@@ -308,6 +314,16 @@ export default function CashierStationPage() {
       setPaymentMethod(prev => prev === 'credit' ? 'cash' : prev);
     }
   }, [selectedCategoryId]);
+
+  useEffect(() => {
+    const isCatValid = allCategories.some(c => c.id === selectedCategoryId && (c.appliesTo === 'both' || c.appliesTo === txnType));
+    if (!isCatValid) {
+      const firstValid = allCategories.find(c => c.appliesTo === 'both' || c.appliesTo === txnType);
+      if (firstValid) {
+        setSelectedCategoryId(firstValid.id);
+      }
+    }
+  }, [txnType, allCategories, selectedCategoryId]);
 
   // 1. Consolidated History Filtering & Sorting
   const historyFiltered = useMemo(() => {
@@ -1466,6 +1482,8 @@ export default function CashierStationPage() {
         } else if (hospitalIncomeType === 'medicine') {
           finalDescription = `Medicine/Treatment for ${hospitalMedicinePatientName} | Time: ${hospitalMedicineTime} | Items: ${hospitalMedicineItems.map(i => `${i.name} (Rs ${i.price})`).join(', ')}${description ? ` | Note: ${description}` : ''}`;
         }
+      } else if (!selectedEntity && itemizedList.length > 0) {
+        finalDescription = `Items: ${itemizedList.map(i => `${i.name} (Rs ${i.price})`).join(', ')}${description ? ` | Note: ${description}` : ''}`;
       }
 
       const createPayload: Record<string, any> = {
@@ -1580,6 +1598,9 @@ export default function CashierStationPage() {
           holdSpentAmount: 0,
         } : {}),
       };
+      if (itemizedList.length > 0) {
+        createPayload.items = itemizedList;
+      }
       if (proofUrl) createPayload.proofUrl = proofUrl;
       if (!proofUrl && missingReason) createPayload.proofMissingReason = missingReason;
 
@@ -1628,7 +1649,7 @@ export default function CashierStationPage() {
           recipientRole: 'superadmin',
           type: 'tx_forwarded',
           title: 'New Transaction Submitted',
-          body: `${session?.name || 'Cashier'} submitted a ${bodyAmountText} transaction for ${selectedEntity?.name || 'General Hospital'}.`,
+          body: `${session?.name || 'Cashier'} submitted a ${bodyAmountText} transaction for ${selectedEntity?.name || customTargetName.trim() || `General ${activeDepartment.label}`}.`,
           relatedId: txRef.id,
           actionUrl: '/hq/dashboard/superadmin/approvals',
         });
@@ -1659,6 +1680,10 @@ export default function CashierStationPage() {
       setCategorySearch('');
       setSearchQuery('');
       setEntityResults([]);
+      setItemizedList([]);
+      setNewItemName('');
+      setNewItemPrice('');
+      setShowGeneralTxForm(false);
       setHospitalMode('none');
       setHospitalIncomeType('none');
       setHospitalFeeType('none');
@@ -2023,6 +2048,10 @@ export default function CashierStationPage() {
                     onClick={() => {
                       setDepartmentCode(dept.code);
                       setSelectedEntity(null);
+                      setShowGeneralTxForm(false);
+                      setItemizedList([]);
+                      setNewItemName('');
+                      setNewItemPrice('');
                       setAmount('');
                       setHospitalMode('none');
                       setHospitalIncomeType('none');
@@ -2120,6 +2149,10 @@ export default function CashierStationPage() {
                          setSearchQuery('');
                          setSearchOpen(false);
                          setShowProfileModal(true);
+                         setShowGeneralTxForm(false);
+                         setItemizedList([]);
+                         setNewItemName('');
+                         setNewItemPrice('');
                       }}
                       className="group p-8 bg-zinc-50 border-2 border-transparent rounded-[2.5rem] hover:border-indigo-500 hover:bg-white hover:shadow-[0_32px_64px_-16px_rgba(79,70,229,0.15)] transition-all flex items-center justify-between text-left relative overflow-hidden"
                     >
@@ -2306,7 +2339,7 @@ export default function CashierStationPage() {
             <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-zinc-50 rounded-full -mr-64 -mt-64 blur-3xl group-hover/console:bg-indigo-50 transition-all duration-1000" />
             
             <div className="relative z-10 space-y-8 md:space-y-10">
-              {(selectedEntity || (departmentCode === 'hospital' && hospitalMode !== 'none')) ? (
+              {(selectedEntity || (departmentCode === 'hospital' && hospitalMode !== 'none') || showGeneralTxForm) ? (
                 <div className="space-y-8 md:space-y-10 animate-in fade-in zoom-in-95 duration-700">
                   {selectedEntity ? (
                     <div className="w-full p-4 sm:p-6 xl:p-8 rounded-2xl sm:rounded-[2rem] bg-zinc-900 text-white min-w-0 shadow-[0_48px_80px_-24px_rgba(0,0,0,0.3)] group/profile relative overflow-hidden">
@@ -2462,8 +2495,19 @@ export default function CashierStationPage() {
                       <Terminal size={48} className="md:w-16 md:h-16" />
                     </div>
                   </div>
-                  <h3 className="text-3xl md:text-5xl font-[1000] text-zinc-900 uppercase tracking-tighter">Select a Patient to Begin</h3>
-                  <p className="text-xs md:text-base font-black text-zinc-400 uppercase tracking-[0.3em] mt-6 max-w-xl mx-auto leading-relaxed opacity-60">Search and select a patient above to start a transaction.</p>
+                  <h3 className="text-3xl md:text-5xl font-[1000] text-zinc-900 uppercase tracking-tighter">
+                    Select {departmentCode === 'spims' ? 'a Student' : departmentCode === 'welfare' ? 'a Donor' : departmentCode === 'job-center' ? 'a Seeker' : departmentCode === 'sukoon-center' ? 'a Client' : 'a Patient'} to Begin
+                  </h3>
+                  <p className="text-xs md:text-base font-black text-zinc-400 uppercase tracking-[0.3em] mt-6 max-w-xl mx-auto leading-relaxed opacity-60">
+                    Search and select above, or create a general transaction without linking a user.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowGeneralTxForm(true)}
+                    className="mt-8 px-8 py-4 bg-zinc-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-600 active:scale-[0.98] transition-all shadow-lg shadow-zinc-900/10 cursor-pointer"
+                  >
+                    Direct / General Entry (No User)
+                  </button>
                 </div>
               )}
 
@@ -2473,11 +2517,26 @@ export default function CashierStationPage() {
                   <div className="space-y-8">
                     {!selectedEntity && departmentCode !== 'hospital' && (
                       <div className="p-6 bg-zinc-50 rounded-2xl border border-zinc-200/60 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white">
-                            <User size={16} />
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white">
+                              <User size={16} />
+                            </div>
+                            <h4 className="text-xs font-black text-zinc-900 uppercase tracking-wider">Unregistered/General Target</h4>
                           </div>
-                          <h4 className="text-xs font-black text-zinc-900 uppercase tracking-wider">Unregistered/General Target</h4>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowGeneralTxForm(false);
+                              setCustomTargetName('');
+                              setItemizedList([]);
+                              setNewItemName('');
+                              setNewItemPrice('');
+                            }}
+                            className="text-[9px] font-black text-rose-600 bg-rose-50 hover:bg-rose-100 px-3 py-1 rounded-lg uppercase tracking-wider transition-all cursor-pointer"
+                          >
+                            Select User instead
+                          </button>
                         </div>
                         <div className="space-y-2">
                           <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Person Name / Purpose / Narrative Target</label>
@@ -2882,10 +2941,85 @@ export default function CashierStationPage() {
                       </>
                     ) : (
                       <>
+                        {!selectedEntity && (
+                          <div className="space-y-4 p-6 bg-zinc-50 rounded-2xl border border-zinc-200/60 animate-in fade-in duration-300">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Itemized Details (Optional)</label>
+                              {itemizedList.length > 0 && (
+                                <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded">
+                                  {itemizedList.length} Item(s) Added
+                                </span>
+                              )}
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={newItemName}
+                                onChange={(e) => setNewItemName(e.target.value)}
+                                placeholder="Item Name (e.g. Utility Bill, Tea, Supplies)"
+                                className="flex-1 h-10 bg-white border border-zinc-200 rounded-lg px-3 text-xs font-bold outline-none focus:border-indigo-500 text-zinc-900"
+                              />
+                              <input
+                                type="number"
+                                value={newItemPrice}
+                                onChange={(e) => setNewItemPrice(e.target.value)}
+                                placeholder="Price"
+                                className="w-24 h-10 bg-white border border-zinc-200 rounded-lg px-3 text-xs font-bold outline-none focus:border-indigo-500 text-zinc-900"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!newItemName.trim() || !newItemPrice) return;
+                                  const item = {
+                                    id: Math.random().toString(),
+                                    name: newItemName.trim(),
+                                    price: Number(newItemPrice) || 0
+                                  };
+                                  const updated = [...itemizedList, item];
+                                  setItemizedList(updated);
+                                  setNewItemName('');
+                                  setNewItemPrice('');
+                                  const total = updated.reduce((sum, item) => sum + item.price, 0);
+                                  setAmount(String(total));
+                                }}
+                                className="px-4 bg-zinc-900 hover:bg-indigo-600 text-white rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
+                              >
+                                Add
+                              </button>
+                            </div>
+
+                            {itemizedList.length > 0 && (
+                              <div className="bg-white rounded-xl border border-zinc-100 p-4 space-y-2 max-h-40 overflow-y-auto no-scrollbar">
+                                {itemizedList.map((item) => (
+                                  <div key={item.id} className="flex justify-between items-center text-xs font-bold border-b border-zinc-50 pb-2 last:border-0 last:pb-0">
+                                    <span className="text-zinc-700">{item.name}</span>
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-zinc-900">Rs {item.price.toLocaleString()}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const updated = itemizedList.filter(i => i.id !== item.id);
+                                          setItemizedList(updated);
+                                          const total = updated.reduce((sum, item) => sum + item.price, 0);
+                                          setAmount(total > 0 ? String(total) : '');
+                                        }}
+                                        className="text-[9px] text-rose-500 hover:underline uppercase tracking-wider cursor-pointer"
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         <div className="space-y-6">
                           <div className="flex items-center justify-between px-4">
                             <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Amount (PKR)</label>
-                            {((departmentCode === 'hospital' || selectedEntity?.name?.toLowerCase().includes('common')) && txnType === 'income' && hospitalIncomeType === 'medicine') ? (
+                            {(((departmentCode === 'hospital' || selectedEntity?.name?.toLowerCase().includes('common')) && txnType === 'income' && hospitalIncomeType === 'medicine') || (!selectedEntity && itemizedList.length > 0)) ? (
                               <div className="flex items-center gap-3">
                                 <span className="w-2 h-2 rounded-full bg-indigo-600 animate-bounce" />
                                 <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Auto Summed From Items</span>
@@ -2905,7 +3039,7 @@ export default function CashierStationPage() {
                               type="number"
                               step="0.01"
                               value={amount}
-                              disabled={(departmentCode === 'hospital' || selectedEntity?.name?.toLowerCase().includes('common')) && txnType === 'income' && hospitalIncomeType === 'medicine'}
+                              disabled={((departmentCode === 'hospital' || selectedEntity?.name?.toLowerCase().includes('common')) && txnType === 'income' && hospitalIncomeType === 'medicine') || (!selectedEntity && itemizedList.length > 0)}
                               onChange={(e) => setAmount(e.target.value)}
                               placeholder="0.00"
                               className="w-full h-12 sm:h-14 xl:h-16 bg-zinc-50 border-2 border-transparent rounded-2xl pl-12 sm:pl-14 pr-6 text-base sm:text-lg md:text-xl xl:text-2xl font-black text-zinc-900 outline-none focus:ring-8 focus:ring-indigo-600/5 focus:bg-white focus:border-indigo-600/20 transition-all shadow-inner tracking-tighter placeholder:text-zinc-200 tabular-nums disabled:opacity-75"

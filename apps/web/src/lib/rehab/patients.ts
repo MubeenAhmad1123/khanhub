@@ -57,8 +57,8 @@ export async function getPatient(id: string): Promise<Patient | null> {
   if (!snap.exists()) return null;
   const data = snap.data();
   return { 
-    id: snap.id, 
     ...data,
+    id: snap.id, 
     admissionDate: toDate(data.admissionDate),
     createdAt: toDate(data.createdAt),
     dischargeDate: data.dischargeDate ? toDate(data.dischargeDate) : undefined
@@ -75,8 +75,8 @@ export async function getPatients(): Promise<Patient[]> {
   const patients = snap.docs.map(doc => {
     const data = doc.data();
     return { 
-      id: doc.id, 
       ...data,
+      id: doc.id, 
       admissionDate: toDate(data.admissionDate),
       createdAt: toDate(data.createdAt),
       dischargeDate: data.dischargeDate ? toDate(data.dischargeDate) : undefined
@@ -127,8 +127,8 @@ export async function getDailyActivities(patientId: string, yearMonth: string): 
   return snap.docs.map(doc => {
     const data = doc.data();
     return {
-      id: doc.id,
       ...data,
+      id: doc.id,
       createdAt: toDate(data.createdAt),
       updatedAt: data.updatedAt ? toDate(data.updatedAt) : undefined
     } as DailyActivityRecord;
@@ -179,8 +179,8 @@ export async function getTherapySessions(patientId: string): Promise<TherapySess
   return snap.docs.map(doc => {
     const data = doc.data();
     return {
-      id: doc.id,
       ...data,
+      id: doc.id,
       createdAt: toDate(data.createdAt)
     } as TherapySession;
   }).sort((a, b) => a.sessionNumber - b.sessionNumber);
@@ -216,8 +216,8 @@ export async function getMedicationRecords(patientId: string): Promise<Medicatio
   return snap.docs.map(doc => {
     const data = doc.data();
     return {
-      id: doc.id,
       ...data,
+      id: doc.id,
       createdAt: toDate(data.createdAt)
     } as MedicationRecord;
   }).sort((a, b) => b.date.localeCompare(a.date));
@@ -242,8 +242,8 @@ export async function getWeeklyProgress(patientId: string): Promise<WeeklyProgre
   return snap.docs.map(doc => {
     const data = doc.data();
     return {
-      id: doc.id,
       ...data,
+      id: doc.id,
       createdAt: toDate(data.createdAt)
     } as WeeklyProgress;
   }).sort((a, b) => a.weekNumber - b.weekNumber);
@@ -267,7 +267,7 @@ export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinance
   // Load limited patients
   const q = query(collection(db, 'rehab_patients'), orderBy('serialNumber', 'desc'), limit(100));
   const patientsSnap = await getDocs(q);
-  const patients = patientsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Patient));
+  const patients = patientsSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as Patient));
   
   if (patients.length === 0) return [];
 
@@ -281,7 +281,7 @@ export async function getAllPatientsWithFinanceSummary(): Promise<PatientFinance
       const chunk = ids.slice(i, i + 30);
       const q = query(collection(db, col), where('patientId', 'in', chunk));
       const snap = await getDocs(q);
-      snap.docs.forEach(d => results.push({ id: d.id, ...d.data() }));
+      snap.docs.forEach(d => results.push({ ...d.data(), id: d.id }));
     }
     return results;
   };
@@ -418,8 +418,8 @@ export async function getPatientFeeRecords(patientId: string): Promise<FeeRecord
   return snap.docs.map(doc => {
     const data = doc.data();
     return { 
-      id: doc.id, 
       ...data,
+      id: doc.id, 
       payments: data.payments.map((p: any) => ({ ...p, date: toDate(p.date) }))
     } as FeeRecord;
   });
