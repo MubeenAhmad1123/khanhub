@@ -1126,7 +1126,7 @@ export default function CashierStationPage() {
     const missingReason = proofReason.trim();
 
     if (!isHospitalDayClose && !isJobCenterDayClose) {
-      if (!selectedEntity && departmentCode !== 'hospital' && !customTargetName.trim()) {
+      if (!selectedEntity && departmentCode !== 'hospital' && !showGeneralTxForm) {
         const txt = 'Select account or enter a Target Person / Purpose Name.';
         toast.error(txt);
         return setMessage({ type: 'error', text: txt });
@@ -3246,7 +3246,7 @@ export default function CashierStationPage() {
 
                       <button 
                         type="submit" 
-                        disabled={processing || (!isHospitalDayClose && !isJobCenterDayClose && !selectedEntity && departmentCode !== 'hospital' && !customTargetName.trim())} 
+                        disabled={processing || (!isHospitalDayClose && !isJobCenterDayClose && !selectedEntity && departmentCode !== 'hospital' && !showGeneralTxForm)} 
                         className="w-full h-16 md:h-32 bg-zinc-900 hover:bg-indigo-600 text-white font-[1000] text-sm md:text-xl uppercase tracking-[0.4em] rounded-[1.5rem] md:rounded-[3.5rem] transition-all shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] disabled:opacity-20 flex items-center justify-center gap-4 md:gap-8 group/submit active:scale-[0.98]"
                       >
                         {processing ? <Loader2 size={24} className="animate-spin md:w-8 md:h-8" /> : (
