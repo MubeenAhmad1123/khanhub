@@ -4503,7 +4503,7 @@ function EntityProfileModal({
     }
     setAdding(true);
     try {
-      const deptCode = entity._deptCode || entity.department || activeDepartment.code || 'rehab';
+      const deptCode = entity._deptCode || entity.department || 'rehab';
       const dept = findDept(deptCode);
 
       const txDate = new Date(`${newTx.date}T12:00:00`);
