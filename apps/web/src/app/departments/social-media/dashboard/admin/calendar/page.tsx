@@ -321,7 +321,7 @@ export default function SocialMediaCalendarPage() {
         (t) => t.date === dateStr && (t.categoryId === cat.id || t.title === cat.name)
       );
 
-      const userName = user?.displayName || user?.name || 'Staff User';
+      const userName = user?.displayName || (user as any)?.name || 'Staff User';
 
       if (existingTask) {
         const ref = doc(db, 'media_calendar_tasks', existingTask.id);
@@ -441,7 +441,7 @@ export default function SocialMediaCalendarPage() {
 
       if (updatedComplete) {
         updateData.completedAt = new Date().toISOString();
-        updateData.completedBy = user?.displayName || user?.name || 'User';
+        updateData.completedBy = user?.displayName || (user as any)?.name || 'User';
       }
 
       await updateDoc(ref, updateData);
