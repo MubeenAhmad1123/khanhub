@@ -167,7 +167,7 @@ export default function SocialMediaCalendarPage() {
     } catch (err) {
       console.error('Error loading media calendar data:', err);
       toast.error('Failed to load matrix tasks or staff list');
-    } fontally {
+    } finally {
       setLoading(false);
     }
   }, []);
