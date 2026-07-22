@@ -27,13 +27,16 @@ export function SalarySlipPrintable({ slip, showActionControls = false, staff = 
   let otherDed = 0;
   let netPay = 0;
 
+  let advancePay = 0;
+
   if (hasFullSlip) {
     grossPay = slip.basicSalary || 0;
     incentive = slip.incentive || 0;
     otherPay = slip.otherEarnings || 0;
     absentee = slip.absentDeduction || 0;
     fines = slip.fine || 0;
-    otherDed = (slip.otherDeductions || 0) + (slip.advance || 0);
+    advancePay = slip.advance || 0;
+    otherDed = slip.otherDeductions || 0;
     netPay = slip.netSalary || 0;
   } else {
     netPay = (slip as any).amount || 0;
@@ -47,7 +50,7 @@ export function SalarySlipPrintable({ slip, showActionControls = false, staff = 
   }
 
   const totalPay = grossPay + incentive + otherPay;
-  const totalDed = absentee + fines + otherDed;
+  const totalDed = absentee + fines + advancePay + otherDed;
 
   // Month label: slip.month is "YYYY-MM" → "June- 2024"
   const monthLabel = (() => {
@@ -234,7 +237,15 @@ export function SalarySlipPrintable({ slip, showActionControls = false, staff = 
               <td className="font-bold border border-black px-3 py-2">Others :</td>
               <td className="border border-black px-3 py-2 text-right">{fmt(otherPay)}</td>
               <td className="border border-black"></td>
-              <td className="font-bold border border-black px-3 py-2">Others :</td>
+              <td className="font-bold border border-black px-3 py-2">Advance Taken :</td>
+              <td className="border border-black px-3 py-2 text-right">{fmt(advancePay)}</td>
+            </tr>
+            {/* ROW 13 */}
+            <tr>
+              <td className="font-bold border border-black px-3 py-2"></td>
+              <td className="border border-black px-3 py-2 text-right"></td>
+              <td className="border border-black"></td>
+              <td className="font-bold border border-black px-3 py-2">Other Deductions :</td>
               <td className="border border-black px-3 py-2 text-right">{fmt(otherDed)}</td>
             </tr>
             {/* ROW 13 */}

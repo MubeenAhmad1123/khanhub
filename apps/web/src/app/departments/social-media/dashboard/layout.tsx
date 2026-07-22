@@ -26,6 +26,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Overview', href: '/departments/social-media/dashboard/admin', icon: <LayoutDashboard size={16} />, roles: ['admin', 'manager', 'superadmin'] },
+  { label: 'Calendar & Tasks', href: '/departments/social-media/dashboard/admin/calendar', icon: <CalendarDays size={16} />, roles: ['admin', 'staff', 'manager', 'superadmin'] },
   { label: 'Staff Management', href: '/departments/social-media/dashboard/admin/staff', icon: <Users size={16} />, roles: ['admin', 'manager', 'superadmin'] },
   { label: 'Campaigns', href: '/departments/social-media/dashboard/admin/campaigns', icon: <Share2 size={16} />, roles: ['admin', 'manager', 'superadmin'] },
   { label: 'Content Log', href: '/departments/social-media/dashboard/admin/content', icon: <Camera size={16} />, roles: ['admin', 'manager', 'superadmin'] },

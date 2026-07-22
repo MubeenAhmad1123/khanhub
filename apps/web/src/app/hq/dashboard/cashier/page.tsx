@@ -1606,7 +1606,124 @@ export default function CashierStationPage() {
 
 
 
-      const txRef = await addDoc(collection(db, activeDepartment.txCollection), createPayload);
+      let targetTxCollection = activeDepartment.txCollection;
+      let targetDeptCode = activeDepartment.code;
+
+      if (isStaffMode && selectedEntity) {
+        const staffDeptStr = String(selectedEntity.department || selectedEntity.dept || activeDepartment.code).toLowerCase();
+        const deptMap: Record<string, string> = {
+          rehab: 'rehab_transactions',
+          hospital: 'hospital_transactions',
+          spims: 'spims_transactions',
+          it: 'it_transactions',
+          'social-media': 'media_transactions',
+          media: 'media_transactions',
+          'sukoon-center': 'sukoon_transactions',
+          sukoon: 'sukoon_transactions',
+          welfare: 'welfare_transactions',
+          'job-center': 'jobcenter_transactions',
+          hq: 'hq_transactions',
+        };
+        if (deptMap[staffDeptStr]) {
+          targetTxCollection = deptMap[staffDeptStr];
+          targetDeptCode = staffDeptStr;
+          createPayload.departmentCode = targetDeptCode;
+          createPayload.departmentName = staffDeptStr.toUpperCase();
+        }
+      }
+
+      const txRef = await addDoc(collection(db, targetTxCollection), createPayload);
+
+      if (isStaffMode && selectedEntity && (resolvedCategory.id === 'staff_salary' || resolvedCategory.id === 'staff_advance')) {
+        try {
+          const monthStr = txDate.slice(0, 7); // 'YYYY-MM'
+          const getPrefix = (d: string) => {
+            const low = String(d || '').toLowerCase();
+            if (low === 'job-center' || low === 'job_center') return 'jobcenter';
+            if (low === 'social-media' || low === 'social_media') return 'media';
+            if (low === 'sukoon-center' || low === 'sukoon_center') return 'sukoon';
+            return low.replace('-', '_');
+          };
+          const prefix = getPrefix(targetDeptCode);
+          const salaryColName = `${prefix}_salary_records`;
+
+          const existingSnap = await getDocs(query(
+            collection(db, salaryColName),
+            where('staffId', '==', selectedEntity.id),
+            where('month', '==', monthStr)
+          ));
+
+          if (resolvedCategory.id === 'staff_advance') {
+            if (!existingSnap.empty) {
+              const existingDoc = existingSnap.docs[0];
+              await updateDoc(doc(db, salaryColName, existingDoc.id), {
+                advance: increment(Number(amount)),
+                updatedAt: Timestamp.now(),
+              });
+            } else {
+              await addDoc(collection(db, salaryColName), {
+                staffId: selectedEntity.id,
+                employeeId: selectedEntity.employeeId || selectedEntity.customId || selectedEntity.id,
+                staffName: selectedEntity.name || 'Staff',
+                department: targetDeptCode,
+                month: monthStr,
+                basicSalary: Number(selectedEntity.monthlySalary || 0),
+                dailyWage: Number(selectedEntity.monthlySalary || 0) / 26,
+                workingDays: 26,
+                presentDays: 26,
+                absentDays: 0,
+                leaveDays: 0,
+                absentDeduction: 0,
+                bonus: 0,
+                otherDeductions: 0,
+                advance: Number(amount),
+                netSalary: Math.max(0, Number(selectedEntity.monthlySalary || 0) - Number(amount)),
+                status: 'draft',
+                createdAt: Timestamp.now(),
+                createdBy: session?.uid,
+              });
+            }
+          } else if (resolvedCategory.id === 'staff_salary') {
+            if (!existingSnap.empty) {
+              const existingDoc = existingSnap.docs[0];
+              await updateDoc(doc(db, salaryColName, existingDoc.id), {
+                status: 'paid',
+                netSalary: Number(amount),
+                paidAt: Timestamp.now(),
+                paidBy: session?.displayName || 'Cashier',
+                linkedTxId: txRef.id,
+              });
+            } else {
+              await addDoc(collection(db, salaryColName), {
+                staffId: selectedEntity.id,
+                employeeId: selectedEntity.employeeId || selectedEntity.customId || selectedEntity.id,
+                staffName: selectedEntity.name || 'Staff',
+                department: targetDeptCode,
+                month: monthStr,
+                basicSalary: Number(selectedEntity.monthlySalary || 0),
+                dailyWage: Number(selectedEntity.monthlySalary || 0) / 26,
+                workingDays: 26,
+                presentDays: 26,
+                absentDays: 0,
+                leaveDays: 0,
+                absentDeduction: 0,
+                bonus: 0,
+                otherDeductions: 0,
+                advance: 0,
+                netSalary: Number(amount),
+                status: 'paid',
+                paidAt: Timestamp.now(),
+                paidBy: session?.displayName || 'Cashier',
+                createdAt: Timestamp.now(),
+                createdBy: session?.uid,
+                linkedTxId: txRef.id,
+              });
+            }
+          }
+        } catch (syncErr) {
+          console.error('[HQ Cashier] Staff salary/advance sync error:', syncErr);
+        }
+      }
 
       if (departmentCode === 'spims' && resolvedCategory.id === 'fee' && selectedEntity) {
         try {
