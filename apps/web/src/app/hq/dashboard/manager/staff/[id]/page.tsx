@@ -328,27 +328,59 @@ export default function StaffProfilePage() {
     if (!f.date) return false;
     try {
       const dObj = toDate(f.date);
-      if (dObj && typeof dObj.toISOString === 'function') {
-        return dObj.toISOString().slice(0, 7) === selectedMonth;
+      if (dObj) {
+        const y = dObj.getFullYear();
+        const m = String(dObj.getMonth() + 1).padStart(2, '0');
+        return `${y}-${m}` === selectedMonth;
       }
     } catch (e) {}
     return String(f.date).startsWith(selectedMonth);
   }, [selectedMonth]);
 
+  const isAdvanceTxInSelectedMonth = useCallback((tx: any) => {
+    const isAdvanceCat = tx.category === 'advance_salary' || 
+                         tx.category === 'advance' || 
+                         (tx.categoryName && tx.categoryName.toLowerCase().includes('advance'));
+    if (!isAdvanceCat || tx.status === 'rejected') return false;
+    const txDate = tx.transactionDate || tx.date || tx.createdAt;
+    if (!txDate) return false;
+    try {
+      const dObj = toDate(txDate);
+      if (dObj) {
+        const y = dObj.getFullYear();
+        const m = String(dObj.getMonth() + 1).padStart(2, '0');
+        return `${y}-${m}` === selectedMonth;
+      }
+    } catch (e) {}
+    return false;
+  }, [selectedMonth]);
+
   const approvedAdvancesForMonth = useMemo(() => {
-    return transactions.filter(tx => {
-      if (tx.category !== 'advance_salary' || tx.status !== 'approved') return false;
-      const txDate = tx.transactionDate || tx.date || tx.createdAt;
-      if (!txDate) return false;
-      try {
-        const dObj = toDate(txDate);
-        if (dObj && typeof dObj.toISOString === 'function') {
-          return dObj.toISOString().slice(0, 7) === selectedMonth;
-        }
-      } catch (e) {}
-      return false;
-    }).reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
-  }, [transactions, selectedMonth]);
+    return transactions
+      .filter(isAdvanceTxInSelectedMonth)
+      .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+  }, [transactions, isAdvanceTxInSelectedMonth]);
+
+  const dateRangeText = useMemo(() => {
+    if (!selectedMonth || !selectedMonth.includes('-')) return '';
+    const [yearStr, monthStr] = selectedMonth.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    if (isNaN(year) || isNaN(month)) return '';
+
+    const dateObj = new Date(year, month - 1, 1);
+    const monthName = dateObj.toLocaleString('en-US', { month: 'short' });
+    const today = new Date();
+    const currentMonthStr = today.toISOString().slice(0, 7);
+
+    if (selectedMonth === currentMonthStr) {
+      const day = today.getDate();
+      return `1 ${monthName} - ${day} ${monthName} ${year}`;
+    } else {
+      const lastDay = new Date(year, month, 0).getDate();
+      return `1 ${monthName} - ${lastDay} ${monthName} ${year}`;
+    }
+  }, [selectedMonth]);
 
   const salaryDetails = useMemo(() => {
     if (!staff) {
@@ -2344,11 +2376,35 @@ export default function StaffProfilePage() {
                 onClick={() => setShowSalaryBreakdownModal(true)}
                 className={`w-full mt-4 rounded-2xl p-5 text-left border-2 transition-all hover:scale-[1.02] cursor-pointer ${theme.light} ${theme.border} ${theme.shadow}`}
               >
-                <div className="flex items-center justify-between mb-3">
-                  <p className={`text-[10px] font-black ${theme.text} uppercase tracking-widest`}>Till Date Salary</p>
-                  <span className={`px-2 py-0.5 rounded-md ${theme.accent} text-white text-[8px] font-black uppercase`}>{presentDaysCount} Present</span>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className={`text-[10px] font-black ${theme.text} uppercase tracking-widest`}>Till Date Salary</p>
+                    {dateRangeText && (
+                      <span className="text-[9px] font-bold text-gray-600 bg-white/90 px-2 py-0.5 rounded-full border border-gray-200 shadow-xs">
+                        {dateRangeText}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <input 
+                      type="month" 
+                      value={selectedMonth} 
+                      onChange={(e) => setSelectedMonth(e.target.value)} 
+                      className="text-[10px] font-bold bg-white border border-gray-200 rounded-lg px-2 py-0.5 text-gray-800 outline-none cursor-pointer hover:border-indigo-400 transition-colors"
+                      title="Change Calculation Month"
+                    />
+                    <span className={`px-2 py-0.5 rounded-md ${theme.accent} text-white text-[8px] font-black uppercase`}>
+                      {presentDaysCount} Present
+                    </span>
+                  </div>
                 </div>
-                <p className={`text-2xl font-black ${theme.text} mb-3`}>₨{tillDateSalary.toLocaleString()}</p>
+
+                <div className="flex items-baseline justify-between mb-1">
+                  <p className={`text-2xl font-black ${theme.text}`}>₨{tillDateSalary.toLocaleString()}</p>
+                  <span className="text-[9px] font-bold text-gray-500">
+                    Gross Earned: ₨{Math.round(salaryDetails.earnings).toLocaleString()}
+                  </span>
+                </div>
                 
                 <div className="border-t border-dashed border-gray-200 pt-2.5 mt-2.5 space-y-1.5 text-[10px] uppercase font-bold text-gray-700">
                   <div className="flex justify-between items-center">
@@ -2357,18 +2413,26 @@ export default function StaffProfilePage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Payable Days:</span>
-                    <span className="font-black text-emerald-600">{salaryDetails.payableDays} Days</span>
+                    <span className="font-black text-emerald-600">{salaryDetails.payableDays} Days (+₨{Math.round(salaryDetails.earnings).toLocaleString()})</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span>Deducted Days:</span>
+                    <span>Deducted Days (Absents):</span>
                     <span className="font-black text-rose-500">{salaryDetails.unpaidDays} Days (-₨{Math.round(salaryDetails.absentDeduction).toLocaleString()})</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Fines:</span>
                     <span className="font-black text-rose-500">-₨{salaryDetails.fines.toLocaleString()}</span>
                   </div>
+                  <div className="flex justify-between items-center">
+                    <span>Advance Salary Taken:</span>
+                    <span className="font-black text-rose-500">-₨{salaryDetails.advance.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-1.5 border-t border-gray-200/60 font-black text-gray-900">
+                    <span>Total Deductions:</span>
+                    <span className="font-black text-rose-600">-₨{Math.round(salaryDetails.absentDeduction + salaryDetails.fines + salaryDetails.advance).toLocaleString()}</span>
+                  </div>
                 </div>
-                <p className="text-[8px] text-gray-400 italic mt-3 text-center">Click for detailed daily salary breakdown & leaves</p>
+                <p className="text-[8px] text-gray-400 italic mt-3 text-center">Click for detailed daily salary breakdown, advance records & leaves</p>
               </div>
 
               <div className={`w-full mt-4 rounded-2xl p-4 text-left border bg-amber-50/50 border-amber-100`}>
@@ -5369,16 +5433,32 @@ export default function StaffProfilePage() {
             <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
               <div>
                 <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500">Salary Breakdown</h3>
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
-                  Cycle: {selectedMonth ? new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Current Month'}
-                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                    Cycle: {selectedMonth ? new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Current Month'}
+                  </p>
+                  {dateRangeText && (
+                    <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                      ({dateRangeText})
+                    </span>
+                  )}
+                </div>
               </div>
-              <button 
-                onClick={() => setShowSalaryBreakdownModal(false)}
-                className="p-2 rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all"
-              >
-                <X size={16} />
-              </button>
+              <div className="flex items-center gap-3">
+                <input 
+                  type="month" 
+                  value={selectedMonth} 
+                  onChange={(e) => setSelectedMonth(e.target.value)} 
+                  className="text-[10px] font-bold bg-white border border-gray-200 rounded-lg px-2.5 py-1 text-gray-800 outline-none cursor-pointer hover:border-indigo-400 transition-colors"
+                  title="Change Calculation Month"
+                />
+                <button 
+                  onClick={() => setShowSalaryBreakdownModal(false)}
+                  className="p-2 rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all"
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
 
             {/* Scrollable Content */}
@@ -5514,8 +5594,41 @@ export default function StaffProfilePage() {
                   </div>
                 </div>
 
+                {/* Advance Salary Deductions Details */}
+                <div className="space-y-3 col-span-1 md:col-span-2 mt-2">
+                  <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    Advance Salary Deductions Details ({transactions.filter(isAdvanceTxInSelectedMonth).length})
+                  </h4>
+                  <div className="border border-gray-100 rounded-2xl overflow-hidden max-h-[200px] overflow-y-auto space-y-1 p-2 bg-gray-50/50">
+                    {transactions.filter(isAdvanceTxInSelectedMonth).length === 0 ? (
+                      <p className="text-[10px] text-gray-400 italic text-center py-4">No advance salary recorded this month</p>
+                    ) : (
+                      transactions.filter(isAdvanceTxInSelectedMonth).map((tx, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-white border border-gray-100">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-700">{tx.description || tx.categoryName || 'Advance Salary'}</span>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[8px] text-gray-400 uppercase font-black">{formatStaffDate(tx.transactionDate || tx.date || tx.createdAt)}</span>
+                              <span className={`px-1.5 py-0.2 rounded text-[7px] font-black uppercase ${
+                                tx.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {tx.status || 'Pending'}
+                              </span>
+                              {tx.paymentMethod && (
+                                <span className="text-[8px] text-gray-500 uppercase font-bold">({tx.paymentMethod})</span>
+                              )}
+                            </div>
+                          </div>
+                          <span className="font-black text-rose-500">-₨{Number(tx.amount).toLocaleString()}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
                 {/* Fine Deductions List */}
-                <div className="space-y-3 col-span-1 md:col-span-2 mt-4">
+                <div className="space-y-3 col-span-1 md:col-span-2 mt-2">
                   <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                     Fine Deductions Details ({fines.filter(isFineInSelectedMonth).length})
@@ -5541,7 +5654,7 @@ export default function StaffProfilePage() {
             
             {/* Footer */}
             <div className="p-6 bg-gray-50 border-t border-gray-100 text-center text-[10px] text-gray-400 italic">
-              All marked leaves are fully paid. Deductions only apply to absences and past unmarked days.
+              All marked leaves are fully paid. Deductions apply to absences, past unmarked days, advances & fines.
             </div>
           </div>
         </div>
