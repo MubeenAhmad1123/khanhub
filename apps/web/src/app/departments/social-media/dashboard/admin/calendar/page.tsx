@@ -10,7 +10,7 @@ import {
 import {
   Calendar as CalendarIcon, Clock, CheckCircle2, Circle, Plus, Trash2, Video,
   Image as ImageIcon, Upload, Sparkles, TrendingUp, Filter, ChevronLeft, ChevronRight,
-  Loader2, User, Layers, CheckSquare, BarChart3
+  Loader2, User, Layers, CheckSquare, BarChart3, Users
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -29,6 +29,14 @@ export interface MediaCalendarTask {
   createdAt: string;
 }
 
+export interface StaffMember {
+  id: string;
+  name: string;
+  displayName?: string;
+  designation?: string;
+  role?: string;
+}
+
 const TASK_PRESETS = [
   { type: 'video_create', label: 'Create Video', role: 'editor', icon: Video, color: 'bg-blue-50 text-blue-600 border-blue-200' },
   { type: 'video_upload', label: 'Upload Video', role: 'editor', icon: Upload, color: 'bg-indigo-50 text-indigo-600 border-indigo-200' },
@@ -42,6 +50,7 @@ export default function SocialMediaCalendarPage() {
 
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<MediaCalendarTask[]>([]);
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [viewMode, setViewMode] = useState<'monthly' | 'weekly'>('monthly');
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7)); // 'YYYY-MM'
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10)); // 'YYYY-MM-DD'
@@ -50,6 +59,7 @@ export default function SocialMediaCalendarPage() {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskType, setNewTaskType] = useState<MediaCalendarTask['type']>('video_create');
   const [newTaskRole, setNewTaskRole] = useState<'editor' | 'designer' | 'all'>('editor');
+  const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const [newTaskNote, setNewTaskNote] = useState('');
   const [addingTask, setAddingTask] = useState(false);
 
@@ -60,15 +70,51 @@ export default function SocialMediaCalendarPage() {
     }
   }, [sessionLoading, user, router]);
 
-  const loadTasks = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const snap = await getDocs(collection(db, 'media_calendar_tasks'));
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as MediaCalendarTask));
-      setTasks(list);
+
+      // 1. Fetch Calendar Tasks
+      const tasksSnap = await getDocs(collection(db, 'media_calendar_tasks'));
+      const tasksData = tasksSnap.docs.map((d) => ({ id: d.id, ...d.data() } as MediaCalendarTask));
+      setTasks(tasksData);
+
+      // 2. Fetch Active Social Media Department Staff
+      const [mediaStaffSnap, hqStaffSnap] = await Promise.all([
+        getDocs(collection(db, 'media_users')).catch(() => ({ docs: [] } as any)),
+        getDocs(query(collection(db, 'hq_users'), where('department', '==', 'social-media'))).catch(() => ({ docs: [] } as any)),
+      ]);
+
+      const staffMap = new Map<string, StaffMember>();
+
+      mediaStaffSnap.docs.forEach((d: any) => {
+        const data = d.data();
+        if (data.isActive !== false && data.status !== 'inactive') {
+          staffMap.set(d.id, {
+            id: d.id,
+            name: data.displayName || data.name || 'Staff Member',
+            designation: data.designation || data.role || 'Social Media Staff',
+            role: data.role,
+          });
+        }
+      });
+
+      hqStaffSnap.docs.forEach((d: any) => {
+        const data = d.data();
+        if (!staffMap.has(d.id) && data.isActive !== false) {
+          staffMap.set(d.id, {
+            id: d.id,
+            name: data.name || data.displayName || 'Staff Member',
+            designation: data.designation || 'Social Media Staff',
+            role: data.role,
+          });
+        }
+      });
+
+      setStaffList(Array.from(staffMap.values()));
     } catch (err) {
-      console.error('Error loading media calendar tasks:', err);
-      toast.error('Failed to load tasks');
+      console.error('Error loading media calendar data:', err);
+      toast.error('Failed to load tasks or staff list');
     } finally {
       setLoading(false);
     }
@@ -76,9 +122,9 @@ export default function SocialMediaCalendarPage() {
 
   useEffect(() => {
     if (user) {
-      loadTasks();
+      loadData();
     }
-  }, [user, loadTasks]);
+  }, [user, loadData]);
 
   // Calendar Helpers
   const currentYearMonth = useMemo(() => {
@@ -163,7 +209,11 @@ export default function SocialMediaCalendarPage() {
   }, [monthlyTasks]);
 
   // Actions
-  const handleAddTask = async (presetType?: MediaCalendarTask['type'], presetTitle?: string, presetRole?: 'editor' | 'designer' | 'all') => {
+  const handleAddTask = async (
+    presetType?: MediaCalendarTask['type'],
+    presetTitle?: string,
+    presetRole?: 'editor' | 'designer' | 'all'
+  ) => {
     const title = (presetTitle || newTaskTitle).trim();
     if (!title) {
       toast.error('Please enter a task title');
@@ -172,24 +222,38 @@ export default function SocialMediaCalendarPage() {
     const type = presetType || newTaskType;
     const role = presetRole || newTaskRole;
 
+    const assignedStaff = staffList.find((s) => s.id === selectedStaffId);
+
     try {
       setAddingTask(true);
-      const payload: Omit<MediaCalendarTask, 'id'> = {
+
+      // Clean payload with NO undefined fields to avoid Firestore errors
+      const payload: Record<string, any> = {
         date: selectedDate,
         title,
         type,
         assignedRole: role,
         isCompleted: false,
-        note: newTaskNote.trim() || undefined,
         createdAt: new Date().toISOString(),
       };
 
+      if (assignedStaff) {
+        payload.assignedStaffId = assignedStaff.id;
+        payload.assignedStaffName = assignedStaff.name;
+      }
+      const trimmedNote = newTaskNote.trim();
+      if (trimmedNote) {
+        payload.note = trimmedNote;
+      }
+
       const docRef = await addDoc(collection(db, 'media_calendar_tasks'), payload);
-      setTasks((prev) => [...prev, { id: docRef.id, ...payload }]);
+      setTasks((prev) => [...prev, { id: docRef.id, ...payload } as MediaCalendarTask]);
       setNewTaskTitle('');
       setNewTaskNote('');
+      setSelectedStaffId('');
       toast.success('Daily task added successfully!');
     } catch (err: any) {
+      console.error('Failed to add task error:', err);
       toast.error('Failed to add task: ' + err.message);
     } finally {
       setAddingTask(false);
@@ -200,14 +264,20 @@ export default function SocialMediaCalendarPage() {
     try {
       const updatedComplete = !task.isCompleted;
       const ref = doc(db, 'media_calendar_tasks', task.id);
-      await updateDoc(ref, {
+      
+      const updateData: Record<string, any> = {
         isCompleted: updatedComplete,
-        completedAt: updatedComplete ? new Date().toISOString() : null,
-        completedBy: updatedComplete ? user?.displayName || 'User' : null,
-      });
+      };
+
+      if (updatedComplete) {
+        updateData.completedAt = new Date().toISOString();
+        updateData.completedBy = user?.displayName || 'User';
+      }
+
+      await updateDoc(ref, updateData);
 
       setTasks((prev) =>
-        prev.map((t) => (t.id === task.id ? { ...t, isCompleted: updatedComplete } : t))
+        prev.map((t) => (t.id === task.id ? { ...t, isCompleted: updatedComplete, ...(updatedComplete ? { completedAt: updateData.completedAt, completedBy: updateData.completedBy } : {}) } : t))
       );
       toast.success(updatedComplete ? 'Task marked as completed! ✓' : 'Task marked as pending');
     } catch (err: any) {
@@ -256,7 +326,7 @@ export default function SocialMediaCalendarPage() {
             Social Media <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400">Task Calendar</span>
           </h1>
           <p className="text-indigo-200/70 text-xs md:text-sm font-medium mt-1">
-            Schedule daily video creations, video uploads, graphic designs, and track progress scores.
+            Schedule daily video creations, video uploads, graphic designs, assign staff members, and track progress scores.
           </p>
         </div>
 
@@ -427,7 +497,7 @@ export default function SocialMediaCalendarPage() {
                               t.isCompleted ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
                             }`}
                           >
-                            {t.title}
+                            {t.title} {t.assignedStaffName ? `(${t.assignedStaffName})` : ''}
                           </span>
                         ))
                       ) : (
@@ -505,11 +575,38 @@ export default function SocialMediaCalendarPage() {
                   onChange={(e) => setNewTaskRole(e.target.value as any)}
                   className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-700 outline-none"
                 >
-                  <option value="editor">Editor</option>
-                  <option value="designer">Graphic Designer</option>
+                  <option value="editor">Editor Role</option>
+                  <option value="designer">Graphic Designer Role</option>
                   <option value="all">All / Team</option>
                 </select>
               </div>
+
+              {/* Assign to specific active staff member */}
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">
+                  Assign Staff Member (Optional)
+                </label>
+                <select
+                  value={selectedStaffId}
+                  onChange={(e) => setSelectedStaffId(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-800 outline-none"
+                >
+                  <option value="">-- Select Active Staff Member --</option>
+                  {staffList.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.name} ({member.designation})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <input
+                type="text"
+                placeholder="Optional Note or Instructions..."
+                value={newTaskNote}
+                onChange={(e) => setNewTaskNote(e.target.value)}
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-medium text-gray-800 outline-none"
+              />
 
               <button
                 type="button"
@@ -548,16 +645,26 @@ export default function SocialMediaCalendarPage() {
                         <p className={`font-bold text-xs text-gray-900 truncate ${t.isCompleted ? 'line-through opacity-60' : ''}`}>
                           {t.title}
                         </p>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
                           <span className="text-[9px] font-bold text-slate-400 uppercase">
                             Role: {t.assignedRole}
                           </span>
+                          {t.assignedStaffName && (
+                            <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                              Assigned to: {t.assignedStaffName}
+                            </span>
+                          )}
                           {t.isCompleted && t.completedBy && (
                             <span className="text-[9px] font-bold text-emerald-600">
                               • Done by {t.completedBy}
                             </span>
                           )}
                         </div>
+                        {t.note && (
+                          <p className="text-[10px] text-slate-500 italic mt-1 bg-slate-50 p-1.5 rounded border border-slate-100">
+                            Note: {t.note}
+                          </p>
+                        )}
                       </div>
                     </div>
 
