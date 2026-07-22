@@ -5064,16 +5064,33 @@ function EntityProfileModal({
     return result;
   }, [localTxns, filterStatus, profileSortConfig]);
 
-  const totalPackage = entity.totalPackage || entity.packageAmount || 0;
+  const isStaffEntity = !!(
+    entity.monthlySalary !== undefined || 
+    entity.staffId !== undefined || 
+    entity.designation !== undefined || 
+    (entity.customId && String(entity.customId).includes('STF')) || 
+    entity.employeeId !== undefined || 
+    (entity._deptLabel && String(entity._deptLabel).toLowerCase().includes('staff')) ||
+    localTxns.some(t => t.category === 'advance_salary' || t.categoryName === 'Staff Advance')
+  );
+
+  const totalPackage = isStaffEntity 
+    ? Number(entity.monthlySalary || entity.salary || entity.totalPackage || entity.packageAmount || 0)
+    : Number(entity.totalPackage || entity.packageAmount || 0);
+
   const totalApproved = localTxns
-    .filter(t => t.type === 'income' && t.status === 'approved')
+    .filter(t => (isStaffEntity ? (t.category === 'advance_salary' || t.category === 'advance' || t.categoryName?.toLowerCase().includes('advance') || t.type === 'expense' || t.type === 'income') : t.type === 'income') && t.status === 'approved')
     .reduce((s, t) => s + Number(t.amount || 0), 0);
+
   const totalPending = localTxns
-    .filter(t => t.type === 'income' && ['pending', 'pending_cashier'].includes(t.status))
+    .filter(t => (isStaffEntity ? (t.category === 'advance_salary' || t.category === 'advance' || t.categoryName?.toLowerCase().includes('advance') || t.type === 'expense' || t.type === 'income') : t.type === 'income') && ['pending', 'pending_cashier'].includes(t.status))
     .reduce((s, t) => s + Number(t.amount || 0), 0);
-  const remaining = entity._deptCode === 'rehab' 
-    ? (entity.remainingBalance ?? entity.overallRemaining ?? entity.remaining ?? (totalPackage - totalApproved)) 
-    : (totalPackage - totalApproved);
+
+  const remaining = isStaffEntity 
+    ? (totalPackage > 0 ? (totalPackage - totalApproved) : 0)
+    : (entity._deptCode === 'rehab' 
+        ? (entity.remainingBalance ?? entity.overallRemaining ?? entity.remaining ?? (totalPackage - totalApproved)) 
+        : (totalPackage - totalApproved));
 
   return (
     <div className="fixed inset-0 z-[150] flex items-end md:items-center justify-center p-0 md:p-10 lg:p-12 bg-zinc-950/80 backdrop-blur-2xl animate-in fade-in duration-500">
@@ -5109,19 +5126,27 @@ function EntityProfileModal({
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-zinc-100 flex-shrink-0 overflow-hidden text-gray-900">
           <div className="p-2 sm:p-3 border-r border-b md:border-b-0 border-zinc-100">
-            <p className="text-[8px] sm:text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">Total Package</p>
+            <p className="text-[8px] sm:text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-0.5">
+              {isStaffEntity ? 'Monthly Base Salary' : 'Total Package'}
+            </p>
             <p className="text-xs sm:text-sm md:text-base lg:text-lg font-black tracking-tight">Rs {totalPackage.toLocaleString()}</p>
           </div>
           <div className="p-2 sm:p-3 border-r border-b md:border-b-0 border-zinc-100 bg-emerald-50/30">
-            <p className="text-[8px] sm:text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-0.5">Approved Paid</p>
+            <p className="text-[8px] sm:text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-0.5">
+              {isStaffEntity ? 'Approved Advance' : 'Approved Paid'}
+            </p>
             <p className="text-xs sm:text-sm md:text-base lg:text-lg font-black text-emerald-700 tracking-tight">Rs {totalApproved.toLocaleString()}</p>
           </div>
           <div className="p-2 sm:p-3 border-r border-zinc-100 bg-amber-50/30">
-            <p className="text-[8px] sm:text-[9px] font-black text-amber-600 uppercase tracking-widest mb-0.5">Pending Review</p>
+            <p className="text-[8px] sm:text-[9px] font-black text-amber-600 uppercase tracking-widest mb-0.5">
+              {isStaffEntity ? 'Pending Advance' : 'Pending Review'}
+            </p>
             <p className="text-xs sm:text-sm md:text-base lg:text-lg font-black text-amber-700 tracking-tight">Rs {totalPending.toLocaleString()}</p>
           </div>
           <div className="p-2 sm:p-3 bg-rose-50/30">
-            <p className="text-[8px] sm:text-[9px] font-black text-rose-600 uppercase tracking-widest mb-0.5">Still Remaining</p>
+            <p className="text-[8px] sm:text-[9px] font-black text-rose-600 uppercase tracking-widest mb-0.5">
+              {isStaffEntity ? 'Salary Remaining' : 'Still Remaining'}
+            </p>
             <p className="text-xs sm:text-sm md:text-base lg:text-lg font-black text-rose-700 tracking-tight">Rs {remaining.toLocaleString()}</p>
           </div>
         </div>

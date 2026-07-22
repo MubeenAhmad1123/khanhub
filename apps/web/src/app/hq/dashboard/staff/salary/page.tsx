@@ -40,6 +40,8 @@ export default function StaffSalaryHistoryPage() {
   const [profile, setProfile] = useState<any>(null);
   const [salaryRecords, setSalaryRecords] = useState<SalaryRecord[]>([]);
 
+  const [advanceTxns, setAdvanceTxns] = useState<any[]>([]);
+
   useEffect(() => {
     const raw = localStorage.getItem('hq_session');
     if (!raw) {
@@ -78,7 +80,7 @@ export default function StaffSalaryHistoryPage() {
         const prefix = getDeptPrefix(dept);
         const colName = `${prefix}_salary_records`;
 
-        // Gather all candidate IDs to match (uid, customId, employeeId, customId with/without prefix)
+        // Gather all candidate IDs to match
         const candidateSet = new Set<string>([uid]);
         if (userData.customId) {
           candidateSet.add(userData.customId);
@@ -100,7 +102,6 @@ export default function StaffSalaryHistoryPage() {
         const allRecords: SalaryRecord[] = [];
         const seenIds = new Set<string>();
 
-        // Query by candidate IDs
         for (const cid of candidateIds) {
           const q = query(collection(db, colName), where('staffId', '==', cid));
           const snap = await getDocs(q).catch(() => ({ docs: [] } as any));
@@ -112,9 +113,27 @@ export default function StaffSalaryHistoryPage() {
           });
         }
 
-        // Sort by month descending
         allRecords.sort((a, b) => (b.month || '').localeCompare(a.month || ''));
         setSalaryRecords(allRecords);
+
+        // Fetch advance salary transactions
+        const txColName = `${prefix}_transactions`;
+        const allTxns: any[] = [];
+        const seenTxIds = new Set<string>();
+        for (const cid of candidateIds) {
+          const q = query(collection(db, txColName), where('staffId', '==', cid));
+          const snap = await getDocs(q).catch(() => ({ docs: [] } as any));
+          snap.docs.forEach((docSnap: any) => {
+            if (!seenTxIds.has(docSnap.id)) {
+              seenTxIds.add(docSnap.id);
+              const data = docSnap.data();
+              if (data.category === 'advance_salary' || data.category === 'advance' || (data.categoryName && data.categoryName.toLowerCase().includes('advance'))) {
+                allTxns.push({ id: docSnap.id, ...data });
+              }
+            }
+          });
+        }
+        setAdvanceTxns(allTxns.sort((a, b) => (b.date || '').localeCompare(a.date || '')));
 
       } catch (err: any) {
         console.error('Error fetching staff salary records:', err);
@@ -169,11 +188,54 @@ export default function StaffSalaryHistoryPage() {
             <h1 className="text-xl font-black text-gray-900 uppercase tracking-tight">My Salary History</h1>
             <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mt-1">Official salary slips and disbursements</p>
           </div>
-          <div className="bg-emerald-50 text-emerald-800 border border-emerald-100 px-4 py-2 rounded-xl text-center">
-            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider">Base Salary</p>
-            <p className="text-base font-black">₨{(profile?.monthlySalary || 0).toLocaleString()}</p>
+          <div className="flex items-center gap-3">
+            <div className="bg-emerald-50 text-emerald-800 border border-emerald-100 px-4 py-2 rounded-xl text-center">
+              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider">Base Salary</p>
+              <p className="text-base font-black">₨{(profile?.monthlySalary || 0).toLocaleString()}</p>
+            </div>
+            <div className="bg-indigo-50 text-indigo-800 border border-indigo-100 px-4 py-2 rounded-xl text-center">
+              <p className="text-[10px] font-black text-indigo-600 uppercase tracking-wider">Advance Taken</p>
+              <p className="text-base font-black">₨{advanceTxns.filter(t => t.status === 'approved').reduce((s, t) => s + Number(t.amount || 0), 0).toLocaleString()}</p>
+            </div>
           </div>
         </div>
+
+        {/* Advance Salary Transactions (If Any) */}
+        {advanceTxns.length > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight flex items-center gap-2">
+                <DollarSign size={16} className="text-indigo-600" /> Advance Salary History ({advanceTxns.length})
+              </h3>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                Approved: ₨{advanceTxns.filter(t => t.status === 'approved').reduce((s, t) => s + Number(t.amount || 0), 0).toLocaleString()}
+              </span>
+            </div>
+            <div className="space-y-2">
+              {advanceTxns.map((tx) => (
+                <div key={tx.id} className="p-3.5 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold text-gray-800">{tx.description || tx.categoryName || 'Staff Advance'}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[9px] font-semibold text-gray-400 uppercase">{tx.date || 'N/A'}</span>
+                      {tx.paymentMethod && (
+                        <span className="text-[9px] font-semibold text-gray-500 uppercase">({tx.paymentMethod})</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-black text-rose-600 block">-₨{Number(tx.amount || 0).toLocaleString()}</span>
+                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
+                      tx.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {tx.status || 'Pending'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Salary Records List */}
         {salaryRecords.length === 0 ? (

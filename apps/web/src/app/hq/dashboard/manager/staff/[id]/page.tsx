@@ -4806,13 +4806,13 @@ export default function StaffProfilePage() {
                       <CreditCard size={16} /> Advance Salary Transactions (Cashier Side)
                     </h4>
                     
-                    {transactions.filter(tx => tx.category === 'advance_salary').length === 0 ? (
+                    {transactions.filter(tx => tx.category === 'advance_salary' || tx.category === 'advance' || (tx.categoryName && tx.categoryName.toLowerCase().includes('advance'))).length === 0 ? (
                       <div className="py-10 text-center bg-gray-50/50 border border-gray-100 rounded-3xl">
                         <p className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">No advance salary transactions recorded</p>
                       </div>
                     ) : (
                       <div className="grid gap-4">
-                        {transactions.filter(tx => tx.category === 'advance_salary').sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(tx => (
+                        {transactions.filter(tx => tx.category === 'advance_salary' || tx.category === 'advance' || (tx.categoryName && tx.categoryName.toLowerCase().includes('advance'))).sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(tx => (
                           <div key={tx.id} className="p-5 rounded-3xl border bg-gray-50 border-gray-100 flex items-center justify-between gap-4">
                             <div className="flex items-center gap-4">
                               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
