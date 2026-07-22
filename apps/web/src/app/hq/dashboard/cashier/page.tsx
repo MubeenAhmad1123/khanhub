@@ -30,7 +30,24 @@ const DEPARTMENTS = [
   { code: 'sukoon-center', label: 'Sukoon Center', txCollection: 'sukoon_transactions', entityCollection: 'sukoon_clients' },
   { code: 'welfare', label: 'Welfare', txCollection: 'welfare_transactions', entityCollection: 'welfare_donors' },
   { code: 'job-center', label: 'Job Center', txCollection: 'jobcenter_transactions', entityCollection: 'jobcenter_seekers' },
+  { code: 'it', label: 'IT Department', txCollection: 'it_transactions', entityCollection: 'it_users' },
+  { code: 'social-media', label: 'Social Media', txCollection: 'media_transactions', entityCollection: 'media_users' },
+  { code: 'hq', label: 'HQ Head Office', txCollection: 'hq_transactions', entityCollection: 'hq_users' },
 ];
+
+function findDept(deptCode: string) {
+  if (!deptCode) return DEPARTMENTS[0];
+  const low = String(deptCode).toLowerCase().replace(/_/g, '-');
+  const found = DEPARTMENTS.find(d => {
+    const codeLow = d.code.toLowerCase().replace(/_/g, '-');
+    if (codeLow === low) return true;
+    if ((low === 'media' || low === 'social-media') && (codeLow === 'media' || codeLow === 'social-media')) return true;
+    if ((low === 'sukoon' || low === 'sukoon-center') && (codeLow === 'sukoon' || codeLow === 'sukoon-center')) return true;
+    if ((low === 'jobcenter' || low === 'job-center') && (codeLow === 'jobcenter' || codeLow === 'job-center')) return true;
+    return false;
+  });
+  return found || DEPARTMENTS.find(d => d.code === 'rehab') || DEPARTMENTS[0];
+}
 
 const BASE_CATEGORIES = [
   { id: 'fee', name: 'Admission Fee', appliesTo: 'income' },
@@ -1840,8 +1857,7 @@ export default function CashierStationPage() {
     setUpdatingDetail(true);
     try {
       const deptCode = detailModalTx.departmentCode;
-      const dept = DEPARTMENTS.find(d => d.code === deptCode);
-      if (!dept) throw new Error('Invalid Department');
+      const dept = findDept(deptCode);
 
       const isApproved = detailModalTx.status === 'approved';
 
@@ -4348,9 +4364,8 @@ function EntityProfileModal({
   }, [propEntity]);
 
   useEffect(() => {
-    const deptCode = propEntity._deptCode || 'rehab';
-    const dept = DEPARTMENTS.find(d => d.code === deptCode);
-    if (!dept) return;
+    const deptCode = propEntity._deptCode || propEntity.department || 'rehab';
+    const dept = findDept(deptCode);
 
     const unsub = onSnapshot(doc(db, dept.entityCollection, propEntity.id), (snap) => {
       if (snap.exists()) {
@@ -4488,9 +4503,8 @@ function EntityProfileModal({
     }
     setAdding(true);
     try {
-      const deptCode = entity._deptCode || 'rehab';
-      const dept = DEPARTMENTS.find(d => d.code === deptCode);
-      if (!dept) throw new Error('Invalid Department');
+      const deptCode = entity._deptCode || entity.department || activeDepartment.code || 'rehab';
+      const dept = findDept(deptCode);
 
       const txDate = new Date(`${newTx.date}T12:00:00`);
       
@@ -4616,10 +4630,8 @@ function EntityProfileModal({
     setLoading(true);
     try {
       const entityId = entity.id;
-      const deptCode = entity._deptCode || 'rehab';
-      const dept = DEPARTMENTS.find(d => d.code === deptCode);
-      
-      if (!dept) { setLoading(false); return; }
+      const deptCode = entity._deptCode || entity.department || 'rehab';
+      const dept = findDept(deptCode);
 
       const results: any[] = [];
 
@@ -4910,9 +4922,9 @@ function EntityProfileModal({
     if (!window.confirm(`Delete this ${tx.status} transaction of Rs ${Number(tx.amount).toLocaleString()}? This cannot be undone.`)) return;
     
     let targetCollection = tx._collection;
-    const deptCode = tx.departmentCode || entity?._deptCode;
+    const deptCode = tx.departmentCode || entity?._deptCode || entity?.department;
     if (!targetCollection) {
-      const dept = DEPARTMENTS.find(d => d.code === deptCode);
+      const dept = findDept(deptCode);
       if (dept) targetCollection = dept.txCollection;
     }
 
@@ -4984,9 +4996,9 @@ function EntityProfileModal({
         if (!tx) continue;
         
         let targetCollection = tx._collection;
-        const deptCode = tx.departmentCode || entity?._deptCode;
+        const deptCode = tx.departmentCode || entity?._deptCode || entity?.department;
         if (!targetCollection) {
-          const dept = DEPARTMENTS.find(d => d.code === deptCode);
+          const dept = findDept(deptCode);
           if (dept) targetCollection = dept.txCollection;
         }
         
