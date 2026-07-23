@@ -68,11 +68,6 @@ export default function DocumentsTab({
   const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !canEdit) return;
-    if (file.type !== 'image/webp') {
-      toast.error('Only .webp images are allowed');
-      if (fileRef.current) fileRef.current.value = '';
-      return;
-    }
     if (!title.trim()) {
       toast.error('Enter document title');
       return;
@@ -90,9 +85,9 @@ export default function DocumentsTab({
       setTitle('');
       if (fileRef.current) fileRef.current.value = '';
       toast.success('Uploaded');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error('Upload failed');
+      toast.error(err.message || 'Upload failed');
     } finally {
       setUploading(false);
     }
@@ -139,7 +134,7 @@ export default function DocumentsTab({
               />
             </div>
             <div className="space-y-1.5 flex flex-col justify-end">
-              <input ref={fileRef} type="file" className="hidden" accept="image/webp" onChange={onUpload} />
+              <input ref={fileRef} type="file" className="hidden" accept="image/*,application/pdf" onChange={onUpload} />
               <button
                 type="button"
                 disabled={uploading}
