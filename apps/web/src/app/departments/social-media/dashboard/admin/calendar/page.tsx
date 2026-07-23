@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useMediaSession } from '@/hooks/social-media/useMediaSession';
 import { db } from '@/lib/firebase';
 import {
-  collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, setDoc
+  collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where
 } from 'firebase/firestore';
 import {
   Calendar as CalendarIcon, Clock, CheckCircle2, Circle, Plus, Trash2, Video,
   Image as ImageIcon, Upload, Sparkles, TrendingUp, Filter, ChevronLeft, ChevronRight,
-  Loader2, User, Layers, CheckSquare, BarChart3, Users, Printer, Square, Edit3, Save, X, FileText
+  Loader2, User, Layers, CheckSquare, BarChart3, Users, Printer, Edit3, Save, X, FileText,
+  Smartphone, Monitor, ListChecks, Check, AlertCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -69,6 +70,103 @@ const TASK_PRESETS = [
   { type: 'graphic_upload', label: 'Upload Graphic Post', role: 'designer', icon: Upload, color: 'bg-pink-50 text-pink-600 border-pink-200' },
 ] as const;
 
+/**
+ * Animated Checkbox Component with Tick (✓) & Cross (✕) animations
+ */
+function AnimatedTickCrossCheckbox({
+  checked,
+  onToggle,
+  size = 'md',
+  disabled = false,
+  title,
+  label,
+  subLabel,
+}: {
+  checked: boolean;
+  onToggle: () => void;
+  size?: 'sm' | 'md' | 'lg';
+  disabled?: boolean;
+  title?: string;
+  label?: string;
+  subLabel?: string;
+}) {
+  const [animatingState, setAnimatingState] = useState<'tick' | 'cross' | null>(null);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (disabled) return;
+    const nextState = checked ? 'cross' : 'tick';
+    setAnimatingState(nextState);
+    onToggle();
+    setTimeout(() => setAnimatingState(null), 450);
+  };
+
+  const boxSizes = {
+    sm: 'w-7 h-7',
+    md: 'w-9 h-9',
+    lg: 'w-11 h-11',
+  }[size];
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={disabled}
+      title={title || (checked ? 'Click to uncheck (Cross ✕)' : 'Click to complete (Tick ✓)')}
+      className={`group relative flex items-center gap-2 rounded-xl transition-all duration-200 select-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-400/50 ${
+        disabled ? 'opacity-50 cursor-not-allowed' : 'active:scale-90 hover:scale-105'
+      }`}
+    >
+      <div
+        className={`${boxSizes} rounded-xl flex items-center justify-center font-black transition-all duration-300 border ${
+          checked
+            ? 'bg-gradient-to-br from-emerald-500 via-teal-500 to-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-500/30 ring-2 ring-emerald-400/30'
+            : 'bg-white text-slate-300 border-slate-300 hover:border-rose-400 hover:bg-rose-50/60 shadow-xs'
+        } ${animatingState === 'tick' ? 'animate-bounce ring-4 ring-emerald-300/50 scale-110' : ''} ${
+          animatingState === 'cross' ? 'animate-pulse ring-4 ring-rose-300/50 scale-95' : ''
+        }`}
+      >
+        {checked ? (
+          <svg
+            className={`w-[60%] h-[60%] text-white transition-all duration-300 ${
+              animatingState === 'tick' ? 'scale-125 rotate-6' : 'scale-100'
+            }`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="3.5"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        ) : (
+          <svg
+            className={`w-[55%] h-[55%] text-slate-300 group-hover:text-rose-500 transition-all duration-300 ${
+              animatingState === 'cross' ? 'scale-125 -rotate-12 text-rose-600' : 'scale-90 opacity-60 group-hover:opacity-100'
+            }`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="3.5"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        )}
+      </div>
+
+      {(label || subLabel) && (
+        <div className="text-left leading-tight min-w-0">
+          {label && (
+            <p className={`font-bold text-xs sm:text-sm truncate transition-colors ${checked ? 'line-through text-slate-400' : 'text-gray-900'}`}>
+              {label}
+            </p>
+          )}
+          {subLabel && <p className="text-[10px] text-slate-400 font-semibold truncate">{subLabel}</p>}
+        </div>
+      )}
+    </button>
+  );
+}
+
 export default function SocialMediaCalendarPage() {
   const router = useRouter();
   const { session: user, loading: sessionLoading } = useMediaSession();
@@ -78,11 +176,11 @@ export default function SocialMediaCalendarPage() {
   const [categories, setCategories] = useState<MediaContentCategory[]>([]);
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   
-  // View Modes: 'matrix' (Serial numbered Printable Checksheet Matrix), 'monthly', 'weekly'
-  const [viewMode, setViewMode] = useState<'matrix' | 'monthly' | 'weekly'>('matrix');
+  // View Modes: 'matrix' (Printable Sheet), 'mobile_cards' (Mobile Friendly List), 'monthly', 'weekly'
+  const [viewMode, setViewMode] = useState<'matrix' | 'mobile_cards' | 'monthly' | 'weekly'>('matrix');
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7)); // 'YYYY-MM'
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10)); // 'YYYY-MM-DD'
-  const [matrixRange, setMatrixRange] = useState<'full' | 'half1' | 'half2'>('full');
+  const [matrixRange, setMatrixRange] = useState<'full' | 'half1' | 'half2' | 'week'>('full');
 
   // Category Creation Form State
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -198,24 +296,7 @@ export default function SocialMediaCalendarPage() {
     return days;
   }, [currentYearMonth]);
 
-  // Matrix Filtered Days
-  const matrixDays = useMemo(() => {
-    if (matrixRange === 'half1') return daysInSelectedMonth.slice(0, 15);
-    if (matrixRange === 'half2') return daysInSelectedMonth.slice(15);
-    return daysInSelectedMonth;
-  }, [daysInSelectedMonth, matrixRange]);
-
-  const calendarGridCells = useMemo(() => {
-    const { year, month } = currentYearMonth;
-    const firstDay = new Date(year, month, 1).getDay(); // 0 = Sun
-    const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1; // Mon = 0
-    const cells: (string | null)[] = [];
-    for (let i = 0; i < adjustedFirstDay; i++) cells.push(null);
-    daysInSelectedMonth.forEach((d) => cells.push(d));
-    return cells;
-  }, [currentYearMonth, daysInSelectedMonth]);
-
-  // Week Days Helper for Weekly View
+  // Week Days Helper around selected date
   const selectedWeekDays = useMemo(() => {
     const curr = new Date(selectedDate);
     const dayOfWeek = curr.getDay(); // 0 = Sun
@@ -234,6 +315,24 @@ export default function SocialMediaCalendarPage() {
     }
     return week;
   }, [selectedDate]);
+
+  // Matrix Filtered Days
+  const matrixDays = useMemo(() => {
+    if (matrixRange === 'half1') return daysInSelectedMonth.slice(0, 15);
+    if (matrixRange === 'half2') return daysInSelectedMonth.slice(15);
+    if (matrixRange === 'week') return selectedWeekDays;
+    return daysInSelectedMonth;
+  }, [daysInSelectedMonth, matrixRange, selectedWeekDays]);
+
+  const calendarGridCells = useMemo(() => {
+    const { year, month } = currentYearMonth;
+    const firstDay = new Date(year, month, 1).getDay(); // 0 = Sun
+    const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1; // Mon = 0
+    const cells: (string | null)[] = [];
+    for (let i = 0; i < adjustedFirstDay; i++) cells.push(null);
+    daysInSelectedMonth.forEach((d) => cells.push(d));
+    return cells;
+  }, [currentYearMonth, daysInSelectedMonth]);
 
   // Analytics & Scores
   const monthlyTasks = useMemo(() => {
@@ -310,12 +409,8 @@ export default function SocialMediaCalendarPage() {
     }
   };
 
-  // Matrix Checkbox Toggle (Created / Uploaded / Completed)
-  const handleToggleMatrixCheckbox = async (
-    dateStr: string,
-    cat: MediaContentCategory,
-    field: 'isCreated' | 'isUploaded' | 'isCompleted'
-  ) => {
+  // Matrix Checkbox Toggle (Primary Animated Tick / Cross Checkbox)
+  const handleToggleMatrixTask = async (dateStr: string, cat: MediaContentCategory) => {
     try {
       const existingTask = tasks.find(
         (t) => t.date === dateStr && (t.categoryId === cat.id || t.title === cat.name)
@@ -324,24 +419,16 @@ export default function SocialMediaCalendarPage() {
       const userName = user?.displayName || (user as any)?.name || 'Staff User';
 
       if (existingTask) {
+        const nextState = !existingTask.isCompleted;
         const ref = doc(db, 'media_calendar_tasks', existingTask.id);
-        const currentVal = !!(existingTask as any)[field];
-        const newVal = !currentVal;
 
         const updateData: Record<string, any> = {
-          [field]: newVal,
+          isCompleted: nextState,
+          isCreated: nextState,
+          isUploaded: nextState,
         };
 
-        // Auto evaluate overall completed state
-        if (field === 'isCompleted') {
-          updateData.isCompleted = newVal;
-        } else {
-          const nextCreated = field === 'isCreated' ? newVal : !!existingTask.isCreated;
-          const nextUploaded = field === 'isUploaded' ? newVal : !!existingTask.isUploaded;
-          updateData.isCompleted = nextCreated && nextUploaded;
-        }
-
-        if (newVal) {
+        if (nextState) {
           updateData.completedAt = new Date().toISOString();
           updateData.completedBy = userName;
         }
@@ -351,9 +438,9 @@ export default function SocialMediaCalendarPage() {
         setTasks((prev) =>
           prev.map((t) => (t.id === existingTask.id ? { ...t, ...updateData } : t))
         );
-        toast.success(`${cat.name} [${dateStr}]: updated ✓`);
+        toast.success(`${cat.name} [${dateStr}]: ${nextState ? 'Completed ✓' : 'Marked Incomplete ✕'}`);
       } else {
-        // Create new task doc for this matrix cell
+        // Create new completed task doc for this cell
         const payload: Record<string, any> = {
           date: dateStr,
           categoryId: cat.id,
@@ -361,9 +448,9 @@ export default function SocialMediaCalendarPage() {
           title: cat.name,
           type: cat.type === 'video' ? 'video_create' : 'graphic_create',
           assignedRole: cat.defaultRole || 'all',
-          isCreated: field === 'isCreated',
-          isUploaded: field === 'isUploaded',
-          isCompleted: field === 'isCompleted' || (field === 'isCreated' && cat.type === 'graphic'),
+          isCreated: true,
+          isUploaded: true,
+          isCompleted: true,
           createdAt: new Date().toISOString(),
           completedAt: new Date().toISOString(),
           completedBy: userName,
@@ -371,10 +458,10 @@ export default function SocialMediaCalendarPage() {
 
         const docRef = await addDoc(collection(db, 'media_calendar_tasks'), payload);
         setTasks((prev) => [...prev, { id: docRef.id, ...payload } as MediaCalendarTask]);
-        toast.success(`${cat.name} marked for ${dateStr} ✓`);
+        toast.success(`${cat.name} marked Completed ✓ for ${dateStr}`);
       }
     } catch (err: any) {
-      console.error('Failed to toggle matrix checkbox:', err);
+      console.error('Failed to toggle matrix task:', err);
       toast.error('Failed to update task check state');
     }
   };
@@ -437,6 +524,8 @@ export default function SocialMediaCalendarPage() {
       
       const updateData: Record<string, any> = {
         isCompleted: updatedComplete,
+        isCreated: updatedComplete,
+        isUploaded: updatedComplete,
       };
 
       if (updatedComplete) {
@@ -447,9 +536,9 @@ export default function SocialMediaCalendarPage() {
       await updateDoc(ref, updateData);
 
       setTasks((prev) =>
-        prev.map((t) => (t.id === task.id ? { ...t, isCompleted: updatedComplete, ...(updatedComplete ? { completedAt: updateData.completedAt, completedBy: updateData.completedBy } : {}) } : t))
+        prev.map((t) => (t.id === task.id ? { ...t, ...updateData } : t))
       );
-      toast.success(updatedComplete ? 'Task marked as completed! ✓' : 'Task marked as pending');
+      toast.success(updatedComplete ? 'Task marked completed ✓' : 'Task marked incomplete ✕');
     } catch (err: any) {
       toast.error('Update failed: ' + err.message);
     }
@@ -470,8 +559,8 @@ export default function SocialMediaCalendarPage() {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
-          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Synchronizing Matrix Calendar Node...</p>
+          <Loader2 className="w-10 h-10 text-cyan-600 animate-spin" />
+          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Synchronizing Task Matrix & Animated Checkboxes...</p>
         </div>
       </div>
     );
@@ -480,7 +569,7 @@ export default function SocialMediaCalendarPage() {
   const tasksForSelectedDate = tasks.filter((t) => t.date === selectedDate);
 
   return (
-    <div className="space-y-8 pb-12 print:p-0 print:space-y-4">
+    <div className="space-y-6 sm:space-y-8 pb-12 print:p-0 print:space-y-4">
       {/* Printable CSS Rules */}
       <style jsx global>{`
         @media print {
@@ -520,47 +609,55 @@ export default function SocialMediaCalendarPage() {
         }
       `}</style>
 
-      {/* Header Banner */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 p-8 rounded-[2.5rem] border border-indigo-500/20 shadow-xl text-white print:hidden">
+      {/* Header Banner - Responsive for Mobile & Desktop */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 p-4 sm:p-6 lg:p-8 rounded-3xl sm:rounded-[2.5rem] border border-indigo-500/20 shadow-2xl text-white print:hidden">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] font-black uppercase tracking-wider border border-cyan-500/30">
-              Media Department Matrix
+              Interactive Media Calendar
             </span>
-            <span className="px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-black uppercase tracking-wider border border-indigo-500/30">
-              Printable Checklist Sheet
+            <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase tracking-wider border border-emerald-500/30 flex items-center gap-1">
+              <Check size={12} /> Tick & Cross Animation Enabled
             </span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-[1000] uppercase tracking-tight mt-3">
-            Social Media <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400">Task Matrix Sheet</span>
+          <h1 className="text-xl sm:text-3xl lg:text-4xl font-[1000] uppercase tracking-tight mt-3">
+            Social Media <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-300">Task Matrix Calendar</span>
           </h1>
-          <p className="text-indigo-200/70 text-xs md:text-sm font-medium mt-1">
-            Serial numbered content list (Rehab Video, Job Center Graphics, SPIMS Post) with daily checkboxes & A4 print design.
+          <p className="text-indigo-200/70 text-xs sm:text-sm font-medium mt-1">
+            Fully responsive on mobile & laptop. Track video creation, graphic posts, and social media releases with animated checkboxes.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Month picker */}
           <input
             type="month"
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="bg-white/10 border border-white/20 text-white font-bold text-xs rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-cyan-400/50 cursor-pointer"
+            className="w-full sm:w-auto bg-white/10 border border-white/20 text-white font-bold text-xs rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-cyan-400/50 cursor-pointer"
           />
 
           {/* View Mode Switcher */}
-          <div className="flex bg-white/10 p-1 rounded-xl border border-white/20">
+          <div className="w-full sm:w-auto flex bg-white/10 p-1 rounded-xl border border-white/20 overflow-x-auto">
             <button
               onClick={() => setViewMode('matrix')}
-              className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
                 viewMode === 'matrix' ? 'bg-cyan-500 text-white shadow-md' : 'text-indigo-200 hover:text-white'
               }`}
             >
               <CheckSquare size={14} /> Matrix Sheet
             </button>
             <button
+              onClick={() => setViewMode('mobile_cards')}
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                viewMode === 'mobile_cards' ? 'bg-cyan-500 text-white shadow-md' : 'text-indigo-200 hover:text-white'
+              }`}
+            >
+              <Smartphone size={14} /> Mobile Cards
+            </button>
+            <button
               onClick={() => setViewMode('monthly')}
-              className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap ${
                 viewMode === 'monthly' ? 'bg-cyan-500 text-white shadow-md' : 'text-indigo-200 hover:text-white'
               }`}
             >
@@ -568,7 +665,7 @@ export default function SocialMediaCalendarPage() {
             </button>
             <button
               onClick={() => setViewMode('weekly')}
-              className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap ${
                 viewMode === 'weekly' ? 'bg-cyan-500 text-white shadow-md' : 'text-indigo-200 hover:text-white'
               }`}
             >
@@ -580,85 +677,92 @@ export default function SocialMediaCalendarPage() {
           <button
             type="button"
             onClick={() => window.print()}
-            className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
+            className="w-full sm:w-auto px-4 sm:px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
           >
             <Printer size={15} /> Print Sheet
           </button>
         </div>
       </div>
 
-      {/* Analytics Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 print:hidden">
-        <div className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm text-center">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Checklist Progress</p>
-          <p className="text-2xl sm:text-3xl font-[1000] text-indigo-600">{analytics.completionRate}%</p>
+      {/* Analytics Summary Cards - Fully Mobile Responsive */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 print:hidden">
+        <div className="bg-white border border-gray-100 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm text-center">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Checklist Rate</p>
+          <p className="text-xl sm:text-3xl font-[1000] text-indigo-600">{analytics.completionRate}%</p>
           <p className="text-[10px] font-bold text-slate-400 mt-1">{analytics.completed} of {analytics.total} Done</p>
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm text-center">
+        <div className="bg-white border border-gray-100 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm text-center">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Videos Created</p>
-          <p className="text-2xl sm:text-3xl font-[1000] text-blue-600">{analytics.videoCreateDone} / {analytics.videoCreateTotal}</p>
+          <p className="text-xl sm:text-3xl font-[1000] text-blue-600">{analytics.videoCreateDone} / {analytics.videoCreateTotal}</p>
           <p className="text-[10px] font-bold text-slate-400 mt-1">Editor Workload</p>
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm text-center">
+        <div className="bg-white border border-gray-100 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm text-center">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Videos Uploaded</p>
-          <p className="text-2xl sm:text-3xl font-[1000] text-indigo-600">{analytics.videoUploadDone} / {analytics.videoUploadTotal}</p>
+          <p className="text-xl sm:text-3xl font-[1000] text-indigo-600">{analytics.videoUploadDone} / {analytics.videoUploadTotal}</p>
           <p className="text-[10px] font-bold text-slate-400 mt-1">Published Videos</p>
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm text-center">
+        <div className="bg-white border border-gray-100 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm text-center">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Graphics Created</p>
-          <p className="text-2xl sm:text-3xl font-[1000] text-purple-600">{analytics.graphicCreateDone} / {analytics.graphicCreateTotal}</p>
+          <p className="text-xl sm:text-3xl font-[1000] text-purple-600">{analytics.graphicCreateDone} / {analytics.graphicCreateTotal}</p>
           <p className="text-[10px] font-bold text-slate-400 mt-1">Designer Workload</p>
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm text-center col-span-2 lg:col-span-1">
+        <div className="bg-white border border-gray-100 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-sm text-center col-span-2 sm:col-span-1">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Graphics Uploaded</p>
-          <p className="text-2xl sm:text-3xl font-[1000] text-pink-600">{analytics.graphicUploadDone} / {analytics.graphicUploadTotal}</p>
+          <p className="text-xl sm:text-3xl font-[1000] text-pink-600">{analytics.graphicUploadDone} / {analytics.graphicUploadTotal}</p>
           <p className="text-[10px] font-bold text-slate-400 mt-1">Published Posts</p>
         </div>
       </div>
 
-      {/* MATRIX CHECKSHEET VIEW (Serial Numbered Printable Grid) */}
+      {/* MATRIX CHECKSHEET VIEW (Sticky Columns for Mobile & Laptop + Animated Checkbox) */}
       {viewMode === 'matrix' && (
-        <div className="bg-white border border-gray-100 rounded-[2.5rem] p-6 shadow-sm space-y-6 print:border-none print:shadow-none print:p-0">
+        <div className="bg-white border border-gray-100 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 shadow-sm space-y-4 sm:space-y-6 print:border-none print:shadow-none print:p-0">
           
           {/* Controls Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4 print:hidden">
             <div>
-              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
                 <CheckSquare className="text-cyan-600" size={20} />
-                Content Task Matrix Sheet ({new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })})
+                Content Task Matrix ({new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })})
               </h2>
               <p className="text-xs text-slate-400 font-medium mt-0.5">
-                Serial numbered task checklist across all days. Click boxes to mark Created (C) or Uploaded (U).
+                Sticky task column on mobile. Tap any checkbox to toggle Tick (✓) or Cross (✕) animation.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               {/* Range Filter */}
-              <div className="flex bg-slate-100 p-1 rounded-xl text-xs font-bold">
+              <div className="flex bg-slate-100 p-1 rounded-xl text-[10px] sm:text-xs font-bold overflow-x-auto w-full sm:w-auto">
                 <button
                   type="button"
-                  onClick={() => setMatrixRange('full')}
-                  className={`px-3 py-1.5 rounded-lg transition-all ${matrixRange === 'full' ? 'bg-white text-indigo-600 shadow-xs font-black' : 'text-slate-500'}`}
+                  onClick={() => setMatrixRange('week')}
+                  className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${matrixRange === 'week' ? 'bg-white text-indigo-600 shadow-xs font-black' : 'text-slate-500'}`}
                 >
-                  Full Month (1-{daysInSelectedMonth.length})
+                  7 Days (Mobile)
                 </button>
                 <button
                   type="button"
                   onClick={() => setMatrixRange('half1')}
-                  className={`px-3 py-1.5 rounded-lg transition-all ${matrixRange === 'half1' ? 'bg-white text-indigo-600 shadow-xs font-black' : 'text-slate-500'}`}
+                  className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${matrixRange === 'half1' ? 'bg-white text-indigo-600 shadow-xs font-black' : 'text-slate-500'}`}
                 >
-                  1st Half (1-15)
+                  1-15
                 </button>
                 <button
                   type="button"
                   onClick={() => setMatrixRange('half2')}
-                  className={`px-3 py-1.5 rounded-lg transition-all ${matrixRange === 'half2' ? 'bg-white text-indigo-600 shadow-xs font-black' : 'text-slate-500'}`}
+                  className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${matrixRange === 'half2' ? 'bg-white text-indigo-600 shadow-xs font-black' : 'text-slate-500'}`}
                 >
-                  2nd Half (16-{daysInSelectedMonth.length})
+                  16-{daysInSelectedMonth.length}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMatrixRange('full')}
+                  className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${matrixRange === 'full' ? 'bg-white text-indigo-600 shadow-xs font-black' : 'text-slate-500'}`}
+                >
+                  Full Month
                 </button>
               </div>
 
@@ -666,7 +770,7 @@ export default function SocialMediaCalendarPage() {
               <button
                 type="button"
                 onClick={() => setShowAddCategoryModal(true)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
               >
                 <Plus size={14} /> Add Content Task Row
               </button>
@@ -689,15 +793,15 @@ export default function SocialMediaCalendarPage() {
             </div>
           </div>
 
-          {/* Table Container */}
-          <div className="matrix-table-container overflow-x-auto w-full border border-gray-200 rounded-2xl print:border-black">
+          {/* Table Container with Sticky Task Name Column */}
+          <div className="matrix-table-container overflow-x-auto w-full border border-gray-200 rounded-2xl print:border-black shadow-inner">
             <table className="matrix-table min-w-full divide-y divide-gray-200 text-xs border-collapse">
               <thead className="bg-slate-900 text-white font-black text-[10px] uppercase tracking-wider print:bg-gray-100 print:text-black">
                 <tr>
-                  <th scope="col" className="px-3 py-3 text-center border-r border-slate-700 w-12 print:border-black print:w-8">
+                  <th scope="col" className="px-2 sm:px-3 py-3 text-center border-r border-slate-700 w-10 sticky left-0 z-20 bg-slate-900 print:border-black print:w-8 print:static">
                     S.No
                   </th>
-                  <th scope="col" className="px-4 py-3 text-left border-r border-slate-700 min-w-[220px] print:border-black print:min-w-[150px]">
+                  <th scope="col" className="px-3 sm:px-4 py-3 text-left border-r border-slate-700 min-w-[160px] sm:min-w-[220px] sticky left-10 z-20 bg-slate-900 print:border-black print:min-w-[140px] print:static">
                     Content Task / Channel
                   </th>
                   {matrixDays.map((dayStr) => {
@@ -708,19 +812,19 @@ export default function SocialMediaCalendarPage() {
                       <th
                         key={dayStr}
                         scope="col"
-                        className={`px-1.5 py-2 text-center border-r border-slate-700 min-w-[42px] ${
-                          isToday ? 'bg-cyan-600 text-white font-black' : ''
+                        className={`px-2 py-2 text-center border-r border-slate-700 min-w-[50px] sm:min-w-[60px] ${
+                          isToday ? 'bg-cyan-600 text-white font-black ring-2 ring-cyan-400' : ''
                         } print:border-black print:min-w-[24px]`}
                       >
                         <div className="leading-tight">
                           <span className="block text-[8px] opacity-75 font-semibold uppercase">{dayOfWeek}</span>
-                          <span className="text-xs font-bold">{dayNum}</span>
+                          <span className="text-xs sm:text-sm font-bold">{dayNum}</span>
                         </div>
                       </th>
                     );
                   })}
-                  <th scope="col" className="px-3 py-3 text-center w-16 print:border-black print:hidden">
-                    Actions
+                  <th scope="col" className="px-3 py-3 text-center w-14 print:border-black print:hidden">
+                    Del
                   </th>
                 </tr>
               </thead>
@@ -735,71 +839,46 @@ export default function SocialMediaCalendarPage() {
                   categories.map((cat, idx) => {
                     return (
                       <tr key={cat.id} className="hover:bg-slate-50/80 transition-colors">
-                        {/* Serial Number */}
-                        <td className="px-2 py-2.5 text-center font-black text-slate-500 border-r border-gray-200 print:border-black print:text-black">
+                        {/* Serial Number (Sticky Left) */}
+                        <td className="px-2 py-3 text-center font-black text-slate-500 border-r border-gray-200 sticky left-0 z-10 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] print:border-black print:text-black print:static print:shadow-none">
                           {cat.serialNo || idx + 1}
                         </td>
 
-                        {/* Category / Task Title */}
-                        <td className="px-4 py-2.5 font-bold text-gray-900 border-r border-gray-200 print:border-black">
+                        {/* Category / Task Title (Sticky Left) */}
+                        <td className="px-3 sm:px-4 py-3 font-bold text-gray-900 border-r border-gray-200 sticky left-10 z-10 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] print:border-black print:static print:shadow-none">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="truncate">{cat.name}</span>
+                            <span className="truncate max-w-[130px] sm:max-w-[180px]">{cat.name}</span>
                             <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200 print:hidden shrink-0">
                               {cat.defaultRole || 'all'}
                             </span>
                           </div>
                         </td>
 
-                        {/* Daily Status Cells */}
+                        {/* Daily Status Cells with Animated Checkbox */}
                         {matrixDays.map((dayStr) => {
                           const task = tasks.find(
                             (t) => t.date === dayStr && (t.categoryId === cat.id || t.title === cat.name)
                           );
-                          const isCreated = !!task?.isCreated;
-                          const isUploaded = !!task?.isUploaded;
                           const isCompleted = !!task?.isCompleted;
 
                           return (
                             <td
                               key={dayStr}
-                              className={`px-1 py-1.5 text-center border-r border-gray-200 transition-colors relative print:border-black ${
-                                isCompleted ? 'bg-emerald-50/50 print:bg-transparent' : isCreated ? 'bg-blue-50/30 print:bg-transparent' : ''
+                              className={`px-1.5 py-2 text-center border-r border-gray-200 transition-colors relative print:border-black ${
+                                isCompleted ? 'bg-emerald-50/40 print:bg-transparent' : ''
                               }`}
                             >
-                              {/* Screen View Interactive Checkboxes */}
+                              {/* Screen View Interactive Animated Checkbox */}
                               <div className="flex flex-col items-center justify-center gap-1 print:hidden">
-                                <div className="flex items-center gap-1">
-                                  {/* C: Created Checkbox */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleMatrixCheckbox(dayStr, cat, 'isCreated')}
-                                    className={`w-5 h-5 rounded flex items-center justify-center font-black text-[9px] border transition-all cursor-pointer ${
-                                      isCreated
-                                        ? 'bg-blue-600 text-white border-blue-700 shadow-2xs'
-                                        : 'bg-white text-slate-400 border-gray-300 hover:border-blue-400'
-                                    }`}
-                                    title={`Toggle Created for ${cat.name} on ${dayStr}`}
-                                  >
-                                    C
-                                  </button>
-
-                                  {/* U: Uploaded Checkbox */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleMatrixCheckbox(dayStr, cat, 'isUploaded')}
-                                    className={`w-5 h-5 rounded flex items-center justify-center font-black text-[9px] border transition-all cursor-pointer ${
-                                      isUploaded
-                                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-2xs'
-                                        : 'bg-white text-slate-400 border-gray-300 hover:border-emerald-400'
-                                    }`}
-                                    title={`Toggle Uploaded for ${cat.name} on ${dayStr}`}
-                                  >
-                                    U
-                                  </button>
-                                </div>
+                                <AnimatedTickCrossCheckbox
+                                  checked={isCompleted}
+                                  onToggle={() => handleToggleMatrixTask(dayStr, cat)}
+                                  size="md"
+                                  title={`${cat.name} (${dayStr}): ${isCompleted ? 'Completed ✓ (Click to uncheck)' : 'Incomplete ✕ (Click to tick)'}`}
+                                />
 
                                 {task?.completedBy && (
-                                  <span className="text-[7px] font-bold text-slate-400 truncate max-w-[36px]" title={`Done by ${task.completedBy}`}>
+                                  <span className="text-[7px] font-bold text-emerald-700 bg-emerald-100/60 px-1 py-0.2 rounded truncate max-w-[42px]" title={`Completed by ${task.completedBy}`}>
                                     {task.completedBy.split(' ')[0]}
                                   </span>
                                 )}
@@ -807,7 +886,7 @@ export default function SocialMediaCalendarPage() {
 
                               {/* Paper Print View Checkbox Indicator */}
                               <div className="hidden print:flex items-center justify-center font-mono font-bold text-xs">
-                                {isCompleted ? '[✓]' : isCreated ? '[C]' : '[ ]'}
+                                {isCompleted ? '[✓]' : '[ ]'}
                               </div>
                             </td>
                           );
@@ -818,7 +897,7 @@ export default function SocialMediaCalendarPage() {
                           <button
                             type="button"
                             onClick={() => handleDeleteCategory(cat.id, cat.name)}
-                            className="p-1 text-slate-300 hover:text-rose-500 transition-colors cursor-pointer"
+                            className="p-1.5 text-slate-300 hover:text-rose-500 rounded-lg transition-colors cursor-pointer"
                             title="Delete Row"
                           >
                             <Trash2 size={14} />
@@ -855,19 +934,95 @@ export default function SocialMediaCalendarPage() {
         </div>
       )}
 
+      {/* MOBILE CARDS CHECKLIST VIEW (Ultra Touch Friendly for Mobile Phones) */}
+      {viewMode === 'mobile_cards' && (
+        <div className="space-y-6 print:hidden">
+          <div className="bg-white border border-gray-100 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+              <div>
+                <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                  <Smartphone className="text-cyan-600" size={20} />
+                  Mobile Card Checklist ({selectedDate})
+                </h2>
+                <p className="text-xs text-slate-400 font-medium mt-0.5">
+                  Large touch targets designed specifically for smartphone screens.
+                </p>
+              </div>
+
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="bg-slate-50 border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-cyan-500/20"
+              />
+            </div>
+
+            {/* Content Categories Cards for Selected Date */}
+            <div className="space-y-3">
+              {categories.map((cat, idx) => {
+                const task = tasks.find(
+                  (t) => t.date === selectedDate && (t.categoryId === cat.id || t.title === cat.name)
+                );
+                const isCompleted = !!task?.isCompleted;
+
+                return (
+                  <div
+                    key={cat.id}
+                    className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
+                      isCompleted
+                        ? 'bg-emerald-50/60 border-emerald-200 shadow-xs'
+                        : 'bg-white border-gray-100 hover:border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center font-black text-xs text-slate-500 shrink-0">
+                        #{cat.serialNo || idx + 1}
+                      </div>
+                      <div className="min-w-0">
+                        <p className={`font-bold text-sm text-gray-900 truncate ${isCompleted ? 'line-through opacity-70' : ''}`}>
+                          {cat.name}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">
+                            Role: {cat.defaultRole || 'all'}
+                          </span>
+                          {task?.completedBy && (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">
+                              Done by {task.completedBy}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0">
+                      <AnimatedTickCrossCheckbox
+                        checked={isCompleted}
+                        onToggle={() => handleToggleMatrixTask(selectedDate, cat)}
+                        size="lg"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MONTHLY GRID VIEW (Standard Calendar Layout) */}
       {viewMode === 'monthly' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 print:hidden">
-          <div className="lg:col-span-7 bg-white border border-gray-100 rounded-[2.5rem] p-6 shadow-sm space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 print:hidden">
+          <div className="lg:col-span-7 bg-white border border-gray-100 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 shadow-sm space-y-6">
             <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                 <CalendarIcon className="text-cyan-600" size={20} />
                 Month Grid Calendar ({selectedMonth})
               </h2>
-              <span className="text-xs font-semibold text-slate-400">Click any day to view or schedule tasks</span>
+              <span className="text-[10px] sm:text-xs font-semibold text-slate-400">Click any day to view or schedule tasks</span>
             </div>
 
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
               {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((w) => (
                 <div key={w} className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest py-2">
                   {w}
@@ -876,7 +1031,7 @@ export default function SocialMediaCalendarPage() {
 
               {calendarGridCells.map((dateStr, idx) => {
                 if (!dateStr) {
-                  return <div key={`empty-${idx}`} className="aspect-square bg-slate-50/50 rounded-2xl" />;
+                  return <div key={`empty-${idx}`} className="aspect-square bg-slate-50/50 rounded-xl sm:rounded-2xl" />;
                 }
 
                 const dayNum = parseInt(dateStr.split('-')[2], 10);
@@ -889,7 +1044,7 @@ export default function SocialMediaCalendarPage() {
                     key={dateStr}
                     type="button"
                     onClick={() => setSelectedDate(dateStr)}
-                    className={`aspect-square rounded-2xl p-2 flex flex-col justify-between text-left transition-all border relative cursor-pointer ${
+                    className={`aspect-square rounded-xl sm:rounded-2xl p-1.5 sm:p-2 flex flex-col justify-between text-left transition-all border relative cursor-pointer ${
                       isSelected
                         ? 'border-cyan-500 bg-cyan-50/40 ring-2 ring-cyan-500/30 scale-105 z-10 shadow-md'
                         : 'border-gray-100 hover:border-gray-300 hover:bg-slate-50'
@@ -897,19 +1052,19 @@ export default function SocialMediaCalendarPage() {
                   >
                     <span className="text-xs font-bold text-gray-800">{dayNum}</span>
                     {dayTasks.length > 0 ? (
-                      <div className="space-y-1">
+                      <div className="space-y-0.5 sm:space-y-1">
                         <div className="flex gap-0.5">
                           {dayTasks.slice(0, 3).map((t) => (
                             <span
                               key={t.id}
-                              className={`w-2 h-2 rounded-full ${
+                              className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
                                 t.isCompleted ? 'bg-emerald-500' : 'bg-amber-400'
                               }`}
                             />
                           ))}
                           {dayTasks.length > 3 && <span className="text-[8px] font-bold text-slate-400">+</span>}
                         </div>
-                        <p className="text-[9px] font-extrabold text-cyan-700 truncate">{completedCount}/{dayTasks.length} Done</p>
+                        <p className="text-[8px] sm:text-[9px] font-extrabold text-cyan-700 truncate">{completedCount}/{dayTasks.length} Done</p>
                       </div>
                     ) : (
                       <span className="text-[9px] text-slate-300 font-semibold">—</span>
@@ -922,10 +1077,10 @@ export default function SocialMediaCalendarPage() {
 
           {/* Side Panel for Single Date Tasks */}
           <div className="lg:col-span-5 space-y-6">
-            <div className="bg-white border border-gray-100 rounded-[2.5rem] p-6 shadow-sm space-y-6">
+            <div className="bg-white border border-gray-100 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 shadow-sm space-y-6">
               <div className="flex items-center justify-between border-b border-gray-100 pb-4">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Daily Scheduled Tasks</h3>
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900">Daily Scheduled Tasks</h3>
                   <p className="text-xs font-semibold text-cyan-600 mt-0.5">Selected Date: {selectedDate}</p>
                 </div>
                 <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-black">
@@ -1039,42 +1194,17 @@ export default function SocialMediaCalendarPage() {
                         t.isCompleted ? 'bg-emerald-50/40 border-emerald-100' : 'bg-white border-gray-100'
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleTaskComplete(t)}
-                          className={`p-1 rounded-lg transition-colors cursor-pointer ${
-                            t.isCompleted ? 'text-emerald-600 hover:text-emerald-700' : 'text-slate-300 hover:text-slate-500'
-                          }`}
-                        >
-                          {t.isCompleted ? <CheckCircle2 size={20} /> : <Circle size={20} />}
-                        </button>
-                        <div className="min-w-0">
-                          <p className={`font-bold text-xs text-gray-900 truncate ${t.isCompleted ? 'line-through opacity-60' : ''}`}>
-                            {t.title}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase">
-                              Role: {t.assignedRole}
-                            </span>
-                            {t.assignedStaffName && (
-                              <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                                Assigned to: {t.assignedStaffName}
-                              </span>
-                            )}
-                            {t.isCompleted && t.completedBy && (
-                              <span className="text-[9px] font-bold text-emerald-600">
-                                • Done by {t.completedBy}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                      <AnimatedTickCrossCheckbox
+                        checked={t.isCompleted}
+                        onToggle={() => handleToggleTaskComplete(t)}
+                        label={t.title}
+                        subLabel={`Role: ${t.assignedRole}${t.assignedStaffName ? ` • ${t.assignedStaffName}` : ''}`}
+                      />
 
                       <button
                         type="button"
                         onClick={() => handleDeleteTask(t.id)}
-                        className="p-1.5 text-slate-300 hover:text-rose-500 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-slate-300 hover:text-rose-500 rounded-lg transition-colors cursor-pointer shrink-0"
                         title="Delete Task"
                       >
                         <Trash2 size={16} />
@@ -1094,13 +1224,13 @@ export default function SocialMediaCalendarPage() {
 
       {/* WEEKLY VIEW */}
       {viewMode === 'weekly' && (
-        <div className="bg-white border border-gray-100 rounded-[2.5rem] p-6 shadow-sm space-y-6 print:hidden">
+        <div className="bg-white border border-gray-100 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 shadow-sm space-y-6 print:hidden">
           <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
               <Clock className="text-cyan-600" size={20} />
               Weekly Task View (Week of {selectedDate})
             </h2>
-            <span className="text-xs font-semibold text-slate-400">Click any day to select</span>
+            <span className="text-[10px] sm:text-xs font-semibold text-slate-400">Click any day to select</span>
           </div>
 
           <div className="space-y-3">
