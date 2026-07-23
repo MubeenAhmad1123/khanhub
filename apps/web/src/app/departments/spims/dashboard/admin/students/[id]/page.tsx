@@ -496,6 +496,9 @@ export default function AdminStudentProfilePage() {
         <ProfileHeader
           student={student}
           onGenerateReport={() => setShowReportModal(true)}
+          onPhotoUpdated={(photoUrl: string) => {
+            setStudent((prev: any) => (prev ? { ...prev, photoUrl } : null));
+          }}
         />
         {/* Edit Status Button */}
         <div className="mt-4 flex justify-center">

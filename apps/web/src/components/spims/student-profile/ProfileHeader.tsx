@@ -1,18 +1,66 @@
 // src/components/spims/student-profile/ProfileHeader.tsx
 'use client';
 
-import React from 'react';
-import { User, Wallet, Calendar, GraduationCap, Phone, FileText } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { User, Wallet, Calendar, GraduationCap, Phone, FileText, Camera, Loader2 } from 'lucide-react';
 import type { SpimsStudent } from '@/types/spims';
 import { formatDateDMY } from '@/lib/utils';
+import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
+import { doc, updateDoc, query, collection, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { toast } from 'react-hot-toast';
 
 interface ProfileHeaderProps {
   student: SpimsStudent;
   onGenerateReport?: () => void;
+  onPhotoUpdated?: (url: string) => void;
 }
 
-export default function ProfileHeader({ student, onGenerateReport }: ProfileHeaderProps): any {
+export default function ProfileHeader({ student, onGenerateReport, onPhotoUpdated }: ProfileHeaderProps): any {
   const totalPkg = Number(student.totalPackage) || 0;
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !student?.id) return;
+
+    const loadingToast = toast.loading('Uploading profile picture...');
+    setUploading(true);
+    try {
+      const url = await uploadToCloudinary(file, 'khanhub/spims/students');
+
+      // Update main student document
+      await updateDoc(doc(db, 'spims_students', student.id), {
+        photoUrl: url
+      });
+
+      // Also update linked spims_users account if present
+      try {
+        const userQ = query(collection(db, 'spims_users'), where('studentId', '==', student.id));
+        const userSnap = await getDocs(userQ);
+        userSnap.docs.forEach(d => {
+          updateDoc(doc(db, 'spims_users', d.id), { photoUrl: url }).catch(() => {});
+        });
+      } catch (err) {
+        console.warn('Could not sync photoUrl to spims_users:', err);
+      }
+
+      toast.success('Profile picture updated successfully!');
+      if (onPhotoUpdated) {
+        onPhotoUpdated(url);
+      }
+    } catch (err) {
+      console.error('Photo upload failed:', err);
+      toast.error('Failed to upload profile picture');
+    } finally {
+      setUploading(false);
+      toast.dismiss(loadingToast);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   return (
     <div className="relative overflow-hidden rounded-2xl md:rounded-[2.5rem] bg-white border border-gray-100 shadow-xl shadow-gray-200/50">
@@ -24,13 +72,40 @@ export default function ProfileHeader({ student, onGenerateReport }: ProfileHead
         <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start text-center md:text-left">
           {/* Avatar Section */}
           <div className="relative group shrink-0">
-            <div className="w-24 h-24 md:w-32 md:h-32 rounded-[2rem] bg-gradient-to-br from-[#1D9E75] to-teal-700 flex items-center justify-center text-white shadow-2xl shadow-[#1D9E75]/30 transform group-hover:rotate-3 transition-transform duration-500">
-              {student.name ? (
+            <div className="w-24 h-24 md:w-32 md:h-32 rounded-[2rem] bg-gradient-to-br from-[#1D9E75] to-teal-700 flex items-center justify-center text-white shadow-2xl shadow-[#1D9E75]/30 transform group-hover:rotate-1 transition-transform duration-500 overflow-hidden relative">
+              {student.photoUrl ? (
+                <img src={student.photoUrl} alt={student.name} className="w-full h-full object-cover" />
+              ) : student.name ? (
                 <span className="text-3xl md:text-5xl font-black">{student.name.charAt(0)}</span>
               ) : (
                 <User size={48} />
               )}
+
+              {uploading && (
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-white animate-spin" />
+                </div>
+              )}
             </div>
+
+            {/* Camera Button to Upload DP */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="absolute -bottom-2 -left-2 bg-white p-2.5 rounded-xl shadow-lg border border-gray-100 text-gray-600 hover:text-[#1D9E75] hover:scale-110 active:scale-95 transition-all cursor-pointer z-10"
+              title="Upload Profile Photo (DP)"
+            >
+              <Camera size={16} />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoUpload}
+            />
+
             <div className="absolute -bottom-2 -right-2 bg-white p-1.5 md:p-2 rounded-xl shadow-lg border border-gray-50">
               <div className="bg-gray-100 px-2 py-0.5 md:py-1 rounded-lg text-[8px] md:text-[9px] font-black text-gray-500 uppercase tracking-widest">
                 ID: {student.rollNo}

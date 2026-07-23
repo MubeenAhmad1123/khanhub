@@ -1473,6 +1473,11 @@ export default function PatientDetailPage() {
     dischargeDate: string;
   }, photoFile: File | null) => {
     try {
+      if (!patient) {
+        toast.error('Patient data not loaded yet');
+        return;
+      }
+
       let photoUrl = form.photoUrl;
 
       if (photoFile) {
@@ -1488,7 +1493,7 @@ export default function PatientDetailPage() {
       const monthlyPkg = Number(form.packageAmount);
 
       const admission = new Date(form.admissionDate);
-      const endDate = patient.isActive === false && form.dischargeDate
+      const endDate = patient?.isActive === false && form.dischargeDate
         ? new Date(form.dischargeDate)
         : new Date();
 
@@ -1516,7 +1521,7 @@ export default function PatientDetailPage() {
       const dueTillDate = billableMonths * monthlyPkg;
 
       let historicalStayPackage = 0;
-      const history = patient.rejoinHistory || [];
+      const history = patient?.rejoinHistory || [];
       history.forEach((stay: any) => {
         let sAdmission = new Date();
         const sa = stay.admissionDate;
@@ -1566,10 +1571,10 @@ export default function PatientDetailPage() {
       });
 
       const totalStayPackage = dueTillDate + historicalStayPackage;
-      const finalMedicineCharges = patient.medicineCharges || 0;
-      const overallReceivedVal = patient.overallReceived || 0;
-      const totalDiscountVal = Number(patient.totalDiscount || 0);
-      const manualAdjustmentVal = Number(patient.manualRemainingAdjustment || 0);
+      const finalMedicineCharges = patient?.medicineCharges || 0;
+      const overallReceivedVal = patient?.overallReceived || 0;
+      const totalDiscountVal = Number(patient?.totalDiscount || 0);
+      const manualAdjustmentVal = Number(patient?.manualRemainingAdjustment || 0);
       
       const overallRemaining = Math.max(0, (totalStayPackage + finalMedicineCharges) - overallReceivedVal - totalDiscountVal + manualAdjustmentVal);
 
@@ -1619,7 +1624,7 @@ export default function PatientDetailPage() {
       toast.error('Failed to update profile');
       throw error;
     }
-  }, [patientId]);
+  }, [patient, patientId]);
 
   const handleCancelEdit = useCallback(() => {
     setIsEditing(false);
