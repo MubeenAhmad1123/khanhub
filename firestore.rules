@@ -1275,6 +1275,19 @@ service cloud.firestore {
       allow delete: if isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId();
     }
 
+    // hq_transactions — HQ Head Office transactions
+    match /hq_transactions/{docId} {
+      allow read: if isHqTier1();
+      allow create: if isHqCashier() || isHqSuperOrManager();
+      allow update: if isHqSuperOrManager()
+        || (
+          isHqCashier()
+          && resource.data.status == 'pending_cashier'
+          && (request.resource.data.status == 'pending' || request.resource.data.status == 'rejected_cashier')
+        );
+      allow delete: if isHqSuperAdmin() || (isHqCashier() && resource.data.status == 'pending' && resource.data.cashierId == hqCustomId());
+    }
+
     // hq_fees — global fee records (direct HQ collections)
     match /hq_fees/{docId} {
       allow read: if isHqSuperOrManager() || isHqCashier();
