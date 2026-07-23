@@ -18,6 +18,43 @@ export interface UploadProgress {
 }
 
 /**
+ * Client-side helper to convert any image (JPEG, PNG, GIF, etc.) into WebP format
+ */
+async function convertImageToWebP(file: File): Promise<File> {
+    if (file.type === 'image/webp') return file;
+    return new Promise((resolve) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                resolve(file);
+                return;
+            }
+            ctx.drawImage(img, 0, 0);
+            canvas.toBlob((blob) => {
+                if (!blob) {
+                    resolve(file);
+                    return;
+                }
+                const webpName = file.name.replace(/\.[^/.]+$/, '') + '.webp';
+                const webpFile = new File([blob], webpName, { type: 'image/webp' });
+                resolve(webpFile);
+            }, 'image/webp', 0.85);
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            resolve(file);
+        };
+        img.src = url;
+    });
+}
+
+/**
  * Upload image, video, or document to Cloudinary
  */
 export async function uploadToCloudinary(
@@ -35,28 +72,42 @@ export async function uploadToCloudinary(
         );
     }
 
+    let fileToUpload = file;
+
     // Determine actual resource type
     let actualType = resourceType;
     if (actualType === 'auto') {
-        if (file.type.startsWith('video/')) actualType = 'video';
-        else if (file.type.startsWith('image/')) {
-            if (file.type !== 'image/webp') {
-                throw new Error('Only .webp image format is allowed for security and optimization.');
-            }
+        if (file.type.startsWith('video/')) {
+            actualType = 'video';
+        } else if (file.type.startsWith('image/')) {
             actualType = 'image';
+            // Automatically convert any image to optimized WebP format
+            try {
+                fileToUpload = await convertImageToWebP(file);
+            } catch (e) {
+                console.warn('WebP conversion fallback to original file format:', e);
+            }
+        } else if (file.type === 'application/pdf') {
+            actualType = 'image'; // PDF viewing works best as image resource layer
+        } else {
+            actualType = 'raw';
         }
-        else if (file.type === 'application/pdf') actualType = 'image'; // PDF viewing works best as image resource layer
-        else actualType = 'raw';
+    } else if (actualType === 'image' && file.type.startsWith('image/')) {
+        try {
+            fileToUpload = await convertImageToWebP(file);
+        } catch (e) {
+            console.warn('WebP conversion fallback:', e);
+        }
     }
 
     try {
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', fileToUpload);
         formData.append('upload_preset', uploadPreset);
         formData.append('folder', folder);
 
         const timestamp = Date.now();
-        const sanitizedName = file.name.replace(/[^a-zA-Z0-9]/g, '_');
+        const sanitizedName = fileToUpload.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const fileName = `${timestamp}_${sanitizedName}`;
         formData.append('public_id', fileName);
 
