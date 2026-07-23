@@ -11,7 +11,7 @@ import {
   Calendar as CalendarIcon, Clock, CheckCircle2, Circle, Plus, Trash2, Video,
   Image as ImageIcon, Upload, Sparkles, TrendingUp, Filter, ChevronLeft, ChevronRight,
   Loader2, User, Layers, CheckSquare, BarChart3, Users, Printer, Edit3, Save, X, FileText,
-  Smartphone, Monitor, ListChecks, Check, AlertCircle
+  Smartphone, Monitor, ListChecks, Check
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -112,7 +112,7 @@ function AnimatedTickCrossCheckbox({
       type="button"
       onClick={handleClick}
       disabled={disabled}
-      title={title || (checked ? 'Click to uncheck (Cross ✕)' : 'Click to complete (Tick ✓)')}
+      title={title || (checked ? 'Click to mark Incomplete (Cross ✕)' : 'Click to complete (Tick ✓)')}
       className={`group relative flex items-center gap-2 rounded-xl transition-all duration-200 select-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-400/50 ${
         disabled ? 'opacity-50 cursor-not-allowed' : 'active:scale-90 hover:scale-105'
       }`}
@@ -121,7 +121,7 @@ function AnimatedTickCrossCheckbox({
         className={`${boxSizes} rounded-xl flex items-center justify-center font-black transition-all duration-300 border ${
           checked
             ? 'bg-gradient-to-br from-emerald-500 via-teal-500 to-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-500/30 ring-2 ring-emerald-400/30'
-            : 'bg-white text-slate-300 border-slate-300 hover:border-rose-400 hover:bg-rose-50/60 shadow-xs'
+            : 'bg-white text-rose-500 border-slate-300 hover:border-rose-400 hover:bg-rose-50/60 shadow-xs'
         } ${animatingState === 'tick' ? 'animate-bounce ring-4 ring-emerald-300/50 scale-110' : ''} ${
           animatingState === 'cross' ? 'animate-pulse ring-4 ring-rose-300/50 scale-95' : ''
         }`}
@@ -570,12 +570,13 @@ export default function SocialMediaCalendarPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-12 print:p-0 print:space-y-4">
-      {/* Printable CSS Rules */}
+      {/* Printable CSS Rules for A4 Paper Output */}
       <style jsx global>{`
         @media print {
           body {
             background: white !important;
             color: black !important;
+            font-family: Arial, sans-serif !important;
           }
           header, footer, nav, .print\\:hidden {
             display: none !important;
@@ -594,6 +595,7 @@ export default function SocialMediaCalendarPage() {
           }
           .matrix-table-container {
             overflow: visible !important;
+            border: 1px solid #000 !important;
           }
           .matrix-table {
             border-collapse: collapse !important;
@@ -605,6 +607,18 @@ export default function SocialMediaCalendarPage() {
             padding: 3px 2px !important;
             text-align: center !important;
             color: #000 !important;
+          }
+          .print-checkbox {
+            width: 12px !important;
+            height: 12px !important;
+            border: 1px solid #000 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-weight: bold !important;
+            font-size: 9px !important;
+            margin: 0 auto !important;
+            border-radius: 1px !important;
           }
         }
       `}</style>
@@ -717,7 +731,7 @@ export default function SocialMediaCalendarPage() {
         </div>
       </div>
 
-      {/* MATRIX CHECKSHEET VIEW (Sticky Columns for Mobile & Laptop + Animated Checkbox) */}
+      {/* MATRIX CHECKSHEET VIEW (Sticky Columns for Mobile & Laptop + Printable Empty/Ticked Checkboxes) */}
       {viewMode === 'matrix' && (
         <div className="bg-white border border-gray-100 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 shadow-sm space-y-4 sm:space-y-6 print:border-none print:shadow-none print:p-0">
           
@@ -854,7 +868,7 @@ export default function SocialMediaCalendarPage() {
                           </div>
                         </td>
 
-                        {/* Daily Status Cells with Animated Checkbox */}
+                        {/* Daily Status Cells with Animated Checkbox for Screen & Printable Boxes for Paper */}
                         {matrixDays.map((dayStr) => {
                           const task = tasks.find(
                             (t) => t.date === dayStr && (t.categoryId === cat.id || t.title === cat.name)
@@ -884,9 +898,11 @@ export default function SocialMediaCalendarPage() {
                                 )}
                               </div>
 
-                              {/* Paper Print View Checkbox Indicator */}
-                              <div className="hidden print:flex items-center justify-center font-mono font-bold text-xs">
-                                {isCompleted ? '[✓]' : '[ ]'}
+                              {/* Paper Print View Checkbox Box (Empty Square or Ticked Square) */}
+                              <div className="hidden print:flex items-center justify-center">
+                                <div className="print-checkbox">
+                                  {isCompleted ? '✓' : ''}
+                                </div>
                               </div>
                             </td>
                           );
