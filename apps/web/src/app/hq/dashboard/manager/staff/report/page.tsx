@@ -8,7 +8,7 @@ import Link from 'next/link';
 import {
   Printer, ArrowLeft, CheckSquare, Square, Filter, Search,
   Users, RotateCcw, FileText, Layers, Loader2, Sparkles, Check,
-  Clock, Shield, Building2, Phone, DollarSign, Award, Shirt
+  Clock, Shield, Building2, Phone, DollarSign, Award, Shirt, SlidersHorizontal
 } from 'lucide-react';
 import { listStaffCards, type StaffCardRow, type StaffDept } from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
