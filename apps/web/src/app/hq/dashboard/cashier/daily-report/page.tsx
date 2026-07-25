@@ -68,9 +68,18 @@ type Transaction = {
 };
 
 const getIsExpense = (tx: any): boolean => {
+  const cat = String(tx.categoryName || tx.category || '').toLowerCase();
+  const desc = String(tx.description || '').toLowerCase();
   return (
     tx.type === 'expense' ||
-    String(tx.categoryName || tx.category || '').toLowerCase().includes('expense')
+    cat.includes('expense') ||
+    cat.includes('salary') ||
+    cat.includes('advance') ||
+    cat === 'staff_salary' ||
+    cat === 'staff_advance' ||
+    cat === 'advance_salary' ||
+    desc.includes('advance salary') ||
+    desc.includes('staff salary')
   );
 };
 

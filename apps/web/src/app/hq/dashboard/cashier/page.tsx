@@ -1491,7 +1491,7 @@ export default function CashierStationPage() {
 
       let finalDescription = description;
       if (txnType === 'expense' && (hospitalExpenseReceiver.trim() || hospitalExpenseReason.trim())) {
-        finalDescription = `Received by: ${hospitalExpenseReceiver.trim() || 'Staff/Vendor'} | Reason: ${hospitalExpenseReason.trim() || 'Expense'}${hospitalExpenseTime ? ` | Time: ${hospitalExpenseTime}` : ''}${description ? ` | Note: ${description}` : ''}`;
+        finalDescription = `Received by: ${hospitalExpenseReceiver.trim() || selectedEntity?.name || 'Staff/Vendor'} | Reason: ${hospitalExpenseReason.trim() || 'Expense'}${hospitalExpenseTime ? ` | Time: ${hospitalExpenseTime}` : ''}${description ? ` | Note: ${description}` : ''}`;
       } else if (isHospitalCommonAllTx) {
         if (hospitalIncomeType === 'fee') {
           let feeName = 'Check-up Fee';
@@ -1507,8 +1507,19 @@ export default function CashierStationPage() {
         finalDescription = `Items: ${itemizedList.map(i => `${i.name} (Rs ${i.price})`).join(', ')}${description ? ` | Note: ${description}` : ''}`;
       }
 
+      const isStaffSalaryOrAdvance = 
+        resolvedCategory.id === 'staff_salary' ||
+        resolvedCategory.id === 'staff_advance' ||
+        resolvedCategory.id === 'advance_salary' ||
+        resolvedCategory.id === 'salary' ||
+        resolvedCategory.id === 'advance' ||
+        resolvedCategory.name.toLowerCase().includes('salary') ||
+        resolvedCategory.name.toLowerCase().includes('advance');
+
+      const effectiveType = isStaffSalaryOrAdvance ? 'expense' : txnType;
+
       const createPayload: Record<string, any> = {
-        type: txnType,
+        type: effectiveType,
         amount: Number(amount),
         category: resolvedCategory.id,
         categoryName: resolvedCategory.name,
@@ -2021,12 +2032,28 @@ export default function CashierStationPage() {
 
   const todayStr = getLocalDateString(new Date());
   
+  const checkIsExpense = (tx: any): boolean => {
+    const cat = String(tx.categoryName || tx.category || '').toLowerCase();
+    const desc = String(tx.description || '').toLowerCase();
+    return (
+      tx.type === 'expense' ||
+      cat.includes('expense') ||
+      cat.includes('salary') ||
+      cat.includes('advance') ||
+      cat === 'staff_salary' ||
+      cat === 'staff_advance' ||
+      cat === 'advance_salary' ||
+      desc.includes('advance salary') ||
+      desc.includes('staff salary')
+    );
+  };
+  
   useEffect(() => {
     const today = getLocalDateString(new Date());
     const todayTxns = historyTxns.filter(t => t.date === today && t.status !== 'pending_cashier');
     
-    const revenue = todayTxns.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const expense = todayTxns.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const revenue = todayTxns.filter(t => !checkIsExpense(t)).reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const expense = todayTxns.filter(t => checkIsExpense(t)).reduce((sum, t) => sum + Number(t.amount || 0), 0);
     
     const deptCounts: Record<string, number> = {};
     todayTxns.forEach(t => {
@@ -2044,13 +2071,10 @@ export default function CashierStationPage() {
   }, [historyTxns]);
 
   const totals = useMemo(() => {
-    if (historyStats.count > 0 && historyFiltered.length === historyTxns.length) {
-      return { income: historyStats.income, expense: historyStats.expense, net: historyStats.income - historyStats.expense };
-    }
-    const income = historyFiltered.filter((x) => x.type === 'income').reduce((s, x) => s + Number(x.amount || 0), 0);
-    const expense = historyFiltered.filter((x) => x.type === 'expense').reduce((s, x) => s + Number(x.amount || 0), 0);
+    const income = historyFiltered.filter((x) => !checkIsExpense(x)).reduce((s, x) => s + Number(x.amount || 0), 0);
+    const expense = historyFiltered.filter((x) => checkIsExpense(x)).reduce((s, x) => s + Number(x.amount || 0), 0);
     return { income, expense, net: income - expense };
-  }, [historyFiltered, historyStats, historyTxns.length]);
+  }, [historyFiltered]);
 
   const departmentBreakdown = useMemo(() => {
     const breakdown: Record<string, { income: number; expense: number }> = {};
@@ -2061,10 +2085,10 @@ export default function CashierStationPage() {
     historyFiltered.forEach(tx => {
       const code = tx.departmentCode;
       if (breakdown[code]) {
-        if (tx.type === 'income') {
-          breakdown[code].income += Number(tx.amount || 0);
-        } else if (tx.type === 'expense') {
+        if (checkIsExpense(tx)) {
           breakdown[code].expense += Number(tx.amount || 0);
+        } else {
+          breakdown[code].income += Number(tx.amount || 0);
         }
       }
     });

@@ -338,9 +338,17 @@ export default function StaffProfilePage() {
   }, [selectedMonth]);
 
   const isAdvanceTxInSelectedMonth = useCallback((tx: any) => {
-    const isAdvanceCat = tx.category === 'advance_salary' || 
-                         tx.category === 'advance' || 
-                         (tx.categoryName && tx.categoryName.toLowerCase().includes('advance'));
+    const cat = String(tx.category || '').toLowerCase();
+    const catName = String(tx.categoryName || '').toLowerCase();
+    const desc = String(tx.description || '').toLowerCase();
+
+    const isAdvanceCat = 
+      cat === 'advance_salary' || 
+      cat === 'advance' || 
+      cat === 'staff_advance' ||
+      catName.includes('advance') ||
+      desc.includes('advance');
+
     if (!isAdvanceCat || tx.status === 'rejected') return false;
     const txDate = tx.transactionDate || tx.date || tx.createdAt;
     if (!txDate) return false;
@@ -473,7 +481,10 @@ export default function StaffProfilePage() {
     const monthlyFinesList = fines.filter(isFineInSelectedMonth);
     const totalFines = monthlyFinesList.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
+    const actualAdvance = Math.max(Number(slip?.advance || 0), approvedAdvancesForMonth);
+
     if (slip) {
+      const net = Math.floor(Math.max(0, slip.basicSalary - (slip.absentDeduction || 0) - (slip.fine || slip.otherDeductions || 0) - actualAdvance + (slip.bonus || 0)));
       return {
         dailyWage: slip.dailyWage || dailyWage,
         presentDays: slip.presentDays || 0,
@@ -485,9 +496,9 @@ export default function StaffProfilePage() {
         unpaidDays: slip.absentDays || 0,
         earnings: slip.basicSalary - (slip.absentDeduction || 0),
         absentDeduction: slip.absentDeduction || 0,
-        estimatedSalary: slip.netSalary || 0,
+        estimatedSalary: slip.status === 'paid' ? (slip.netSalary || net) : net,
         fines: slip.fine || slip.otherDeductions || 0,
-        advance: slip.advance || 0,
+        advance: actualAdvance,
         bonus: slip.bonus || 0,
         bonusReason: slip.bonusReason || '',
         deductionReason: slip.deductionReason || '',
@@ -498,7 +509,7 @@ export default function StaffProfilePage() {
       };
     }
 
-    const estimatedSalary = Math.floor(Math.max(0, earnings - totalFines - approvedAdvancesForMonth));
+    const estimatedSalary = Math.floor(Math.max(0, earnings - totalFines - actualAdvance));
 
     return {
       dailyWage,
@@ -513,7 +524,7 @@ export default function StaffProfilePage() {
       absentDeduction,
       estimatedSalary,
       fines: totalFines,
-      advance: approvedAdvancesForMonth,
+      advance: actualAdvance,
       bonus: 0,
       bonusReason: '',
       deductionReason: '',
@@ -749,15 +760,21 @@ export default function StaffProfilePage() {
         const docsList: any[] = [];
         for (const p of prefixes) {
           const colName = `${p}_${suffix}`;
-          const snaps = await Promise.all(
-            uniqueIds.map(id => 
-              getDocs(query(collection(db, colName), where('staffId', '==', id)))
-                .catch(() => ({ docs: [] } as any))
-            )
-          );
+          const promises: Promise<any>[] = [];
+          uniqueIds.forEach(id => {
+            promises.push(getDocs(query(collection(db, colName), where('staffId', '==', id))).catch(() => ({ docs: [] } as any)));
+            if (suffix === 'transactions') {
+              promises.push(getDocs(query(collection(db, colName), where('patientId', '==', id))).catch(() => ({ docs: [] } as any)));
+            }
+          });
+          const snaps = await Promise.all(promises);
           docsList.push(...snaps.flatMap(snap => snap.docs));
         }
-        return docsList;
+        const seenMap = new Map<string, any>();
+        docsList.forEach(d => {
+          if (d && d.id && !seenMap.has(d.id)) seenMap.set(d.id, d);
+        });
+        return Array.from(seenMap.values());
       };
 
       const [
@@ -1895,13 +1912,15 @@ export default function StaffProfilePage() {
       
       const prefix = getDeptPrefix(staff.dept as StaffDept);
       
+      const targetStaffId = staff.id || staff.staffId;
       const payload: any = {
         type: 'expense',
         category: 'advance_salary',
         categoryName: 'Advance Salary',
         amount: Number(advanceForm.amount),
-        patientId: `${staff.dept}-general`,
-        patientName: `General ${staff.dept.toUpperCase()} Account`,
+        patientId: targetStaffId,
+        patientName: staff.name,
+        receivedBy: staff.name,
         description: advanceForm.description.trim() || `Advance salary for ${staff.name}`,
         paymentMethod: advanceForm.paymentMethod,
         referenceNo: advanceForm.referenceNo.trim(),
@@ -1912,7 +1931,7 @@ export default function StaffProfilePage() {
         createdBy: session?.uid,
         createdByName: session?.displayName || session?.name || 'HQ Manager',
         createdAt: Timestamp.now(),
-        staffId: staff.staffId,
+        staffId: targetStaffId,
         staffName: staff.name
       };
       
@@ -1924,6 +1943,57 @@ export default function StaffProfilePage() {
       }
       
       const txRef = await addDoc(collection(db, `${prefix}_transactions`), payload);
+
+      // Sync advance to salary_records
+      try {
+        const monthStr = advanceForm.date.slice(0, 7);
+        const salaryColName = `${prefix}_salary_records`;
+        const candidateStaffIds = [staff.id, staff.staffId, staff.employeeId].filter(Boolean);
+        let existingSnap: any = { empty: true, docs: [] };
+        for (const sid of candidateStaffIds) {
+          const snap = await getDocs(query(
+            collection(db, salaryColName),
+            where('staffId', '==', sid),
+            where('month', '==', monthStr)
+          )).catch(() => ({ empty: true, docs: [] }));
+          if (!snap.empty) {
+            existingSnap = snap;
+            break;
+          }
+        }
+
+        if (!existingSnap.empty) {
+          const existingDoc = existingSnap.docs[0];
+          await updateDoc(doc(db, salaryColName, existingDoc.id), {
+            advance: increment(Number(advanceForm.amount)),
+            updatedAt: Timestamp.now(),
+          });
+        } else {
+          await addDoc(collection(db, salaryColName), {
+            staffId: targetStaffId,
+            employeeId: staff.employeeId || targetStaffId,
+            staffName: staff.name || 'Staff',
+            department: staff.dept,
+            month: monthStr,
+            basicSalary: Number(staff.monthlySalary || 0),
+            dailyWage: Number(staff.monthlySalary || 0) / 26,
+            workingDays: 26,
+            presentDays: 26,
+            absentDays: 0,
+            leaveDays: 0,
+            absentDeduction: 0,
+            bonus: 0,
+            otherDeductions: 0,
+            advance: Number(advanceForm.amount),
+            netSalary: Math.max(0, Number(staff.monthlySalary || 0) - Number(advanceForm.amount)),
+            status: 'draft',
+            createdAt: Timestamp.now(),
+            createdBy: session?.uid,
+          });
+        }
+      } catch (salarySyncErr) {
+        console.error('[StaffProfile] Failed to sync advance to salary_records:', salarySyncErr);
+      }
       
       if (session?.role === 'superadmin') {
         try {
