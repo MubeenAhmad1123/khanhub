@@ -138,6 +138,28 @@ const getTxDisplayTime = (tx: any): string => {
   return 'N/A';
 };
 
+const getTxTimeInMinutes = (tx: any): number => {
+  const rawTimeStr = tx.time || tx.hospitalPatientDetails?.time;
+  if (rawTimeStr) {
+    const timeStr = String(rawTimeStr).trim();
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+    if (match) {
+      let hrs = parseInt(match[1], 10);
+      const mins = parseInt(match[2], 10);
+      const ampm = match[3]?.toUpperCase();
+      if (ampm === 'PM' && hrs < 12) hrs += 12;
+      if (ampm === 'AM' && hrs === 12) hrs = 0;
+      return hrs * 60 + mins;
+    }
+  }
+
+  const d = toDate(tx.createdAt || tx.transactionDate || tx.date);
+  if (d && !isNaN(d.getTime())) {
+    return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+  }
+  return 0;
+};
+
 export default function DailyReportPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
@@ -253,10 +275,14 @@ export default function DailyReportPage() {
       const results = await Promise.all([...fetchPromises, genericPromise]);
       const flattened = results.flat();
       
+      // Sort chronologically by time (AM first, PM later)
       flattened.sort((a, b) => {
-        const dateA = toDate(a.transactionDate || a.date || a.createdAt);
-        const dateB = toDate(b.transactionDate || b.date || b.createdAt);
-        return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
+        const timeA = getTxTimeInMinutes(a);
+        const timeB = getTxTimeInMinutes(b);
+        if (timeA !== timeB) return timeA - timeB;
+        const dateA = toDate(a.createdAt || a.transactionDate || a.date)?.getTime() || 0;
+        const dateB = toDate(b.createdAt || b.transactionDate || b.date)?.getTime() || 0;
+        return dateA - dateB;
       });
       
       setTransactions(flattened);

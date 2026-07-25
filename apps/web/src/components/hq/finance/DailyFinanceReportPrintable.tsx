@@ -98,6 +98,30 @@ const getTxDisplayTime = (tx: any): string => {
   return 'N/A';
 };
 
+const getTxTimeInMinutes = (tx: any): number => {
+  const rawTimeStr = tx.time || tx.hospitalPatientDetails?.time;
+  if (rawTimeStr) {
+    const timeStr = String(rawTimeStr).trim();
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+    if (match) {
+      let hrs = parseInt(match[1], 10);
+      const mins = parseInt(match[2], 10);
+      const ampm = match[3]?.toUpperCase();
+      if (ampm === 'PM' && hrs < 12) hrs += 12;
+      if (ampm === 'AM' && hrs === 12) hrs = 0;
+      return hrs * 60 + mins;
+    }
+  }
+
+  if (tx.createdAt) {
+    const d = new Date(tx.createdAt.toMillis?.() || tx.createdAt.seconds * 1000);
+    if (!isNaN(d.getTime())) {
+      return d.getHours() * 60 + d.getMinutes();
+    }
+  }
+  return 0;
+};
+
 interface Props {
   date: string; // YYYY-MM-DD or display format
   transactions: Transaction[];
@@ -202,6 +226,13 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
           }
         }
       }
+    });
+
+    Object.values(incomeCategories).forEach(cat => {
+      cat.txs.sort((a, b) => getTxTimeInMinutes(a) - getTxTimeInMinutes(b));
+    });
+    Object.values(expenseCategories).forEach(cat => {
+      cat.txs.sort((a, b) => getTxTimeInMinutes(a) - getTxTimeInMinutes(b));
     });
 
     return {

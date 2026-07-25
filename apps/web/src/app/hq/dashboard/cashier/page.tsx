@@ -1468,6 +1468,10 @@ export default function CashierStationPage() {
       }
 
       let resolvedCategory = selectedCategory;
+      if (txnType === 'expense' && !resolvedCategory) {
+        resolvedCategory = { id: 'other_expense', name: 'Other Expense', appliesTo: 'expense' } as any;
+      }
+
       if (isHospitalCommonAllTx) {
         if (txnType === 'expense') {
           resolvedCategory = { id: 'other_expense', name: 'Other Expense', appliesTo: 'expense' } as any;
@@ -1486,10 +1490,10 @@ export default function CashierStationPage() {
       if (!resolvedCategory) return;
 
       let finalDescription = description;
-      if (isHospitalCommonAllTx) {
-        if (txnType === 'expense') {
-          finalDescription = `Received by: ${hospitalExpenseReceiver} | Reason: ${hospitalExpenseReason} | Time: ${hospitalExpenseTime}${description ? ` | Note: ${description}` : ''}`;
-        } else if (hospitalIncomeType === 'fee') {
+      if (txnType === 'expense' && (hospitalExpenseReceiver.trim() || hospitalExpenseReason.trim())) {
+        finalDescription = `Received by: ${hospitalExpenseReceiver.trim() || 'Staff/Vendor'} | Reason: ${hospitalExpenseReason.trim() || 'Expense'}${hospitalExpenseTime ? ` | Time: ${hospitalExpenseTime}` : ''}${description ? ` | Note: ${description}` : ''}`;
+      } else if (isHospitalCommonAllTx) {
+        if (hospitalIncomeType === 'fee') {
           let feeName = 'Check-up Fee';
           if (hospitalFeeType === 'usg') feeName = 'USG Fee';
           else if (hospitalFeeType === 'bsr') feeName = 'BSR Fee';
@@ -2678,6 +2682,53 @@ export default function CashierStationPage() {
                             onChange={(e) => setCustomTargetName(e.target.value)}
                             placeholder="e.g., General Welfare, Walk-in Seeker, Utility Bill payment, Rent..."
                             className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all shadow-inner text-gray-900"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {txnType === 'expense' && departmentCode !== 'hospital' && (
+                      <div className="p-6 bg-rose-50/50 rounded-2xl border border-rose-200/80 space-y-4 animate-in fade-in duration-300">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-rose-600 rounded-lg flex items-center justify-center text-white shadow-sm">
+                            <TrendingDown size={16} />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-rose-900 uppercase tracking-wider">
+                              {activeDepartment.label} Expense Entry
+                            </h4>
+                            <p className="text-[10px] font-bold text-rose-600/80">Record receiver name, reason, and time easily</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-1">Receiver Name (Who is taking?)</label>
+                            <input
+                              value={hospitalExpenseReceiver}
+                              onChange={(e) => setHospitalExpenseReceiver(e.target.value)}
+                              placeholder="e.g. Staff Name, Vendor, Driver..."
+                              className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-rose-600/10 focus:border-rose-600 transition-all text-gray-900 shadow-sm"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-1">Reason / Purpose</label>
+                            <input
+                              value={hospitalExpenseReason}
+                              onChange={(e) => setHospitalExpenseReason(e.target.value)}
+                              placeholder="e.g. Utility bill, Rent, Grocery, Maintenance..."
+                              className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-rose-600/10 focus:border-rose-600 transition-all text-gray-900 shadow-sm"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-1">Time (Optional)</label>
+                          <input
+                            type="time"
+                            value={hospitalExpenseTime}
+                            onChange={(e) => setHospitalExpenseTime(e.target.value)}
+                            className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-rose-600/10 focus:border-rose-600 transition-all text-gray-900 shadow-sm"
                           />
                         </div>
                       </div>
