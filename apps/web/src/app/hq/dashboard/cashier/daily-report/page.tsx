@@ -218,66 +218,81 @@ export default function DailyReportPage() {
       // Aggregated fetch from all departmental collections
       const fetchPromises = DEPARTMENTS.map(async (dept) => {
         try {
-          // Optimized query using the new composite indexes (date ASC/DESC)
-          const qConstraints: any[] = [
-            where('date', '>=', startTimestamp),
-            where('date', '<=', endTimestamp),
-            orderBy('date', 'desc')
-          ];
+          const docMap = new Map<string, Transaction>();
+
+          // 1. Primary Timestamp query
+          try {
+            const q = query(
+              collection(db, dept.txCollection),
+              where('date', '>=', startTimestamp),
+              where('date', '<=', endTimestamp)
+            );
+            const snap = await getDocs(q);
+            snap.docs.forEach(doc => {
+              docMap.set(doc.id, {
+                id: doc.id,
+                departmentCode: dept.code,
+                departmentName: dept.label,
+                ...doc.data()
+              } as Transaction);
+            });
+          } catch (e) {}
+
+          // 2. Recent documents fallback (catches string dates YYYY-MM-DD or createdAt dates)
+          try {
+            const qFallback = query(
+              collection(db, dept.txCollection),
+              orderBy('createdAt', 'desc'),
+              limit(300)
+            );
+            const snapFallback = await getDocs(qFallback);
+            snapFallback.docs.forEach(doc => {
+              if (!docMap.has(doc.id)) {
+                const data = doc.data();
+                const d = toDate(data.date || data.transactionDate || data.createdAt);
+                if (d && d >= startOfDay && d <= endOfDay) {
+                  docMap.set(doc.id, {
+                    id: doc.id,
+                    departmentCode: dept.code,
+                    departmentName: dept.label,
+                    ...data
+                  } as Transaction);
+                }
+              }
+            });
+          } catch (e) {}
+
+          let list = Array.from(docMap.values());
 
           if (session.role === 'cashier') {
-            qConstraints.push(where('cashierId', '==', (session.customId || '').toUpperCase()));
+            const cashierIdLow = (session.customId || '').toLowerCase();
+            list = list.filter((t: any) => {
+              const cId = String(t.cashierId || '').toLowerCase();
+              return cId === cashierIdLow || !t.cashierId;
+            });
           }
 
-          const q = query(
-            collection(db, dept.txCollection),
-            ...qConstraints
-          );
-          const snap = await getDocs(q);
-          return snap.docs.map(doc => ({
-            id: doc.id,
-            departmentCode: dept.code,
-            departmentName: dept.label,
-            ...doc.data()
-          })) as Transaction[];
+          return list;
         } catch (err) {
-          console.warn(`[DailyReport] Failed optimized fetch for ${dept.code}, falling back...`, err);
-          // Fallback if index not yet propagated
-          const qFallback = query(
-            collection(db, dept.txCollection),
-            orderBy('createdAt', 'desc'),
-            limit(200)
-          );
-          const snap = await getDocs(qFallback);
-          return snap.docs
-            .map(doc => ({ id: doc.id, departmentCode: dept.code, departmentName: dept.label, ...doc.data() }))
-            .filter((t: any) => {
-              const dateVal = t.date || t.transactionDate;
-              if (!dateVal) return false;
-              const d = toDate(dateVal);
-              return d && d >= startOfDay && d <= endOfDay;
-            }) as Transaction[];
+          console.warn(`[DailyReport] Failed fetch for ${dept.code}:`, err);
+          return [];
         }
       });
 
       // Also fetch from legacy/generic cashierTransactions if it exists
       const genericPromise = (async () => {
         try {
-          const qConstraints: any[] = [
+          const snap = await getDocs(query(
+            collection(db, 'cashierTransactions'),
             where('date', '>=', startTimestamp),
             where('date', '<=', endTimestamp)
-          ];
-
+          ));
+          let list = snap.docs.map(doc => ({ id: doc.id, departmentCode: 'other', departmentName: 'General', ...doc.data() })) as Transaction[];
           if (session.role === 'cashier') {
-            qConstraints.push(where('cashierId', '==', (session.customId || '').toUpperCase()));
+            const cashierIdLow = (session.customId || '').toLowerCase();
+            list = list.filter((t: any) => String(t.cashierId || '').toLowerCase() === cashierIdLow);
           }
-
-          const q = query(
-            collection(db, 'cashierTransactions'),
-            ...qConstraints
-          );
-          const snap = await getDocs(q);
-          return snap.docs.map(doc => ({ id: doc.id, departmentCode: 'other', departmentName: 'General', ...doc.data() })) as Transaction[];
+          return list;
         } catch { return []; }
       })();
 
@@ -436,15 +451,14 @@ export default function DailyReportPage() {
     };
 
     transactions.forEach(tx => {
-      // ONLY process approved transactions for summary stats!
-      if (tx.status !== 'approved') return;
+      if (tx.status === 'rejected') return;
 
       const amt = Number(tx.amount) || 0;
-      const type = tx.type || 'income';
+      const isExp = getIsExpense(tx);
       const catKey = tx.categoryName || tx.category || 'Uncategorized';
       const deptName = tx.departmentName || 'Unknown';
       
-      if (type === 'income') {
+      if (!isExp) {
         summary.incomeEntriesCount += 1;
         summary.totalIncome += amt;
         if (!summary.categoryBreakdown.income[catKey]) {
