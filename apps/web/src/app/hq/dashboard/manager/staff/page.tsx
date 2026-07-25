@@ -10,7 +10,7 @@ import Link from 'next/link';
 import {
   Users, Search, Shield, ArrowRight,
   Filter, Plus, Download, LayoutGrid, List as ListIcon,
-  Activity, Clock, Star, Loader2, AlertCircle
+  Activity, Clock, Star, Loader2, AlertCircle, Printer
 } from 'lucide-react';
 import { listStaffCards, type StaffCardRow, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
@@ -283,7 +283,14 @@ export default function ManagerStaffPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-4 w-full md:w-auto">
+            <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+              <Link
+                href="/hq/dashboard/manager/staff/report"
+                className="flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-500/25 active:scale-95 transition-all whitespace-nowrap"
+              >
+                <Printer size={18} />
+                <span>Generate Printable Report</span>
+              </Link>
               <div className="bg-white rounded-3xl p-2 border border-gray-100 flex items-center justify-between md:justify-start gap-4 sm:gap-6 shadow-2xl shadow-gray-200/50 w-full md:w-auto">
                 <div className="px-4 sm:px-6 py-2 border-r border-gray-100 flex-1 md:flex-initial">
                   <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">Total Active</p>
