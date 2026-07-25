@@ -499,7 +499,7 @@ export default function DailyReportPage() {
               summary.uniquePatients.add(pName.trim().toLowerCase());
             }
           }
-        } else if (type === 'income') {
+        } else if (!isExp) {
           const pName = tx.patientName;
           if (pName && pName !== '—' && pName !== 'Inline Patient' && pName !== 'Day Close Transaction') {
             summary.uniquePatients.add(pName.trim().toLowerCase());
@@ -508,11 +508,11 @@ export default function DailyReportPage() {
       }
 
       if (tx.paymentMethod === 'cash') {
-        summary.cashExpected += (type === 'income' ? amt : -amt);
+        summary.cashExpected += (!isExp ? amt : -amt);
       }
       
       const methodKey = tx.paymentMethod || 'Other';
-      summary.methodTotals[methodKey] = (summary.methodTotals[methodKey] || 0) + (type === 'income' ? amt : -amt);
+      summary.methodTotals[methodKey] = (summary.methodTotals[methodKey] || 0) + (!isExp ? amt : -amt);
     });
 
     summary.netTotal = summary.totalIncome - summary.totalExpense;
