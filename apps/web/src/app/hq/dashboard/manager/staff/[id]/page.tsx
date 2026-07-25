@@ -2495,11 +2495,11 @@ export default function StaffProfilePage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Advance Salary Taken:</span>
-                    <span className="font-black text-rose-500">-₨{salaryDetails.advance.toLocaleString()}</span>
+                    <span className="font-black text-rose-500">-₨{(salaryDetails.advance || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center pt-1.5 border-t border-gray-200/60 font-black text-gray-900">
                     <span>Total Deductions:</span>
-                    <span className="font-black text-rose-600">-₨{Math.round(salaryDetails.absentDeduction + salaryDetails.fines + salaryDetails.advance).toLocaleString()}</span>
+                    <span className="font-black text-rose-600">-₨{Math.round(salaryDetails.absentDeduction + salaryDetails.fines + (salaryDetails.advance || 0)).toLocaleString()}</span>
                   </div>
                 </div>
                 <p className="text-[8px] text-gray-400 italic mt-3 text-center">Click for detailed daily salary breakdown, advance records & leaves</p>
@@ -5567,10 +5567,10 @@ export default function StaffProfilePage() {
                           <span>- ₨{Math.round(salaryDetails.absentDeduction).toLocaleString()}</span>
                         </div>
                       )}
-                      {salaryDetails.advance > 0 && (
+                      {(salaryDetails.advance || 0) > 0 && (
                         <div className="flex justify-between text-rose-500">
                           <span>Advance Salary:</span>
-                          <span>- ₨{salaryDetails.advance.toLocaleString()}</span>
+                          <span>- ₨{(salaryDetails.advance || 0).toLocaleString()}</span>
                         </div>
                       )}
                       {salaryDetails.bonus > 0 && (
@@ -5598,10 +5598,10 @@ export default function StaffProfilePage() {
                           <span>- ₨{Math.round(salaryDetails.absentDeduction).toLocaleString()}</span>
                         </div>
                       )}
-                      {salaryDetails.advance > 0 && (
+                      {(salaryDetails.advance || 0) > 0 && (
                         <div className="flex justify-between text-rose-500">
                           <span>Advance Salary:</span>
-                          <span>- ₨{salaryDetails.advance.toLocaleString()}</span>
+                          <span>- ₨{(salaryDetails.advance || 0).toLocaleString()}</span>
                         </div>
                       )}
                       {salaryDetails.fines > 0 && (
