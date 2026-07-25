@@ -192,15 +192,15 @@ export default function StaffReportGeneratorPage() {
   const getDeptLabel = (dept?: string) => {
     if (!dept) return 'N/A';
     switch (dept.toLowerCase()) {
-      case 'hq': return 'HQ Command';
-      case 'rehab': return 'Rehab Node';
-      case 'spims': return 'SPIMS Node';
-      case 'hospital': return 'Medical Node';
-      case 'sukoon': return 'Sukoon Node';
-      case 'welfare': return 'Welfare Node';
-      case 'job-center': return 'Workforce Node';
-      case 'social-media': return 'Broadcast Node';
-      case 'it': return 'Digital Node';
+      case 'hq': return 'Khan Hub Official';
+      case 'rehab': return 'Rehab Department';
+      case 'spims': return 'SPIMS Department';
+      case 'hospital': return 'Hospital Department';
+      case 'sukoon': return 'Sukoon Department';
+      case 'welfare': return 'Welfare Department';
+      case 'job-center': return 'Job Center Department';
+      case 'social-media': return 'Social Media Department';
+      case 'it': return 'IT Department';
       default: return dept.toUpperCase();
     }
   };
@@ -496,15 +496,15 @@ export default function StaffReportGeneratorPage() {
                   onChange={e => setDeptFilter(e.target.value)}
                 >
                   <option value="all">All Departments</option>
-                  <option value="hq">HQ Command</option>
-                  <option value="rehab">Rehab Node</option>
-                  <option value="spims">SPIMS Node</option>
-                  <option value="hospital">Medical Node</option>
-                  <option value="sukoon">Sukoon Node</option>
-                  <option value="welfare">Welfare Node</option>
-                  <option value="job-center">Workforce Node</option>
-                  <option value="social-media">Broadcast Node</option>
-                  <option value="it">Digital Node</option>
+                  <option value="hq">Khan Hub Official</option>
+                  <option value="rehab">Rehab Department</option>
+                  <option value="spims">SPIMS Department</option>
+                  <option value="hospital">Hospital Department</option>
+                  <option value="sukoon">Sukoon Department</option>
+                  <option value="welfare">Welfare Department</option>
+                  <option value="job-center">Job Center Department</option>
+                  <option value="social-media">Social Media Department</option>
+                  <option value="it">IT Department</option>
                 </select>
               </div>
 
@@ -640,12 +640,12 @@ export default function StaffReportGeneratorPage() {
               {Object.entries(groupedStaff).map(([deptGroupTitle, staffGroup]) => (
                 <div key={deptGroupTitle} className="space-y-3 print-row">
                   {groupByDept && (
-                    <div className="flex items-center justify-between bg-slate-900 text-white px-4 py-2 rounded-xl print:bg-slate-800 print:text-white print:rounded-none">
-                      <h3 className="text-xs font-black uppercase tracking-wider">
+                    <div className="flex items-center justify-between bg-slate-900 text-white px-4.5 py-2.5 rounded-xl print:bg-slate-900 print:text-white print:rounded-none shadow-sm">
+                      <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-white">
                         {deptGroupTitle}
                       </h3>
-                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-white/20">
-                        {staffGroup.length} Staff
+                      <span className="text-[10px] sm:text-xs font-black px-2.5 py-1 rounded-md bg-white/20 text-white">
+                        {staffGroup.length} Staff Members
                       </span>
                     </div>
                   )}

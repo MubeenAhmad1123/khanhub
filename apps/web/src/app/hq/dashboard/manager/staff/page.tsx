@@ -368,15 +368,15 @@ export default function ManagerStaffPage() {
                 onChange={e => setDeptFilter(e.target.value)}
               >
                 <option value="all">All Departments</option>
-                <option value="hq">HQ Command</option>
-                <option value="rehab">Rehab Node</option>
-                <option value="spims">SPIMS Node</option>
-                <option value="hospital">Medical Node</option>
-                <option value="sukoon">Sukoon Node</option>
-                <option value="welfare">Welfare Node</option>
-                <option value="job-center">Workforce Node</option>
-                <option value="social-media">Broadcast Node</option>
-                <option value="it">Digital Node</option>
+                <option value="hq">Khan Hub Official</option>
+                <option value="rehab">Rehab Department</option>
+                <option value="spims">SPIMS Department</option>
+                <option value="hospital">Hospital Department</option>
+                <option value="sukoon">Sukoon Department</option>
+                <option value="welfare">Welfare Department</option>
+                <option value="job-center">Job Center Department</option>
+                <option value="social-media">Social Media Department</option>
+                <option value="it">IT Department</option>
               </select>
               <select
                 className="border-none rounded-2xl px-4 sm:px-6 py-4 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] outline-none cursor-pointer transition-all flex-1 sm:flex-initial w-1/2 sm:w-auto text-center sm:text-left bg-gray-50 text-gray-900 focus:ring-2 focus:ring-gray-900 hover:bg-gray-100 shadow-sm"
