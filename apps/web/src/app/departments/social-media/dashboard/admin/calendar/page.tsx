@@ -570,17 +570,44 @@ export default function SocialMediaCalendarPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-12 print:p-0 print:space-y-4">
-      {/* Printable CSS Rules for A4 Paper Output */}
+      {/* Printable CSS Rules for Paper & PDF Export */}
       <style jsx global>{`
         @media print {
-          body {
+          @page {
+            size: landscape A4;
+            margin: 6mm;
+          }
+          html, body {
             background: white !important;
             color: black !important;
-            font-family: Arial, sans-serif !important;
+            font-family: Arial, Helvetica, sans-serif !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
           }
-          header, footer, nav, .print\\:hidden {
+          header, footer, nav, aside, .print\\:hidden,
+          div[class*="fixed top-0 right-0"],
+          div[class*="fixed bottom-0 left-0"] {
             display: none !important;
           }
+          
+          /* Reset parent layout containers so sidebar offset is 0 */
+          div[class*="min-h-screen"],
+          div[class*="lg\\:ml-"],
+          main,
+          div[class*="max-w-"] {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-height: 0 !important;
+            position: static !important;
+            box-shadow: none !important;
+            background: transparent !important;
+          }
+
           .print\\:block {
             display: block !important;
           }
@@ -595,30 +622,45 @@ export default function SocialMediaCalendarPage() {
           }
           .matrix-table-container {
             overflow: visible !important;
+            width: 100% !important;
             border: 1px solid #000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
           }
           .matrix-table {
             border-collapse: collapse !important;
             width: 100% !important;
-            font-size: 8px !important;
+            font-size: 9px !important;
+            table-layout: auto !important;
           }
           .matrix-table th, .matrix-table td {
             border: 1px solid #000 !important;
-            padding: 3px 2px !important;
+            padding: 4px 2px !important;
             text-align: center !important;
             color: #000 !important;
+            position: static !important;
+            box-shadow: none !important;
+            background: transparent !important;
+          }
+          .matrix-table th {
+            background-color: #f1f5f9 !important;
+            font-weight: bold !important;
           }
           .print-checkbox {
-            width: 12px !important;
-            height: 12px !important;
+            width: 13px !important;
+            height: 13px !important;
             border: 1px solid #000 !important;
+            border-radius: 2px !important;
             display: inline-flex !important;
             align-items: center !important;
             justify-content: center !important;
             font-weight: bold !important;
-            font-size: 9px !important;
+            font-size: 10px !important;
             margin: 0 auto !important;
-            border-radius: 1px !important;
+          }
+          tr {
+            page-break-inside: avoid !important;
           }
         }
       `}</style>
