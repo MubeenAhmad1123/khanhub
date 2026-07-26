@@ -16,7 +16,7 @@ import {
 } from 'firebase/firestore';
 import { useRehabSession } from '@/hooks/rehab/useRehabSession';
 import { syncRehabPatientFinance } from '@/app/hq/actions/approvals';
-import { calculateBillableMonths } from '@/lib/utils';
+import { calculateBillableMonths, isPatientFeeTransaction } from '@/lib/utils';
 import { 
   Search, 
   Calculator, 
@@ -160,9 +160,7 @@ export default function SuperAdminDuesPage() {
 
         if (tx.category === 'medicine_charge') {
           totalMedicineCharges += netAmount;
-        } else if (tx.category === 'canteen_deposit' || tx.category === 'canteen' || tx.category === 'canteen_expense') {
-          // Exclude canteen
-        } else {
+        } else if (isPatientFeeTransaction(tx)) {
           totalReceived += netAmount;
           totalDiscount += discount;
         }

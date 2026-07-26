@@ -84,6 +84,78 @@ export function calculateBillableMonths(admissionDate: any, endDate?: any): numb
 }
 
 /**
+ * Checks if a transaction is a patient package fee payment.
+ * Returns true ONLY for fee payments (patient_fee, fee, monthly_fee, package_fee, admission_fee).
+ * Excludes canteen deposits, canteen purchases, medicine, registration, food, utilities, etc.
+ */
+export function isPatientFeeTransaction(t: any): boolean {
+  if (!t) return false;
+
+  const type = String(t.type || '').toLowerCase();
+  const category = String(t.category || '').toLowerCase().trim();
+  const categoryName = String(t.categoryName || '').toLowerCase().trim();
+
+  // Only income transactions can be fee payments
+  if (type && type !== 'income') return false;
+
+  // Exclude non-fee categories explicitly
+  const nonFeeKeywords = [
+    'canteen',
+    'medicine',
+    'pharmacy',
+    'medical',
+    'registration',
+    'food',
+    'kitchen',
+    'utility',
+    'utilities',
+    'bill',
+    'rent',
+    'salary',
+    'marketing',
+    'office',
+    'supplies',
+    'repair',
+    'maintenance',
+    'miscellaneous',
+    'misc',
+    'other'
+  ];
+
+  for (const kw of nonFeeKeywords) {
+    if (category.includes(kw) || categoryName.includes(kw)) {
+      return false;
+    }
+  }
+
+  // Explicit positive fee matches
+  if (
+    category === 'patient_fee' ||
+    category === 'fee' ||
+    category === 'monthly_fee' ||
+    category === 'package_fee' ||
+    category === 'admission_fee' ||
+    categoryName.includes('patient fee') ||
+    categoryName.includes('monthly fee') ||
+    categoryName.includes('package fee') ||
+    categoryName.includes('admission fee') ||
+    categoryName.includes('patient package')
+  ) {
+    return true;
+  }
+
+  // Fallback: If category or categoryName contains 'fee' or 'package' or 'admission'
+  if (
+    category.includes('fee') || category.includes('package') || category.includes('admission') ||
+    categoryName.includes('fee') || categoryName.includes('package') || categoryName.includes('admission')
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Format a date-like value as "DD MM YYYY" (e.g. "25 12 2026").
  * Accepts Firestore Timestamp, Date, ISO string, or epoch-like values.
  */

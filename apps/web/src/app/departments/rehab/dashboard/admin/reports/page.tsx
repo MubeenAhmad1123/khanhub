@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
-import { formatDateDMY, downloadElementAsPng, toDate, calculateBillableMonths } from '@/lib/utils';
+import { formatDateDMY, downloadElementAsPng, toDate, calculateBillableMonths, isPatientFeeTransaction } from '@/lib/utils';
 import {
   FileBarChart, Printer, Calendar,
   TrendingUp, TrendingDown, DollarSign, Loader2, BarChart3,
@@ -112,23 +112,19 @@ function calculatePatientOverallRemaining(
     const isMedicineCharge = txData.category === 'medicine_charge';
     const isCanteen = txData.category === 'canteen_deposit' || txData.category === 'canteen' || txData.category === 'canteen_expense';
 
-    if (isCanteen) {
-      return;
-    }
-
     if (isMedicineCharge) {
       if (isApproved) {
         totalMedicineCharges += Number(txData.amount || 0);
       }
-    } else if (isApproved && !isSynced) {
+    } else if (isApproved && !isSynced && isPatientFeeTransaction(txData)) {
       aggregatedPayments.push({
         amount: Number(txData.amount || 0),
         status: 'approved'
       });
     }
 
-    // Accumulate total discount
-    if (isApproved && !isMedicineCharge) {
+    // Accumulate total discount on fee transactions
+    if (isApproved && isPatientFeeTransaction(txData)) {
       totalDiscount += Number(txData.discount || 0);
     }
   });

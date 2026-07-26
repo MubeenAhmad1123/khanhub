@@ -188,7 +188,8 @@ export default function PatientsListPage() {
           });
         });
 
-        const remaining = (totalDueTillDate + medCharges) - totalReceived;
+        const manualAdj = Number((data as any).manualRemainingAdjustment || 0);
+        const remaining = (totalDueTillDate + medCharges) - totalReceived + manualAdj;
 
         const totalCanteenDeposited = pCanteen.reduce((a, c) => a + (Number(c.totalDeposited) || 0), 0);
         const totalCanteenSpent = pCanteen.reduce((a, c) => a + (Number(c.totalSpent) || 0), 0);
