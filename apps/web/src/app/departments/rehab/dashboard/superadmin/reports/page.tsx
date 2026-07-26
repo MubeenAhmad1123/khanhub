@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
-import { formatDateDMY, downloadElementAsPng, toDate } from '@/lib/utils';
+import { formatDateDMY, downloadElementAsPng, toDate, calculateBillableMonths } from '@/lib/utils';
 import {
   FileBarChart, Printer, Calendar,
   TrendingUp, TrendingDown, DollarSign, Loader2, BarChart3,
@@ -49,39 +49,23 @@ function calculatePatientOverallRemaining(
   allTxns: any[]
 ): number {
   const manualAdj = Number(patient.manualRemainingAdjustment || 0);
-  if (patient.isActive !== false || manualAdj !== 0) {
-    return Number(patient.overallRemaining ?? patient.remaining ?? patient.remainingBalance ?? patient.amountRemaining ?? 0);
-  }
-
   const patientId = patient.id;
-  const monthlyPkg = Number(patient.monthlyPackage || patient.packageAmount || 0);
+  const monthlyPkg = Number(patient.monthlyPackage || patient.packageAmount || 60000);
   
   const safeToDateLocal = (d: any) => {
     if (!d) return new Date();
     if (d.toDate) return d.toDate();
-    return new Date(d);
+    const parsed = new Date(d);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
   };
 
   let admissionDate = safeToDateLocal(patient.admissionDate);
-  let endDate = patient.dischargeDate ? safeToDateLocal(patient.dischargeDate) : new Date();
+  let endDate = patient.isActive === false && patient.dischargeDate 
+    ? safeToDateLocal(patient.dischargeDate) 
+    : new Date();
 
-  // Calculate billable months (Completed month cycle + 1 day above counts as full next month)
-  const rawMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth());
-  let completedMonths = rawMonths;
-  let hasExtraDays = false;
-
-  if (endDate.getDate() < admissionDate.getDate()) {
-    completedMonths = rawMonths - 1;
-    hasExtraDays = true;
-  } else if (endDate.getDate() > admissionDate.getDate()) {
-    completedMonths = rawMonths;
-    hasExtraDays = true;
-  } else {
-    completedMonths = rawMonths;
-    hasExtraDays = false;
-  }
-
-  const currentStayMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+  // Calculate billable months (Day 1 of admission = 1st month. Month cycle completion + 1 day = next month)
+  const currentStayMonths = calculateBillableMonths(admissionDate, endDate);
   const currentStayPackage = currentStayMonths * monthlyPkg;
 
   // Calculate historical stays using stay cycle logic
@@ -90,32 +74,17 @@ function calculatePatientOverallRemaining(
   history.forEach((stay: any) => {
     const sAdmission = safeToDateLocal(stay.admissionDate);
     const sDischarge = stay.dischargeDate ? safeToDateLocal(stay.dischargeDate) : new Date();
-    const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || 0);
+    const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || monthlyPkg);
 
-    const sRawMonths = (sDischarge.getFullYear() - sAdmission.getFullYear()) * 12 + (sDischarge.getMonth() - sAdmission.getMonth());
-    let sCompletedMonths = sRawMonths;
-    let sHasExtraDays = false;
-
-    if (sDischarge.getDate() < sAdmission.getDate()) {
-      sCompletedMonths = sRawMonths - 1;
-      sHasExtraDays = true;
-    } else if (sDischarge.getDate() > sAdmission.getDate()) {
-      sCompletedMonths = sRawMonths;
-      sHasExtraDays = true;
-    } else {
-      sCompletedMonths = sRawMonths;
-      sHasExtraDays = false;
-    }
-
-    const sBillableMonths = Math.max(1, sCompletedMonths + (sHasExtraDays ? 1 : 0));
+    const sBillableMonths = calculateBillableMonths(sAdmission, sDischarge);
     historicalStayPackage += sBillableMonths * sMonthlyPkg;
   });
 
   const totalStayPackage = currentStayPackage + historicalStayPackage;
 
-  // 2. Fetch payments from allFees (synced payments) and allTxns (approved transactions)
+  // Fetch payments from allFees (synced payments) and allTxns (approved transactions)
   const patientFees = allFees.filter(f => f.patientId === patientId);
-  const patientTxns = allTxns.filter(t => t.patientId === patientId);
+  const patientTxns = allTxns.filter(t => t.patientId === patientId || t.studentId === patientId);
 
   let overallReceived = 0;
   let totalMedicineCharges = 0;

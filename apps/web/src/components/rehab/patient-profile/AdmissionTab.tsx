@@ -5,7 +5,7 @@ import { Edit3, Save, Loader2, User, Heart, Brain, Phone, Shield, DollarSign } f
 import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'react-hot-toast';
-import { formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
+import { formatDateDMY, parseDateDMY, toDate, calculateBillableMonths } from '@/lib/utils';
 import { BrutalistCalendar } from '@/components/ui/BrutalistCalendar';
 
 const SectionCard = React.memo(({ title, icon: Icon, children }: any) => (
@@ -324,22 +324,7 @@ export default function AdmissionTab({
                         ? toDate(form.dischargeDate || patient.dischargeDate)
                         : new Date();
                       
-                      const rawMonths = (endDate.getFullYear() - adm.getFullYear()) * 12 + (endDate.getMonth() - adm.getMonth());
-                      let completedMonths = rawMonths;
-                      let hasExtraDays = false;
-
-                      if (endDate.getDate() < adm.getDate()) {
-                        completedMonths = rawMonths - 1;
-                        hasExtraDays = true;
-                      } else if (endDate.getDate() > adm.getDate()) {
-                        completedMonths = rawMonths;
-                        hasExtraDays = true;
-                      } else {
-                        completedMonths = rawMonths;
-                        hasExtraDays = false;
-                      }
-
-                      const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+                      const billableMonths = calculateBillableMonths(adm, endDate);
                       return `${billableMonths} ${billableMonths === 1 ? 'Month' : 'Months'}`;
                     })()}
                   </span>
@@ -355,22 +340,7 @@ export default function AdmissionTab({
                         ? toDate(form.dischargeDate || patient.dischargeDate)
                         : new Date();
                       
-                      const rawMonths = (endDate.getFullYear() - adm.getFullYear()) * 12 + (endDate.getMonth() - adm.getMonth());
-                      let completedMonths = rawMonths;
-                      let hasExtraDays = false;
-
-                      if (endDate.getDate() < adm.getDate()) {
-                        completedMonths = rawMonths - 1;
-                        hasExtraDays = true;
-                      } else if (endDate.getDate() > adm.getDate()) {
-                        completedMonths = rawMonths;
-                        hasExtraDays = true;
-                      } else {
-                        completedMonths = rawMonths;
-                        hasExtraDays = false;
-                      }
-
-                      const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+                      const billableMonths = calculateBillableMonths(adm, endDate);
                       const monthlyPkg = Number(form.monthlyPackage || form.packageAmount || 0);
                       return (billableMonths * monthlyPkg).toLocaleString();
                     })()}

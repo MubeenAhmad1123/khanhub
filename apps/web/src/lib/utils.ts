@@ -37,6 +37,53 @@ export function toDate(val: any): Date {
 }
 
 /**
+ * Calculates billable stay months based on admission date and end/current date.
+ * Rules:
+ * 1. Day 1 of admission counts as Month 1 (minimum 1 month).
+ * 2. On the same day of the following month (e.g., June 15 to July 15), 1 full month is completed.
+ * 3. As soon as the next day arrives (e.g., July 16, 17, ... 26), it counts as the 2nd full month.
+ * 4. Month cycle boundary adjusts for shorter end months (e.g. Jan 31 -> Feb 28).
+ */
+export function calculateBillableMonths(admissionDate: any, endDate?: any): number {
+  const start = toDate(admissionDate);
+  if (!start || isNaN(start.getTime())) return 1;
+  
+  const end = endDate ? toDate(endDate) : new Date();
+  if (!end || isNaN(end.getTime())) return 1;
+
+  const startYear = start.getFullYear();
+  const startMonth = start.getMonth();
+  const startDay = start.getDate();
+
+  const endYear = end.getFullYear();
+  const endMonth = end.getMonth();
+  const endDay = end.getDate();
+
+  const rawMonths = (endYear - startYear) * 12 + (endMonth - startMonth);
+  if (rawMonths < 0) return 1;
+
+  // Determine target day for the end month (handling months with fewer days like Feb)
+  const daysInEndMonth = new Date(endYear, endMonth + 1, 0).getDate();
+  const targetDay = Math.min(startDay, daysInEndMonth);
+
+  let completedMonths = rawMonths;
+  let hasExtraDays = false;
+
+  if (endDay < targetDay) {
+    completedMonths = rawMonths - 1;
+    hasExtraDays = true;
+  } else if (endDay > targetDay) {
+    completedMonths = rawMonths;
+    hasExtraDays = true;
+  } else {
+    completedMonths = rawMonths;
+    hasExtraDays = false;
+  }
+
+  return Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+}
+
+/**
  * Format a date-like value as "DD MM YYYY" (e.g. "25 12 2026").
  * Accepts Firestore Timestamp, Date, ISO string, or epoch-like values.
  */

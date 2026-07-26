@@ -16,7 +16,7 @@ import FinanceHistory from '@/components/patient/FinanceHistory';
 import TherapyTab from '@/components/rehab/patient-profile/TherapyTab';
 import MedicationTab from '@/components/rehab/patient-profile/MedicationTab';
 import AdmissionTab from '@/components/rehab/patient-profile/AdmissionTab';
-import { formatDateDMY } from '@/lib/utils';
+import { formatDateDMY, calculateBillableMonths } from '@/lib/utils';
 import { Patient } from '@/types/rehab';
 import { LogoLoader } from '@/components/ui';
 import { useVisibleSections } from '@/hooks/useVisibleSections';
@@ -143,22 +143,7 @@ export default function FamilyPatientViewPage() {
       const monthlyPkg = Number(data.monthlyPackage || data.packageAmount || 0);
       const dailyRate = Math.round(monthlyPkg / 30);
 
-      const rawMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth());
-      let completedMonths = rawMonths;
-      let hasExtraDays = false;
-
-      if (endDate.getDate() < admissionDate.getDate()) {
-        completedMonths = rawMonths - 1;
-        hasExtraDays = true;
-      } else if (endDate.getDate() > admissionDate.getDate()) {
-        completedMonths = rawMonths;
-        hasExtraDays = true;
-      } else {
-        completedMonths = rawMonths;
-        hasExtraDays = false;
-      }
-
-      const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+      const billableMonths = calculateBillableMonths(admissionDate, endDate);
       const dueTillDate = billableMonths * monthlyPkg;
       const remainingTillDate = dueTillDate - totalReceived;
 

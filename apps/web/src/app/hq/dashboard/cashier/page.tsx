@@ -8,7 +8,7 @@ import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText
 import Link from 'next/link';
 import { db, auth } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
-import { cn, formatDateDMY, parseDateDMY, toDate } from '@/lib/utils';
+import { cn, formatDateDMY, parseDateDMY, toDate, calculateBillableMonths } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { markHqNotificationRead, markAllHqNotificationsRead, subscribeHqNotifications, sendHqPushNotification } from '@/lib/hqNotifications';
 import { toast } from 'react-hot-toast';
@@ -4873,22 +4873,7 @@ function EntityProfileModal({
         endDate = safeToDate(patientData.dischargeDate);
       }
 
-      const rawMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth());
-      let completedMonths = rawMonths;
-      let hasExtraDays = false;
-
-      if (endDate.getDate() < admissionDate.getDate()) {
-        completedMonths = rawMonths - 1;
-        hasExtraDays = true;
-      } else if (endDate.getDate() > admissionDate.getDate()) {
-        completedMonths = rawMonths;
-        hasExtraDays = true;
-      } else {
-        completedMonths = rawMonths;
-        hasExtraDays = false;
-      }
-
-      const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+      const billableMonths = calculateBillableMonths(admissionDate, endDate);
       const currentStayPackage = billableMonths * monthlyPkg;
 
       // Calculate historical stays
@@ -4897,24 +4882,9 @@ function EntityProfileModal({
       history.forEach((stay: any) => {
         const sAdmission = safeToDate(stay.admissionDate);
         const sDischarge = stay.dischargeDate ? safeToDate(stay.dischargeDate) : new Date();
-        const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || 0);
+        const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || monthlyPkg);
 
-        const sRawMonths = (sDischarge.getFullYear() - sAdmission.getFullYear()) * 12 + (sDischarge.getMonth() - sAdmission.getMonth());
-        let sCompletedMonths = sRawMonths;
-        let sHasExtraDays = false;
-
-        if (sDischarge.getDate() < sAdmission.getDate()) {
-          sCompletedMonths = sRawMonths - 1;
-          sHasExtraDays = true;
-        } else if (sDischarge.getDate() > sAdmission.getDate()) {
-          sCompletedMonths = sRawMonths;
-          sHasExtraDays = true;
-        } else {
-          sCompletedMonths = sRawMonths;
-          sHasExtraDays = false;
-        }
-
-        const sBillableMonths = Math.max(1, sCompletedMonths + (sHasExtraDays ? 1 : 0));
+        const sBillableMonths = calculateBillableMonths(sAdmission, sDischarge);
         historicalStayPackage += sBillableMonths * sMonthlyPkg;
       });
 

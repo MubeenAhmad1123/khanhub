@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { collection, getDocs, query, where, limit, orderBy, startAfter, getCountFromServer, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { formatDateDMY } from '@/lib/utils';
+import { formatDateDMY, calculateBillableMonths } from '@/lib/utils';
 import { 
   Heart, Plus, Search, ChevronRight, User, Calendar, Loader2, 
   Phone, DollarSign, CheckCircle, AlertCircle, X, Filter,
@@ -176,22 +176,7 @@ export default function PatientsListPage() {
         const daysSinceAdmission = Math.max(0, Math.floor((endDate.getTime() - admissionDate.getTime()) / (1000 * 60 * 60 * 24)));
         
         // ── UNIFIED MONTHLY DUES LOGIC (MATCHES PROFILE & REPORTS) ──
-        const rawMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth());
-        let completedMonths = rawMonths;
-        let hasExtraDays = false;
-
-        if (endDate.getDate() < admissionDate.getDate()) {
-          completedMonths = rawMonths - 1;
-          hasExtraDays = true;
-        } else if (endDate.getDate() > admissionDate.getDate()) {
-          completedMonths = rawMonths;
-          hasExtraDays = true;
-        } else {
-          completedMonths = rawMonths;
-          hasExtraDays = false;
-        }
-
-        const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+        const billableMonths = calculateBillableMonths(admissionDate, endDate);
         const totalDueTillDate = billableMonths * pkgAmount;
         const medCharges = Number(data.medicineCharges || 0);
         

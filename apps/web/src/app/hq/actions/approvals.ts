@@ -5,7 +5,7 @@ import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { requireHqSuperadmin, readHqSessionCookie } from './auth';
 import { sendHqPushServer } from '@/lib/hqNotificationsServer';
-import { toDate } from '@/lib/utils';
+import { toDate, calculateBillableMonths } from '@/lib/utils';
 
 export type Dept = 'rehab' | 'spims' | 'job-center' | 'hospital' | 'sukoon-center' | 'welfare';
 type Decision = 'approved' | 'rejected';
@@ -143,22 +143,7 @@ async function syncPatientFinance(
   }
 
   // Calculate billable months for active stay
-  const rawMonths = (endDate.getFullYear() - admissionDate.getFullYear()) * 12 + (endDate.getMonth() - admissionDate.getMonth());
-  let completedMonths = rawMonths;
-  let hasExtraDays = false;
-
-  if (endDate.getDate() < admissionDate.getDate()) {
-    completedMonths = rawMonths - 1;
-    hasExtraDays = true;
-  } else if (endDate.getDate() > admissionDate.getDate()) {
-    completedMonths = rawMonths;
-    hasExtraDays = true;
-  } else {
-    completedMonths = rawMonths;
-    hasExtraDays = false;
-  }
-
-  const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+  const billableMonths = calculateBillableMonths(admissionDate, endDate);
   const currentStayPackage = billableMonths * monthlyPkg;
 
   // 3. Calculate stay package fee for historical stays in rejoinHistory
@@ -167,24 +152,9 @@ async function syncPatientFinance(
   history.forEach((stay: any) => {
     const sAdmission = safeToDate(stay.admissionDate);
     const sDischarge = stay.dischargeDate ? safeToDate(stay.dischargeDate) : new Date();
-    const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || 0);
+    const sMonthlyPkg = Number(stay.monthlyPackage || stay.packageAmount || monthlyPkg);
 
-    const sRawMonths = (sDischarge.getFullYear() - sAdmission.getFullYear()) * 12 + (sDischarge.getMonth() - sAdmission.getMonth());
-    let sCompletedMonths = sRawMonths;
-    let sHasExtraDays = false;
-
-    if (sDischarge.getDate() < sAdmission.getDate()) {
-      sCompletedMonths = sRawMonths - 1;
-      sHasExtraDays = true;
-    } else if (sDischarge.getDate() > sAdmission.getDate()) {
-      sCompletedMonths = sRawMonths;
-      sHasExtraDays = true;
-    } else {
-      sCompletedMonths = sRawMonths;
-      sHasExtraDays = false;
-    }
-
-    const sBillableMonths = Math.max(1, sCompletedMonths + (sHasExtraDays ? 1 : 0));
+    const sBillableMonths = calculateBillableMonths(sAdmission, sDischarge);
     historicalStayPackage += sBillableMonths * sMonthlyPkg;
   });
 

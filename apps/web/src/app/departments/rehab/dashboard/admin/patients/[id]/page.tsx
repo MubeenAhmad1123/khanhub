@@ -18,7 +18,7 @@ import {
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 import { syncRehabPatientFinance } from '@/app/hq/actions/approvals';
-import { formatDateDMY, parseDateDMY, toDate, downloadElementAsPng } from '@/lib/utils';
+import { formatDateDMY, parseDateDMY, toDate, downloadElementAsPng, calculateBillableMonths } from '@/lib/utils';
 import { BrutalistCalendar, LogoLoader } from '@/components/ui';
 
 import type { MonthRecord, Payment as PaymentType } from '@/components/rehab/patient-profile/FinanceHistory';
@@ -559,22 +559,7 @@ export default function PatientDetailPage() {
       const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
 
       // Calculate Billable Months (Completed month cycle + 1 day above counts as full next month)
-      const rawMonths = (endDate.getFullYear() - admission.getFullYear()) * 12 + (endDate.getMonth() - admission.getMonth());
-      let completedMonths = rawMonths;
-      let hasExtraDays = false;
-
-      if (endDate.getDate() < admission.getDate()) {
-        completedMonths = rawMonths - 1;
-        hasExtraDays = true;
-      } else if (endDate.getDate() > admission.getDate()) {
-        completedMonths = rawMonths;
-        hasExtraDays = true;
-      } else {
-        completedMonths = rawMonths;
-        hasExtraDays = false;
-      }
-
-      const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+      const billableMonths = calculateBillableMonths(admission, endDate);
       const durationFormatted = formatStayDuration(daysAdmitted);
 
       // Fetch all fees to calculate total received
@@ -890,22 +875,7 @@ export default function PatientDetailPage() {
       const diffTimeMs = endDate.getTime() - admission.getTime();
       const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
 
-      const rawMonths = (endDate.getFullYear() - admission.getFullYear()) * 12 + (endDate.getMonth() - admission.getMonth());
-      let completedMonths = rawMonths;
-      let hasExtraDays = false;
-
-      if (endDate.getDate() < admission.getDate()) {
-        completedMonths = rawMonths - 1;
-        hasExtraDays = true;
-      } else if (endDate.getDate() > admission.getDate()) {
-        completedMonths = rawMonths;
-        hasExtraDays = true;
-      } else {
-        completedMonths = rawMonths;
-        hasExtraDays = false;
-      }
-
-      const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+      const billableMonths = calculateBillableMonths(admission, endDate);
       const durationFormatted = formatStayDuration(daysAdmitted);
 
       let overallReceived = 0;
@@ -1500,22 +1470,7 @@ export default function PatientDetailPage() {
       const diffTimeMs = endDate.getTime() - admission.getTime();
       const daysAdmitted = diffTimeMs > 0 ? Math.floor(diffTimeMs / (1000 * 60 * 60 * 24)) : 0;
 
-      const rawMonths = (endDate.getFullYear() - admission.getFullYear()) * 12 + (endDate.getMonth() - admission.getMonth());
-      let completedMonths = rawMonths;
-      let hasExtraDays = false;
-
-      if (endDate.getDate() < admission.getDate()) {
-        completedMonths = rawMonths - 1;
-        hasExtraDays = true;
-      } else if (endDate.getDate() > admission.getDate()) {
-        completedMonths = rawMonths;
-        hasExtraDays = true;
-      } else {
-        completedMonths = rawMonths;
-        hasExtraDays = false;
-      }
-
-      const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+      const billableMonths = calculateBillableMonths(admission, endDate);
       const durationFormatted = formatStayDuration(daysAdmitted);
       const dailyRate = Math.floor(monthlyPkg / 30);
       const dueTillDate = billableMonths * monthlyPkg;
@@ -2045,22 +2000,7 @@ export default function PatientDetailPage() {
       // 2. Calculate remaining dues and stay package on discharge
       const monthlyPkg = Number(patient.monthlyPackage || patient.packageAmount || 0);
       
-      const rawMonths = (dischargeDateObj.getFullYear() - admissionDateObj.getFullYear()) * 12 + (dischargeDateObj.getMonth() - admissionDateObj.getMonth());
-      let completedMonths = rawMonths;
-      let hasExtraDays = false;
-
-      if (dischargeDateObj.getDate() < admissionDateObj.getDate()) {
-        completedMonths = rawMonths - 1;
-        hasExtraDays = true;
-      } else if (dischargeDateObj.getDate() > admissionDateObj.getDate()) {
-        completedMonths = rawMonths;
-        hasExtraDays = true;
-      } else {
-        completedMonths = rawMonths;
-        hasExtraDays = false;
-      }
-
-      const billableMonths = Math.max(1, completedMonths + (hasExtraDays ? 1 : 0));
+      const billableMonths = calculateBillableMonths(admissionDateObj, dischargeDateObj);
       const currentStayPackage = billableMonths * monthlyPkg;
 
       let historicalStayPackage = 0;
