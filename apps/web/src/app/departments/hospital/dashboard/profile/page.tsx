@@ -15,12 +15,13 @@ import {
   TrendingUp, Activity, MapPin, Mail, Briefcase,
   AlertCircle, ChevronRight, Download, Info, Sparkles,
   Heart, CheckCircle2, XCircle, FileText, Eye, LogOut, CreditCard,
-  ClipboardList, Coins
+  ClipboardList, Coins, PhoneCall
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDateDMY, toDate } from '@/lib/utils';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 import { useVisibleSections } from '@/hooks/useVisibleSections';
+import LeadsCRM from '@/components/shared/LeadsCRM';
 
 // --- Enhanced Types matched with HQ data schema ---
 interface AttendanceLog {
@@ -208,6 +209,7 @@ export default function ProfilePage() {
   // Dynamic Navigation Tabs filtered by visibleSections claims
   const visibleTabs = useMemo(() => {
     const list = [
+      { id: 'leads' as const, label: 'Leads & CRM', icon: PhoneCall, visible: true },
       { id: 'tasks' as const, label: 'Special Tasks', icon: Target, visible: sections.reports !== false },
       { id: 'attendance' as const, label: 'Attendance', icon: Calendar, visible: sections.attendance !== false },
       { id: 'duty' as const, label: 'Duties', icon: Briefcase, visible: sections.duties !== false },
@@ -1093,6 +1095,23 @@ export default function ProfilePage() {
           {/* All Sections Stacked — scroll-based */}
           <div className="space-y-6">
             
+            {/* --- LEADS & CRM SECTION --- */}
+            <div ref={el => { sectionRefs.current['leads'] = el; }} id="section-leads" className={`${cardStyle} p-6 scroll-mt-[140px]`}>
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center text-rose-600">
+                    <PhoneCall size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Leads & CRM Management</h3>
+                    <p className="text-xs text-gray-500 font-medium">Manage leads, inquiries, procedures, and daily reports</p>
+                  </div>
+                </div>
+              </div>
+
+              <LeadsCRM department="hospital" />
+            </div>
+
             {/* --- TASKS SECTION --- */}
             {sections.reports !== false && (
               <div ref={el => { sectionRefs.current['tasks'] = el; }} id="section-tasks" className={`${cardStyle} p-6 scroll-mt-[140px]`}>

@@ -12,14 +12,16 @@ import { formatDateDMY, toDate } from '@/lib/utils';
 import {
   Clock, CheckCircle, Calendar,
   Lightbulb, Send, Star, List, Loader2, AlertCircle,
-  Trophy, Sparkles, Activity, CheckCircle2, Circle, Shirt, LogOut, ArrowRight, UserCheck, ShieldAlert
+  Trophy, Sparkles, Activity, CheckCircle2, Circle, Shirt, LogOut, ArrowRight, UserCheck, ShieldAlert, PhoneCall
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useVisibleSections } from '@/hooks/useVisibleSections';
+import LeadsCRM from '@/components/shared/LeadsCRM';
 
 export default function StaffSelfPage() {
   const router = useRouter();
   const { session: user, loading: sessionLoading } = useHospitalSession();
+  const [activeTab, setActiveTab] = useState<'overview' | 'leads'>('overview');
 
   const [staffProfile, setStaffProfile] = useState<any>(null);
   const [todayRecord, setTodayRecord] = useState<any>(null);
@@ -364,6 +366,37 @@ export default function StaffSelfPage() {
           )}
         </div>
 
+        {/* Tab Switcher */}
+        <div className="flex items-center gap-2 bg-gray-100 p-1.5 rounded-2xl">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={cn(
+              "flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2",
+              activeTab === 'overview' ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
+            )}
+          >
+            <Activity size={16} />
+            Staff Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('leads')}
+            className={cn(
+              "flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2",
+              activeTab === 'leads' ? "bg-white text-rose-600 shadow-sm" : "text-gray-500 hover:text-gray-800"
+            )}
+          >
+            <PhoneCall size={16} />
+            Leads & CRM Page
+          </button>
+        </div>
+
+        {activeTab === 'leads' ? (
+          <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
+            <LeadsCRM department="hospital" />
+          </div>
+        ) : (
+          <>
+
         {/* Quick Stats Matrix */}
         {((sections.growthPoints !== false) || (sections.attendance !== false)) && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -608,9 +641,11 @@ export default function StaffSelfPage() {
                     </div>
                   )}
                 </div>
-              )}
             </div>
-          )}  </div>
+          )}
+        </div>
+      </>
+    )}
 
       </main>
     </div>
