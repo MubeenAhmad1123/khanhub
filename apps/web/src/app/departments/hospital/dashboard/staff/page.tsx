@@ -8,7 +8,7 @@ import {
   updateDoc, doc, getDoc, Timestamp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { formatDateDMY, toDate } from '@/lib/utils';
+import { formatDateDMY, toDate, cn } from '@/lib/utils';
 import {
   Clock, CheckCircle, Calendar,
   Lightbulb, Send, Star, List, Loader2, AlertCircle,
