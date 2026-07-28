@@ -14,6 +14,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Patient View', href: '/departments/hospital/dashboard/patient', roles: ['family'] },
   { label: 'Staff Dashboard', href: '/departments/hospital/dashboard/staff', roles: ['staff'] },
+  { label: 'Leads & CRM', href: '/departments/hospital/dashboard/admin/leads', roles: ['staff', 'admin', 'superadmin'] },
   { label: 'Cashier Dashboard', href: '/departments/hospital/dashboard/cashier', roles: ['cashier', 'superadmin'] },
   { label: 'Admin Overview', href: '/departments/hospital/dashboard/admin', roles: ['admin', 'superadmin'] },
   { label: 'Patients', href: '/departments/hospital/dashboard/admin/patients', roles: ['admin', 'superadmin'] },

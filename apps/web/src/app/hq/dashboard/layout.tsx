@@ -209,25 +209,18 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
       if (hospitalSession) {
         try {
           const parsed = JSON.parse(hospitalSession);
-          const isSpecialUser = parsed.uid === '5mHY2l3o6NhGDji4CysY' || 
-                                parsed.uid === 'hospital_5mHY2l3o6NhGDji4CysY' ||
-                                parsed.customId === '5mHY2l3o6NhGDji4CysY' ||
-                                parsed.customId === 'hospital_5mHY2l3o6NhGDji4CysY' ||
-                                parsed.email?.includes('5mHY2l3o6NhGDji4CysY') ||
-                                parsed.isEditOnly === true;
-
-          if (isSpecialUser || parsed.role === 'admin' || parsed.role === 'superadmin') {
+          if (parsed && parsed.uid) {
             const synthSession = {
               uid: parsed.uid,
-              customId: parsed.customId || '5mHY2l3o6NhGDji4CysY',
-              name: parsed.name || parsed.displayName || 'Hospital Staff Audit',
+              customId: parsed.customId || parsed.uid,
+              name: parsed.name || parsed.displayName || 'Hospital Staff',
               role: 'manager',
               loginTime: Date.now(),
               isEditOnly: true
             };
             localStorage.setItem(SESSION_KEY, JSON.stringify(synthSession));
             localStorage.setItem('hq_login_time', Date.now().toString());
-            console.log('[HQ Layout] Synthesized temporary HQ session for supervisor.');
+            console.log('[HQ Layout] Synthesized temporary HQ session for staff profile view.');
           }
         } catch (e) {}
       }

@@ -117,9 +117,9 @@ export default function StaffProfilePage() {
   const [generatingSlip, setGeneratingSlip] = useState(false);
   const [uploadingRecordId, setUploadingRecordId] = useState<string | null>(null);
   const [uploadingType, setUploadingType] = useState<'slip' | 'proof' | null>(null);
-  const [draftSlipFile, setDraftSlipFile] = useState<File | null>(null);
-  const [draftProofFile, setDraftProofFile] = useState<File | null>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'tasks' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll' | 'action' | 'leads'>('profile');
+  const searchParams = useSearchParams();
+  const tabParam = searchParams ? searchParams.get('tab') : null;
+  const [activeTab, setActiveTab] = useState<'profile' | 'tasks' | 'attendance' | 'duties' | 'dress' | 'salary' | 'score' | 'edit' | 'payroll' | 'action' | 'leads'>((tabParam as any) || 'profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [processingConfig, setProcessingConfig] = useState(false);
@@ -2581,7 +2581,7 @@ export default function StaffProfilePage() {
                 { id: 'dress', label: 'Dress Code', icon: <Shield size={12} />, visibilityKey: 'uniform' },
                 { id: 'duties', label: 'Duty Logs', icon: <ClipboardList size={12} />, visibilityKey: 'duties' },
                 { id: 'score', label: 'Score Analysis', icon: <TrendingUp size={12} />, visibilityKey: 'growthPoints' },
-                ...(staffId === 'hospital_5mHY2l3o6NhGDji4CysY' || staffId?.includes('5mHY2l3o6NhGDji4CysY') ? [{ id: 'leads', label: 'Leads CRM', icon: <ClipboardList size={12} /> }] : []),
+                { id: 'leads', label: 'Leads & CRM', icon: <ClipboardList size={12} /> },
               ].map(tab => {
                 const isHidden = (tab as any).visibilityKey && staff?.visibleSections && (staff.visibleSections as any)[(tab as any).visibilityKey] === false;
                 return (

@@ -23,7 +23,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { title: 'Overview', href: '/departments/hospital/dashboard/admin', icon: LayoutDashboard, roles: ['admin', 'superadmin'] },
-  { title: 'Leads & CRM', href: '/departments/hospital/dashboard/admin/leads', icon: PhoneCall, roles: ['admin', 'superadmin'] },
+  { title: 'Leads & CRM', href: '/departments/hospital/dashboard/admin/leads', icon: PhoneCall, roles: ['staff', 'admin', 'superadmin'] },
   { title: 'Transactions', href: '/departments/hospital/dashboard/admin/patients', icon: FileText, roles: ['admin', 'superadmin'] },
   { title: 'Reports & Logs', href: '/departments/hospital/dashboard/admin/reports', icon: ClipboardList, roles: ['admin'] },
   { title: 'HQ Reports', href: '/departments/hospital/dashboard/superadmin/reports', icon: ClipboardList, roles: ['superadmin'] },

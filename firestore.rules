@@ -540,19 +540,16 @@ service cloud.firestore {
     }
 
     // ── Leads & CRM Collections ────────────────────────
-    // Access restricted to HQ and Kashmala (Receptionist)
     match /leads/{leadId} {
-      allow read, write: if isAuth() && (
-        isHqTier1()
-        || request.auth.uid == '5mHY2l3o6NhGDji4CysY' // Kashmala Nazar (Receptionist)
-      );
+      allow read, write: if isAuth();
     }
 
     match /hq_lead_responses/{responseId} {
-      allow read, write: if isAuth() && (
-        isHqTier1()
-        || request.auth.uid == '5mHY2l3o6NhGDji4CysY' // Kashmala Nazar (Receptionist)
-      );
+      allow read, write: if isAuth();
+    }
+
+    match /hq_lead_procedures/{procedureId} {
+      allow read, write: if isAuth();
     }
 
     // ── Staff fines ────────────────────────────────────
