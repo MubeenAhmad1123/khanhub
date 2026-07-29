@@ -115,6 +115,8 @@ export default function StaffProfilePage() {
 
   const [staff, setStaff] = useState<StaffProfile | null>(null);
   const [generatingSlip, setGeneratingSlip] = useState(false);
+  const [draftSlipFile, setDraftSlipFile] = useState<File | null>(null);
+  const [draftProofFile, setDraftProofFile] = useState<File | null>(null);
   const [uploadingRecordId, setUploadingRecordId] = useState<string | null>(null);
   const [uploadingType, setUploadingType] = useState<'slip' | 'proof' | null>(null);
   const searchParams = useSearchParams();
