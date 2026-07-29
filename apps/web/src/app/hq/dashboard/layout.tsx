@@ -515,32 +515,32 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
 
   return (
     <VoiceAssistantProvider>
-      <div className="min-h-screen flex overflow-x-hidden bg-white">
-      <aside className="hidden md:flex flex-col w-20 lg:w-64 hover:w-64 fixed left-0 top-0 h-screen z-30 bg-white border-r border-gray-100 transition-all duration-300 group/sidebar">
+      <div className="min-h-screen flex overflow-x-hidden bg-white print:overflow-visible print:bg-white">
+      <aside className="hidden md:flex flex-col w-20 lg:w-64 hover:w-64 fixed left-0 top-0 h-screen z-30 bg-white border-r border-gray-100 transition-all duration-300 group/sidebar print:hidden">
         <SidebarContent />
       </aside>
 
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-gray-900/10 backdrop-blur-sm z-40 md:hidden transition-opacity"
+          className="fixed inset-0 bg-gray-900/10 backdrop-blur-sm z-40 md:hidden transition-opacity print:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       <aside className={`fixed left-0 top-0 h-screen w-72 z-50 md:hidden transform transition-transform duration-300 ease-out shadow-2xl ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-none'
-      } bg-white border-r border-gray-100`}>
+      } bg-white border-r border-gray-100 print:hidden`}>
         <button
           onClick={() => setSidebarOpen(false)}
-          className="absolute top-4 right-4 p-2.5 rounded-xl border border-gray-100 text-gray-400 bg-white shadow-sm hover:text-rose-600 hover:border-rose-100 transition-all z-50 active:scale-95"
+          className="absolute top-4 right-4 p-2.5 rounded-xl border border-gray-100 text-gray-400 bg-white shadow-sm hover:text-rose-600 hover:border-rose-100 transition-all z-50 active:scale-95 print:hidden"
         >
           <X size={18} />
         </button>
         <SidebarContent />
       </aside>
 
-      <div className="flex-1 md:ml-20 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-hidden">
-        <header className="md:hidden sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-4 py-3.5 flex items-center justify-between">
+      <div className="flex-1 md:ml-20 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-hidden print:ml-0 print:m-0 print:p-0 print:w-full print:max-w-none print:overflow-visible">
+        <header className="md:hidden sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-4 py-3.5 flex items-center justify-between print:hidden">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -579,7 +579,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           </div>
         </header>
 
-        <header className="hidden md:flex sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 items-center justify-between">
+        <header className="hidden md:flex sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 items-center justify-between print:hidden">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
@@ -615,7 +615,7 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
           </div>
         </header>
 
-        <main className={`flex-1 overflow-x-hidden transition-opacity duration-300 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+        <main className={`flex-1 overflow-x-hidden transition-opacity duration-300 print:m-0 print:p-0 print:overflow-visible ${mounted ? 'opacity-100' : 'opacity-0'}`}>
           {/* Notification permission banner — only when permission not yet decided */}
           {showNotifBanner && (
             <HqNotificationPermissionBanner
@@ -624,17 +624,19 @@ export default function HqDashboardLayout({ children }: { children: React.ReactN
               onDismiss={handleDismissBanner}
             />
           )}
-          <div className="p-4 lg:p-8">
-            <div className="max-w-6xl mx-auto w-full">
+          <div className="p-4 lg:p-8 print:p-0 print:m-0">
+            <div className="max-w-6xl mx-auto w-full print:max-w-none print:w-full print:m-0 print:p-0">
               {children}
             </div>
           </div>
         </main>
       </div>
       </div>
-      <VoiceCommandBar />
-      <VoiceDisambiguationCard />
-      <HqGlobalSearch userRole={currentRole} isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      <div className="print:hidden">
+        <VoiceCommandBar />
+        <VoiceDisambiguationCard />
+        <HqGlobalSearch userRole={currentRole} isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      </div>
     </VoiceAssistantProvider>
   );
 }

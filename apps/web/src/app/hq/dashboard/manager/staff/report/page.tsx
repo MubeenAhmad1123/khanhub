@@ -292,45 +292,85 @@ export default function StaffReportGeneratorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20 print:bg-white print:pb-0 print:text-black">
-      {/* Dynamic CSS for Print Orientation */}
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20 print:bg-white print:pb-0 print:pt-0 print:min-h-0 print:text-black">
+      {/* Dynamic CSS for Print Orientation & Full Document Pagination */}
       <style jsx global>{`
         @media print {
           @page {
             size: A4 ${printOrientation};
             margin: 8mm;
           }
+
+          aside,
+          header,
+          nav,
+          .no-print {
+            display: none !important;
+          }
+
+          html, body, #__next, main, div, section, table, tbody, tr, td, th {
+            overflow: visible !important;
+            height: auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+          }
+
           body {
             background-color: white !important;
             color: black !important;
             font-size: 10pt;
+            margin: 0 !important;
+            padding: 0 !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
-          .no-print {
-            display: none !important;
+
+          .flex-1, main, div {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
           }
+
           .print-only {
             display: block !important;
           }
+
           .print-table {
             width: 100% !important;
             border-collapse: collapse !important;
             margin-top: 10px !important;
+            table-layout: auto !important;
           }
+
+          .print-table thead {
+            display: table-header-group !important;
+          }
+
+          .print-table tr {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+
           .print-table th, .print-table td {
             border: 1px solid #222 !important;
-            padding: 6px 8px !important;
-            font-size: 9pt !important;
+            padding: 5px 6px !important;
+            font-size: 8.5pt !important;
+            color: #000 !important;
           }
+
           .print-table th {
             background-color: #f1f5f9 !important;
             color: #000 !important;
             font-weight: 800 !important;
             text-transform: uppercase !important;
           }
-          .print-row {
-            page-break-inside: avoid !important;
+
+          .print-dept-header {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
           }
         }
       `}</style>
@@ -373,7 +413,7 @@ export default function StaffReportGeneratorPage() {
       </header>
 
       {/* Main Screen Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 mt-6 sm:mt-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 mt-6 sm:mt-8 print:m-0 print:p-0 print:max-w-none">
         {/* Controls & Configuration Panel (Hidden on Print) */}
         <section className="no-print space-y-6 mb-8">
           {/* Column Checkbox Selection Cards */}
@@ -590,7 +630,7 @@ export default function StaffReportGeneratorPage() {
         </section>
 
         {/* Printable Document Container */}
-        <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-2xl shadow-slate-200/60 print:p-0 print:border-none print:shadow-none print:bg-transparent">
+        <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-2xl shadow-slate-200/60 print:p-0 print:border-none print:shadow-none print:bg-transparent print:m-0 print:w-full">
           {/* Print Header (Visible on print & screen preview) */}
           <div className="border-b-2 border-slate-900 pb-5 mb-6 flex items-start justify-between">
             <div>
@@ -636,11 +676,11 @@ export default function StaffReportGeneratorPage() {
             </div>
           ) : (
             /* Render Grouped or Single Tables */
-            <div className="space-y-8">
+            <div className="space-y-8 print:space-y-6">
               {Object.entries(groupedStaff).map(([deptGroupTitle, staffGroup]) => (
-                <div key={deptGroupTitle} className="space-y-3 print-row">
+                <div key={deptGroupTitle} className="space-y-3 mb-6 print:mb-4">
                   {groupByDept && (
-                    <div className="flex items-center justify-between bg-slate-900 text-white px-4.5 py-2.5 rounded-xl print:bg-slate-900 print:text-white print:rounded-none shadow-sm">
+                    <div className="flex items-center justify-between bg-slate-900 text-white px-4.5 py-2.5 rounded-xl print:bg-slate-900 print:text-white print:rounded-none shadow-sm print-dept-header">
                       <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-white">
                         {deptGroupTitle}
                       </h3>
@@ -650,7 +690,7 @@ export default function StaffReportGeneratorPage() {
                     </div>
                   )}
 
-                  <div className="overflow-x-auto w-full">
+                  <div className="overflow-x-auto w-full print:overflow-visible">
                     <table className="w-full text-left border-collapse print-table">
                       <thead>
                         <tr className="bg-slate-100 text-slate-900 border-y border-slate-300 text-[10px] font-black uppercase tracking-wider">
