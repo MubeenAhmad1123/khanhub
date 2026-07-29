@@ -38,13 +38,35 @@ const DEPARTMENTS = [
   { code: 'sukoon-center', label: 'Sukoon Center', txCollection: 'sukoon_transactions' },
   { code: 'welfare', label: 'Welfare', txCollection: 'welfare_transactions' },
   { code: 'job-center', label: 'Job Center', txCollection: 'jobcenter_transactions' },
+  { code: 'it', label: 'IT Department', txCollection: 'it_transactions' },
+  { code: 'social-media', label: 'Social Media', txCollection: 'media_transactions' },
+  { code: 'hq', label: 'HQ Head Office', txCollection: 'hq_transactions' },
 ];
+
+const getIsExpense = (tx: any): boolean => {
+  const cat = String(tx.categoryName || tx.category || '').toLowerCase();
+  const desc = String(tx.description || '').toLowerCase();
+  return (
+    tx.type === 'expense' ||
+    cat.includes('expense') ||
+    cat.includes('salary') ||
+    cat.includes('advance') ||
+    cat === 'staff_salary' ||
+    cat === 'staff_advance' ||
+    cat === 'advance_salary' ||
+    desc.includes('advance salary') ||
+    desc.includes('staff salary') ||
+    desc.includes('staff advance') ||
+    desc.includes('advance')
+  );
+};
 
 type Transaction = {
   id: string;
   amount: number;
   type: 'income' | 'expense';
   category: string;
+  categoryName?: string;
   description: string;
   paymentMethod: string;
   departmentCode: string;
@@ -153,11 +175,12 @@ export default function DayClosePage() {
       if (tx.status !== 'approved') return;
 
       const amt = Number(tx.amount) || 0;
-      if (tx.type === 'income') s.income += amt;
+      const isExp = getIsExpense(tx);
+      if (!isExp) s.income += amt;
       else s.expense += amt;
 
       if (tx.paymentMethod === 'cash') {
-        s.cashExpected += (tx.type === 'income' ? amt : -amt);
+        s.cashExpected += (!isExp ? amt : -amt);
       }
     });
     return s;

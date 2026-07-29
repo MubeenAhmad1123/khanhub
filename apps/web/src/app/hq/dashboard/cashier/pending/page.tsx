@@ -15,6 +15,9 @@ const DEPARTMENTS = [
   { code: 'sukoon-center', label: 'Sukoon Center', txCollection: 'sukoon_transactions' },
   { code: 'welfare', label: 'Welfare', txCollection: 'welfare_transactions' },
   { code: 'job-center', label: 'Job Center', txCollection: 'jobcenter_transactions' },
+  { code: 'it', label: 'IT Department', txCollection: 'it_transactions' },
+  { code: 'social-media', label: 'Social Media', txCollection: 'media_transactions' },
+  { code: 'hq', label: 'HQ Head Office', txCollection: 'hq_transactions' },
 ];
 
 export default function CashierPendingPage() {

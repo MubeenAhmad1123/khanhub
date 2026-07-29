@@ -17,7 +17,9 @@ const getIsExpense = (tx: any): boolean => {
     cat === 'staff_advance' ||
     cat === 'advance_salary' ||
     desc.includes('advance salary') ||
-    desc.includes('staff salary')
+    desc.includes('staff salary') ||
+    desc.includes('staff advance') ||
+    desc.includes('advance')
   );
 };
 
@@ -40,13 +42,14 @@ interface Transaction {
   transactionDate?: any;
   hospitalPatientDetails?: any;
   patientName?: string;
+  staffName?: string;
 }
 
 const getTxDisplayName = (tx: any): string => {
   if (tx.departmentCode === 'hospital' && tx.hospitalPatientDetails) {
     return tx.hospitalPatientDetails.patientName || tx.hospitalPatientDetails.receiverName || tx.patientName || '—';
   }
-  return tx.patientName || tx.studentName || tx.seekerName || tx.staffName || tx.name || '—';
+  return tx.staffName || tx.patientName || tx.studentName || tx.seekerName || tx.name || '—';
 };
 
 const getTxDisplayDescription = (tx: any): string => {
@@ -79,7 +82,7 @@ const getTxExpenseRecipient = (tx: any): string => {
   if (tx.departmentCode === 'hospital' && tx.hospitalPatientDetails) {
     return tx.hospitalPatientDetails.receiverName || tx.receivedBy || tx.cashierId || 'Staff';
   }
-  return tx.receivedBy || tx.cashierId || 'Staff';
+  return tx.staffName || tx.receivedBy || tx.cashierId || 'Staff';
 };
 
 const getTxDisplayTime = (tx: any): string => {
