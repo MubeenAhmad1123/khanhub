@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, setDoc, deleteDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
@@ -10,7 +10,7 @@ import {
   Loader2, Printer, Award, Clock, XCircle, ArrowRight, ArrowLeft, 
   Search, Filter, Calendar, Crown, Trophy, Medal, ChevronRight, 
   Coins, Sparkles, AlertCircle, AlertTriangle, ExternalLink, Shield,
-  ThumbsUp, Check, X, ClipboardList, Star
+  ThumbsUp, Check, X, ClipboardList, Star, Edit3, Save
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getDeptPrefix, getDeptCollection, StaffDept } from '@/lib/hq/superadmin/staff';
@@ -69,6 +69,17 @@ export default function ManagerReportsPage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [viewingStaff, setViewingStaff] = useState<any | null>(null);
   const [selectedDay, setSelectedDay] = useState<any | null>(null);
+  const [isEditingDay, setIsEditingDay] = useState(false);
+  const [savingAudit, setSavingAudit] = useState(false);
+  const [editForm, setEditForm] = useState<any>({
+    attendance: 'unmarked',
+    uniform: 'unmarked',
+    uniformItems: [],
+    duty: 'unmarked',
+    dutyItems: [],
+    fines: 0,
+    fineReasons: ''
+  });
   
   // Weekly vs Monthly Toggle State
   const [reportPeriod, setReportPeriod] = useState<'monthly' | 'weekly'>('monthly');
@@ -606,8 +617,136 @@ export default function ManagerReportsPage() {
     return Array.from(set).sort();
   }, [staff]);
 
+  const activeViewingStaff = useMemo(() => {
+    if (!viewingStaff) return null;
+    return rankedStaff.find(s => s.id === viewingStaff.id) || viewingStaff;
+  }, [viewingStaff, rankedStaff]);
+
+  useEffect(() => {
+    if (selectedDay && activeViewingStaff) {
+      const updatedDayLog = activeViewingStaff.stats.dailyBreakdown.find((b: any) => b.date === selectedDay.date);
+      if (updatedDayLog && updatedDayLog !== selectedDay && !isEditingDay) {
+        setSelectedDay(updatedDayLog);
+      }
+    }
+  }, [activeViewingStaff, selectedDay, isEditingDay]);
+
+  useEffect(() => {
+    if (selectedDay && activeViewingStaff) {
+      const existingUniformItems = selectedDay.details?.uniformItems || [];
+      const configDress = activeViewingStaff.dressCodeConfig || [];
+      const uniformItems = configDress.length > 0 ? configDress.map((c: any) => {
+        const found = existingUniformItems.find((i: any) => i.key === c.key);
+        return {
+          key: c.key,
+          label: c.label || c.key,
+          status: found ? found.status : 'yes'
+        };
+      }) : existingUniformItems;
+
+      const existingDutyItems = selectedDay.details?.dutyItems || [];
+      const configDuty = activeViewingStaff.dutyConfig || [];
+      const dutyItems = configDuty.length > 0 ? configDuty.map((c: any) => {
+        const found = existingDutyItems.find((i: any) => i.key === c.key);
+        return {
+          key: c.key,
+          label: c.label || c.key,
+          status: found ? (found.status === 'done' || found.status === 'yes' ? 'done' : 'not_done') : 'done'
+        };
+      }) : existingDutyItems;
+
+      setEditForm({
+        attendance: selectedDay.attendance || 'unmarked',
+        uniform: selectedDay.uniform || 'unmarked',
+        uniformItems,
+        duty: selectedDay.duty || 'unmarked',
+        dutyItems,
+        fines: selectedDay.fines || 0,
+        fineReasons: selectedDay.fineReasons || ''
+      });
+    }
+  }, [selectedDay, activeViewingStaff]);
+
+  const liveCalculatedScore = useMemo(() => {
+    if (editForm.attendance === 'leave' || editForm.attendance === 'unmarked') return 0;
+    const attPt = editForm.attendance === 'present' ? 1 : 0;
+    const dressPt = editForm.uniform === 'yes' ? 1 : 0;
+    const dutyPt = editForm.duty === 'yes' ? 1 : 0;
+    return attPt + dressPt + dutyPt;
+  }, [editForm]);
+
+  const handleSaveDayAudit = async () => {
+    if (!activeViewingStaff || !selectedDay) return;
+    setSavingAudit(true);
+    try {
+      const dept = activeViewingStaff.department as StaffDept;
+      const prefix = getDeptPrefix(dept);
+      const date = selectedDay.date;
+      const simpleSid = getSimpleId(activeViewingStaff.id);
+
+      // 1. Attendance update
+      const attRef = doc(db, `${prefix}_attendance`, `${simpleSid}_${date}`);
+      await setDoc(attRef, {
+        staffId: simpleSid,
+        date,
+        status: editForm.attendance,
+        isLate: editForm.attendance === 'late',
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      // 2. Dress Log update
+      const dressRef = doc(db, `${prefix}_dress_logs`, `${simpleSid}_${date}`);
+      await setDoc(dressRef, {
+        staffId: simpleSid,
+        date,
+        status: editForm.uniform,
+        items: editForm.uniformItems || [],
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      // 3. Duty Log update
+      const dutyRef = doc(db, `${prefix}_duty_logs`, `${simpleSid}_${date}`);
+      await setDoc(dutyRef, {
+        staffId: simpleSid,
+        date,
+        status: editForm.duty,
+        duties: editForm.dutyItems || [],
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      // 4. Fines update
+      const fineRef = doc(db, `${prefix}_fines`, `${simpleSid}_${date}`);
+      const fineAmt = Number(editForm.fines) || 0;
+      if (fineAmt > 0) {
+        await setDoc(fineRef, {
+          staffId: simpleSid,
+          date,
+          amount: fineAmt,
+          reason: editForm.fineReasons || 'Daily Audit Penalty',
+          status: 'unpaid',
+          recordedBy: (session as any)?.name || (session as any)?.displayName || (session as any)?.email || 'Manager',
+          createdAt: serverTimestamp()
+        }, { merge: true });
+      } else {
+        await deleteDoc(fineRef).catch(() => {});
+      }
+
+      toast.success(`Audit record for ${date} saved successfully!`);
+      
+      // Reload logs and recalculate scores across all components
+      await fetchData();
+      setIsEditingDay(false);
+    } catch (err: any) {
+      console.error("Error saving audit log:", err);
+      toast.error("Failed to save audit: " + (err.message || 'Unknown error'));
+    } finally {
+      setSavingAudit(false);
+    }
+  };
+
   const handleOpenStaffModal = (member: any) => {
     setViewingStaff(member);
+    setIsEditingDay(false);
     // Auto-select the first logged day or today
     const logged = member.stats.dailyBreakdown.find((b: any) => b.attendance !== 'unmarked');
     setSelectedDay(logged || member.stats.dailyBreakdown[0] || null);
@@ -1157,7 +1296,7 @@ export default function ManagerReportsPage() {
       </div>
 
       {/* ==================== STAFF DETAILED REPORT MODAL ==================== */}
-      {viewingStaff && (
+      {activeViewingStaff && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 max-h-screen overflow-hidden print:static print:z-0 print:p-0 print:overflow-visible">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm print:hidden" onClick={() => setViewingStaff(null)} />
           
@@ -1169,22 +1308,22 @@ export default function ManagerReportsPage() {
               <div className="flex justify-between items-start print:hidden">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-[1.25rem] bg-indigo-50 border border-indigo-100 flex items-center justify-center text-2xl font-black text-indigo-600 overflow-hidden shadow-inner">
-                    {viewingStaff.photoUrl ? (
-                      <img src={viewingStaff.photoUrl} alt={viewingStaff.name} className="w-full h-full object-cover" />
+                    {activeViewingStaff.photoUrl ? (
+                      <img src={activeViewingStaff.photoUrl} alt={activeViewingStaff.name} className="w-full h-full object-cover" />
                     ) : (
-                      viewingStaff.name?.[0]
+                      activeViewingStaff.name?.[0]
                     )}
                   </div>
                   <div>
-                    <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 leading-none">{viewingStaff.name}</h2>
-                    <p className="text-indigo-600 text-xs font-extrabold tracking-wide mt-1.5 uppercase">{formatDesignation(viewingStaff.designation)}</p>
-                    <p className="text-slate-400 font-bold text-[9px] uppercase tracking-widest mt-1.5">{getDeptLabel(viewingStaff.department)} Department • ID: {viewingStaff.employeeId || viewingStaff.customId}</p>
+                    <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 leading-none">{activeViewingStaff.name}</h2>
+                    <p className="text-indigo-600 text-xs font-extrabold tracking-wide mt-1.5 uppercase">{formatDesignation(activeViewingStaff.designation)}</p>
+                    <p className="text-slate-400 font-bold text-[9px] uppercase tracking-widest mt-1.5">{getDeptLabel(activeViewingStaff.department)} Department • ID: {activeViewingStaff.employeeId || activeViewingStaff.customId}</p>
                   </div>
                 </div>
                 
                 <button 
                   onClick={() => setViewingStaff(null)} 
-                  className="text-slate-400 hover:text-slate-600 transition-all bg-slate-55/10 bg-slate-50 hover:bg-slate-100 border border-slate-100 p-2.5 rounded-full"
+                  className="text-slate-400 hover:text-slate-600 transition-all bg-slate-50 hover:bg-slate-100 border border-slate-100 p-2.5 rounded-full"
                 >
                   <XCircle size={22} />
                 </button>
@@ -1193,20 +1332,20 @@ export default function ManagerReportsPage() {
               {/* Print Only Title Block */}
               <div className="hidden print:block border-b border-slate-200 pb-4 mb-6">
                 <h1 className="text-3xl font-black text-slate-900">Performance Audit Record</h1>
-                <p className="text-sm font-bold text-indigo-600 mt-1 uppercase tracking-wider">Staff: {viewingStaff.name} ({formatDesignation(viewingStaff.designation)})</p>
+                <p className="text-sm font-bold text-indigo-600 mt-1 uppercase tracking-wider">Staff: {activeViewingStaff.name} ({formatDesignation(activeViewingStaff.designation)})</p>
                 <p className="text-xs text-slate-400 mt-1">
-                  Period: {reportPeriod === 'weekly' ? `Weekly (${dateRange.start} to ${dateRange.end})` : `Monthly (${selectedMonth})`} • Department: {getDeptLabel(viewingStaff.department).toUpperCase()}
+                  Period: {reportPeriod === 'weekly' ? `Weekly (${dateRange.start} to ${dateRange.end})` : `Monthly (${selectedMonth})`} • Department: {getDeptLabel(activeViewingStaff.department).toUpperCase()}
                 </p>
               </div>
 
               {/* Grid Metrics */}
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                 {[
-                  { label: 'Cumulative Score', val: `${viewingStaff.stats.totalPoints} / ${viewingStaff.stats.maxPoints}`, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100/50' },
-                  { label: 'Attendance Rate', val: `${viewingStaff.stats.attPct}%`, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100/50' },
-                  { label: 'Dress Code Rate', val: `${viewingStaff.stats.dressPct}%`, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100/50' },
-                  { label: 'Duty Done Rate', val: `${viewingStaff.stats.dutyPct}%`, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-100/50' },
-                  { label: 'Fines Total', val: `₨${viewingStaff.stats.finesTotal.toLocaleString()}`, color: viewingStaff.stats.finesTotal > 0 ? 'text-rose-600' : 'text-slate-400', bg: viewingStaff.stats.finesTotal > 0 ? 'bg-rose-50 border-rose-100/50' : 'bg-slate-50 border-slate-100/50' },
+                  { label: 'Cumulative Score', val: `${activeViewingStaff.stats.totalPoints} / ${activeViewingStaff.stats.maxPoints}`, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100/50' },
+                  { label: 'Attendance Rate', val: `${activeViewingStaff.stats.attPct}%`, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100/50' },
+                  { label: 'Dress Code Rate', val: `${activeViewingStaff.stats.dressPct}%`, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100/50' },
+                  { label: 'Duty Done Rate', val: `${activeViewingStaff.stats.dutyPct}%`, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-100/50' },
+                  { label: 'Fines Total', val: `₨${activeViewingStaff.stats.finesTotal.toLocaleString()}`, color: activeViewingStaff.stats.finesTotal > 0 ? 'text-rose-600' : 'text-slate-400', bg: activeViewingStaff.stats.finesTotal > 0 ? 'bg-rose-50 border-rose-100/50' : 'bg-slate-50 border-slate-100/50' },
                 ].map(s => (
                   <div key={s.label} className={`border rounded-2xl p-4 text-center ${s.bg}`}>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 truncate">{s.label}</p>
@@ -1223,7 +1362,7 @@ export default function ManagerReportsPage() {
                       <Calendar size={18} className="text-indigo-600 animate-pulse" />
                       Performance Calendar Heatmap
                     </h3>
-                    <p className="text-slate-400 text-[11px] font-medium mt-0.5">Click any day box below to audit daily granular logs</p>
+                    <p className="text-slate-400 text-[11px] font-medium mt-0.5">Click any day box below to audit or modify daily granular logs</p>
                   </div>
                   
                   {/* Heatmap Legend */}
@@ -1252,7 +1391,7 @@ export default function ManagerReportsPage() {
 
                     const dayStr = String(cell).padStart(2, '0');
                     const dayDate = `${selectedMonth}-${dayStr}`;
-                    const dayLog = viewingStaff.stats.dailyBreakdown.find((b: any) => b.date === dayDate);
+                    const dayLog = activeViewingStaff.stats.dailyBreakdown.find((b: any) => b.date === dayDate);
                     
                     let cellBg = 'bg-slate-200 hover:bg-slate-300';
                     let cellText = 'text-slate-600 font-extrabold';
@@ -1280,11 +1419,11 @@ export default function ManagerReportsPage() {
                           cellBg = 'bg-emerald-600 hover:bg-emerald-700';
                           cellText = 'text-white font-black';
                         } else if (dayLog.score === 2) {
-                          cellBg = 'bg-emerald-100 hover:bg-emerald-205 hover:bg-emerald-200';
+                          cellBg = 'bg-emerald-100 hover:bg-emerald-200';
                           cellText = 'text-emerald-800 font-extrabold';
                           borderClass = 'border border-emerald-300';
                         } else {
-                          cellBg = 'bg-amber-100 hover:bg-amber-255 hover:bg-amber-250';
+                          cellBg = 'bg-amber-100 hover:bg-amber-200';
                           cellText = 'text-amber-800 font-extrabold';
                           borderClass = 'border border-amber-300';
                         }
@@ -1296,7 +1435,20 @@ export default function ManagerReportsPage() {
                     return (
                       <button 
                         key={`cell-${cell}`}
-                        onClick={() => setSelectedDay(dayLog || null)}
+                        onClick={() => {
+                          setSelectedDay(dayLog || { 
+                            date: dayDate, 
+                            day: cell, 
+                            attendance: 'unmarked', 
+                            uniform: 'unmarked', 
+                            duty: 'unmarked', 
+                            score: 0, 
+                            fines: 0, 
+                            fineReasons: '', 
+                            details: { uniformItems: [], dutyItems: [] } 
+                          });
+                          setIsEditingDay(false);
+                        }}
                         className={`aspect-square rounded-2xl flex flex-col items-center justify-center relative transition-all duration-200 ${cellBg} ${cellText} ${borderClass} ${
                           isCurrentlySelected ? 'ring-4 ring-indigo-500 shadow-lg scale-105 z-10' : 'hover:scale-103'
                         }`}
@@ -1311,82 +1463,319 @@ export default function ManagerReportsPage() {
                 </div>
               </div>
 
-              {/* Day details subpanel */}
+              {/* Day details subpanel (Editable) */}
               {selectedDay && (
-                <div className="bg-slate-50 border border-slate-100 rounded-3xl p-5 shadow-inner print:hidden animate-in fade-in duration-200">
+                <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-inner print:hidden animate-in fade-in duration-200">
+                  {/* Header & Controls */}
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-slate-200">
                     <div>
-                      <h4 className="font-extrabold text-sm text-slate-900 uppercase tracking-wider">Granular Day Audit Logs</h4>
-                      <p className="text-xs text-indigo-600 font-extrabold mt-0.5">Selected Date: {selectedDay.date}</p>
-                    </div>
-                    <span className="text-xs font-black bg-indigo-100 border border-indigo-200/50 text-indigo-700 px-3 py-1 rounded-xl">
-                      Score: {selectedDay.score} / 3 Pts
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
-                    {/* Attendance */}
-                    <div className="bg-white border border-slate-100 rounded-2xl p-4">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">1. Attendance</p>
-                      <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
-                        selectedDay.attendance === 'present' ? 'bg-emerald-55 bg-emerald-55/10 bg-emerald-50 border-emerald-100 text-emerald-700' :
-                        selectedDay.attendance === 'late' ? 'bg-amber-50 border-amber-100 text-amber-700' :
-                        selectedDay.attendance === 'absent' ? 'bg-rose-50 border-rose-100 text-rose-700' :
-                        selectedDay.attendance === 'leave' ? 'bg-purple-50 border-purple-100 text-purple-700' :
-                        'bg-slate-105 bg-slate-100 border-slate-200 text-slate-400'
-                      }`}>
-                        {selectedDay.attendance}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-extrabold text-sm text-slate-900 uppercase tracking-wider">Granular Day Audit Logs</h4>
+                        <span className="text-[10px] font-black bg-indigo-50 border border-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-lg uppercase">
+                          {selectedDay.date}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 font-medium mt-0.5">
+                        Audit and modify daily performance items for {activeViewingStaff.name}
+                      </p>
                     </div>
 
-                    {/* Dress Code */}
-                    <div className="bg-white border border-slate-100 rounded-2xl p-4">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">2. Dress Compliance</p>
-                      <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
-                        selectedDay.uniform === 'yes' ? 'bg-emerald-55 bg-emerald-55/10 bg-emerald-50 border-emerald-100 text-emerald-700' :
-                        selectedDay.uniform === 'incomplete' ? 'bg-amber-50 border-amber-100 text-amber-700' :
-                        selectedDay.uniform === 'na' ? 'bg-purple-50 border-purple-100 text-purple-700' :
-                        'bg-rose-55 bg-rose-55/10 bg-rose-50 border-rose-100 text-rose-700'
-                      }`}>
-                        {selectedDay.uniform === 'yes' ? 'Full Compliant' : selectedDay.uniform === 'incomplete' ? 'Incomplete' : selectedDay.uniform === 'na' ? 'Not Applicable' : 'Non Compliant'}
-                      </span>
-                      
-                      {/* Detailed dress missing items */}
-                      {selectedDay.uniform === 'incomplete' && selectedDay.details?.uniformItems && (
-                        <div className="mt-2 text-[9px] font-bold text-amber-600/80">
-                          Missing: {selectedDay.details.uniformItems.filter((i: any) => i.status === 'no').map((i: any) => i.key).join(', ') || 'Dress items'}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Duties Checklist */}
-                    <div className="bg-white border border-slate-100 rounded-2xl p-4">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">3. Duty Checklist</p>
-                      <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
-                        selectedDay.duty === 'yes' ? 'bg-emerald-55 bg-emerald-55/10 bg-emerald-50 border-emerald-100 text-emerald-700' :
-                        selectedDay.duty === 'incomplete' ? 'bg-amber-50 border-amber-100 text-amber-700' :
-                        selectedDay.duty === 'na' ? 'bg-purple-50 border-purple-100 text-purple-700' :
-                        'bg-rose-55 bg-rose-55/10 bg-rose-50 border-rose-100 text-rose-700'
-                      }`}>
-                        {selectedDay.duty === 'yes' ? 'Accomplished' : selectedDay.duty === 'incomplete' ? 'Incomplete' : selectedDay.duty === 'na' ? 'Not Applicable' : 'Incomplete'}
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xs font-black bg-indigo-100 border border-indigo-200/50 text-indigo-700 px-3 py-1.5 rounded-xl">
+                        Score: {isEditingDay ? liveCalculatedScore : selectedDay.score} / 3 Pts
                       </span>
 
-                      {/* Detailed pending duties */}
-                      {selectedDay.duty === 'incomplete' && selectedDay.details?.dutyItems && (
-                        <div className="mt-2 text-[9px] font-bold text-amber-600/80">
-                          Pending: {selectedDay.details.dutyItems.filter((i: any) => i.status !== 'done').map((i: any) => i.key).join(', ') || 'Duties'}
+                      {!isEditingDay ? (
+                        <button
+                          onClick={() => setIsEditingDay(true)}
+                          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-extrabold text-xs shadow-md transition-all active:scale-95"
+                        >
+                          <Edit3 size={14} /> Edit / Modify
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={handleSaveDayAudit}
+                            disabled={savingAudit}
+                            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-extrabold text-xs shadow-md transition-all active:scale-95 disabled:opacity-50"
+                          >
+                            {savingAudit ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save Audit
+                          </button>
+                          <button
+                            onClick={() => setIsEditingDay(false)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold text-xs transition-all"
+                          >
+                            <X size={14} /> Cancel
+                          </button>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Fines Subcard */}
-                  {selectedDay.fines > 0 && (
-                    <div className="mt-4 bg-rose-50/50 border border-rose-100 rounded-2xl p-4 flex items-center gap-3">
-                      <Shield className="text-rose-600 shrink-0" size={20} />
-                      <div>
-                        <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Incurred Penalty Fines</p>
-                        <p className="text-xs font-extrabold text-rose-805 text-rose-800 mt-0.5">₨{selectedDay.fines.toLocaleString()} — {selectedDay.fineReasons || 'Unexcused audit failure'}</p>
+                  {/* Read Mode View */}
+                  {!isEditingDay ? (
+                    <div className="space-y-4 pt-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {/* Attendance Card */}
+                        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">1. Attendance</p>
+                          <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
+                            selectedDay.attendance === 'present' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                            selectedDay.attendance === 'late' ? 'bg-amber-50 border-amber-100 text-amber-700' :
+                            selectedDay.attendance === 'absent' ? 'bg-rose-50 border-rose-100 text-rose-700' :
+                            selectedDay.attendance === 'leave' ? 'bg-purple-50 border-purple-100 text-purple-700' :
+                            'bg-slate-100 border-slate-200 text-slate-400'
+                          }`}>
+                            {selectedDay.attendance}
+                          </span>
+                        </div>
+
+                        {/* Dress Code Card */}
+                        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">2. Dress Compliance</p>
+                          <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
+                            selectedDay.uniform === 'yes' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                            selectedDay.uniform === 'incomplete' ? 'bg-amber-50 border-amber-100 text-amber-700' :
+                            selectedDay.uniform === 'na' ? 'bg-purple-50 border-purple-100 text-purple-700' :
+                            'bg-rose-50 border-rose-100 text-rose-700'
+                          }`}>
+                            {selectedDay.uniform === 'yes' ? 'Full Compliant' : selectedDay.uniform === 'incomplete' ? 'Incomplete' : selectedDay.uniform === 'na' ? 'Not Applicable' : 'Non Compliant'}
+                          </span>
+                          
+                          {selectedDay.uniform === 'incomplete' && selectedDay.details?.uniformItems && (
+                            <div className="mt-2 text-[9px] font-bold text-amber-600/90">
+                              Missing: {selectedDay.details.uniformItems.filter((i: any) => i.status === 'no').map((i: any) => i.label || i.key).join(', ') || 'Dress items'}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Duties Checklist Card */}
+                        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">3. Duty Checklist</p>
+                          <span className={`inline-block px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border ${
+                            selectedDay.duty === 'yes' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                            selectedDay.duty === 'incomplete' ? 'bg-amber-50 border-amber-100 text-amber-700' :
+                            selectedDay.duty === 'na' ? 'bg-purple-50 border-purple-100 text-purple-700' :
+                            'bg-rose-50 border-rose-100 text-rose-700'
+                          }`}>
+                            {selectedDay.duty === 'yes' ? 'Accomplished' : selectedDay.duty === 'incomplete' ? 'Incomplete' : selectedDay.duty === 'na' ? 'Not Applicable' : 'Non Compliant'}
+                          </span>
+
+                          {selectedDay.duty === 'incomplete' && selectedDay.details?.dutyItems && (
+                            <div className="mt-2 text-[9px] font-bold text-amber-600/90">
+                              Pending: {selectedDay.details.dutyItems.filter((i: any) => i.status !== 'done' && i.status !== 'yes').map((i: any) => i.label || i.key).join(', ') || 'Duties'}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Fines Card */}
+                      {selectedDay.fines > 0 && (
+                        <div className="bg-rose-50/70 border border-rose-100 rounded-2xl p-4 flex items-center gap-3">
+                          <Shield className="text-rose-600 shrink-0" size={20} />
+                          <div>
+                            <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Incurred Penalty Fines</p>
+                            <p className="text-xs font-extrabold text-rose-800 mt-0.5">₨{selectedDay.fines.toLocaleString()} — {selectedDay.fineReasons || 'Audit penalty'}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Edit Mode Interactive Controls */
+                    <div className="space-y-4 pt-4 animate-in fade-in duration-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        
+                        {/* Attendance Selector */}
+                        <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2.5 shadow-sm">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">1. Attendance Status</p>
+                          <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold">
+                            {[
+                              { id: 'present', label: 'Present (+1 pt)', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+                              { id: 'late', label: 'Late (0 pt)', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+                              { id: 'absent', label: 'Absent (0 pt)', cls: 'bg-rose-50 text-rose-700 border-rose-200' },
+                              { id: 'leave', label: 'Leave (N/A)', cls: 'bg-purple-50 text-purple-700 border-purple-200' },
+                              { id: 'unmarked', label: 'Unmarked', cls: 'bg-slate-100 text-slate-600 border-slate-200' },
+                            ].map(opt => (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => setEditForm((prev: any) => ({
+                                  ...prev,
+                                  attendance: opt.id,
+                                  uniform: opt.id === 'leave' ? 'na' : prev.uniform,
+                                  duty: opt.id === 'leave' ? 'na' : prev.duty
+                                }))}
+                                className={`px-2 py-2 rounded-xl border text-center transition-all ${
+                                  editForm.attendance === opt.id
+                                    ? `${opt.cls} ring-2 ring-indigo-500 font-extrabold shadow-sm scale-[1.02]`
+                                    : 'bg-slate-50 text-slate-600 border-slate-100 hover:bg-slate-100'
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Dress Compliance Selector */}
+                        <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2.5 shadow-sm">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">2. Dress Compliance</p>
+                          <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold">
+                            {[
+                              { id: 'yes', label: 'Full Compliant (+1 pt)', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+                              { id: 'incomplete', label: 'Incomplete (0 pt)', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+                              { id: 'no', label: 'Non Compliant (0 pt)', cls: 'bg-rose-50 text-rose-700 border-rose-200' },
+                              { id: 'na', label: 'N/A', cls: 'bg-purple-50 text-purple-700 border-purple-200' },
+                            ].map(opt => (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => setEditForm((prev: any) => ({ ...prev, uniform: opt.id }))}
+                                className={`px-2 py-2 rounded-xl border text-center transition-all ${
+                                  editForm.uniform === opt.id
+                                    ? `${opt.cls} ring-2 ring-indigo-500 font-extrabold shadow-sm scale-[1.02]`
+                                    : 'bg-slate-50 text-slate-600 border-slate-100 hover:bg-slate-100'
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Individual Dress Items checklist */}
+                          {editForm.uniformItems && editForm.uniformItems.length > 0 && (
+                            <div className="pt-2 border-t border-slate-100 space-y-1">
+                              <p className="text-[9px] font-extrabold text-slate-400 uppercase">Dress Items Checklist:</p>
+                              <div className="space-y-1 max-h-24 overflow-y-auto pr-1">
+                                {editForm.uniformItems.map((item: any, i: number) => (
+                                  <button
+                                    key={item.key || i}
+                                    type="button"
+                                    onClick={() => {
+                                      const updatedItems = [...editForm.uniformItems];
+                                      const newStatus = updatedItems[i].status === 'yes' ? 'no' : 'yes';
+                                      updatedItems[i].status = newStatus;
+                                      const allYes = updatedItems.every(x => x.status === 'yes');
+                                      const allNo = updatedItems.every(x => x.status === 'no');
+                                      const newOverall = allYes ? 'yes' : (allNo ? 'no' : 'incomplete');
+                                      setEditForm((prev: any) => ({ ...prev, uniformItems: updatedItems, uniform: newOverall }));
+                                    }}
+                                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${
+                                      item.status === 'yes' ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800' : 'bg-rose-50/80 border-rose-200 text-rose-800'
+                                    }`}
+                                  >
+                                    <span>{item.label || item.key}</span>
+                                    <span>{item.status === 'yes' ? '✓ Compliant' : '✗ Missing'}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Duty Checklist Selector */}
+                        <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2.5 shadow-sm">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">3. Duty Checklist</p>
+                          <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold">
+                            {[
+                              { id: 'yes', label: 'Accomplished (+1 pt)', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+                              { id: 'incomplete', label: 'Incomplete (0 pt)', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+                              { id: 'no', label: 'Non Compliant (0 pt)', cls: 'bg-rose-50 text-rose-700 border-rose-200' },
+                              { id: 'na', label: 'N/A', cls: 'bg-purple-50 text-purple-700 border-purple-200' },
+                            ].map(opt => (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => setEditForm((prev: any) => ({ ...prev, duty: opt.id }))}
+                                className={`px-2 py-2 rounded-xl border text-center transition-all ${
+                                  editForm.duty === opt.id
+                                    ? `${opt.cls} ring-2 ring-indigo-500 font-extrabold shadow-sm scale-[1.02]`
+                                    : 'bg-slate-50 text-slate-600 border-slate-100 hover:bg-slate-100'
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Individual Duty Tasks checklist */}
+                          {editForm.dutyItems && editForm.dutyItems.length > 0 && (
+                            <div className="pt-2 border-t border-slate-100 space-y-1">
+                              <p className="text-[9px] font-extrabold text-slate-400 uppercase">Duty Checklist Tasks:</p>
+                              <div className="space-y-1 max-h-24 overflow-y-auto pr-1">
+                                {editForm.dutyItems.map((item: any, i: number) => (
+                                  <button
+                                    key={item.key || i}
+                                    type="button"
+                                    onClick={() => {
+                                      const updatedItems = [...editForm.dutyItems];
+                                      const isDone = updatedItems[i].status === 'done' || updatedItems[i].status === 'yes';
+                                      updatedItems[i].status = isDone ? 'not_done' : 'done';
+                                      const allDone = updatedItems.every(x => x.status === 'done' || x.status === 'yes');
+                                      const allPending = updatedItems.every(x => x.status === 'not_done' || x.status === 'pending');
+                                      const newOverall = allDone ? 'yes' : (allPending ? 'no' : 'incomplete');
+                                      setEditForm((prev: any) => ({ ...prev, dutyItems: updatedItems, duty: newOverall }));
+                                    }}
+                                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${
+                                      (item.status === 'done' || item.status === 'yes') ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800' : 'bg-amber-50/80 border-amber-200 text-amber-800'
+                                    }`}
+                                  >
+                                    <span>{item.label || item.key}</span>
+                                    <span>{(item.status === 'done' || item.status === 'yes') ? '✓ Done' : '⌛ Pending'}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                      </div>
+
+                      {/* Penalty Fine Section */}
+                      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2">
+                        <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">4. Penalty Fine Audit</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="text-[10px] font-extrabold text-slate-500 block mb-1">Fine Amount (₨)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="0"
+                              value={editForm.fines}
+                              onChange={(e) => setEditForm((prev: any) => ({ ...prev, fines: Math.max(0, Number(e.target.value)) }))}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-black text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                            />
+                          </div>
+                          <div className="sm:col-span-2">
+                            <label className="text-[10px] font-extrabold text-slate-500 block mb-1">Fine Reason / Audit Note</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Late arrival fine, incomplete duty penalty"
+                              value={editForm.fineReasons}
+                              onChange={(e) => setEditForm((prev: any) => ({ ...prev, fineReasons: e.target.value }))}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Form Actions */}
+                      <div className="flex justify-end gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingDay(false)}
+                          className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl transition-all"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveDayAudit}
+                          disabled={savingAudit}
+                          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
+                        >
+                          {savingAudit ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save Audit Record
+                        </button>
                       </div>
                     </div>
                   )}
@@ -1403,17 +1792,27 @@ export default function ManagerReportsPage() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-150">
-                        {['Date', 'Attendance', 'Uniform', 'Duties', 'Fines', 'Daily Score'].map(h => (
+                        {['Date', 'Attendance', 'Uniform', 'Duties', 'Fines', 'Daily Score', 'Actions'].map(h => (
                           <th key={h} className="px-5 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs">
-                      {viewingStaff.stats.dailyBreakdown.map((b: any, idx: number) => {
+                      {activeViewingStaff.stats.dailyBreakdown.map((b: any, idx: number) => {
                         const isActive = b.attendance !== 'unmarked';
+                        const isSelectedRow = selectedDay && selectedDay.date === b.date;
                         
                         return (
-                          <tr key={idx} className={`hover:bg-slate-50/50 ${!isActive ? 'opacity-50 bg-slate-55 bg-slate-50/30' : ''}`}>
+                          <tr 
+                            key={idx} 
+                            onClick={() => {
+                              setSelectedDay(b);
+                              setIsEditingDay(false);
+                            }}
+                            className={`transition-all duration-150 cursor-pointer ${
+                              isSelectedRow ? 'bg-indigo-50/70 border-l-4 border-l-indigo-600 font-semibold' : 'hover:bg-slate-50/60'
+                            } ${!isActive ? 'opacity-50 bg-slate-50/30' : ''}`}
+                          >
                             <td className="px-5 py-3 font-extrabold text-slate-800">{b.date}</td>
                             
                             <td className="px-5 py-3 font-semibold uppercase text-[10px]">
@@ -1451,6 +1850,20 @@ export default function ManagerReportsPage() {
                             <td className="px-5 py-3 font-black text-slate-800">
                               {isActive ? `${b.score} / 3` : <span className="text-slate-300 font-bold">—</span>}
                             </td>
+
+                            <td className="px-5 py-3">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedDay(b);
+                                  setIsEditingDay(true);
+                                }}
+                                className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-100 rounded-lg text-[10px] font-extrabold transition-all flex items-center gap-1 active:scale-95"
+                              >
+                                <Edit3 size={11} /> Edit
+                              </button>
+                            </td>
                           </tr>
                         );
                       })}
@@ -1463,21 +1876,21 @@ export default function ManagerReportsPage() {
               <div className="flex gap-4 pt-6 border-t border-slate-200 print:hidden">
                 <button 
                   onClick={() => {
-                    const attCount = viewingStaff.stats.presents + viewingStaff.stats.lates;
+                    const attCount = activeViewingStaff.stats.presents + activeViewingStaff.stats.lates;
                     if (attCount < 7) {
                       toast.error("Audit requires at least 7 active logs inside the selected period");
                       return;
                     }
                     window.print();
                   }}
-                  className="flex-1 bg-indigo-650 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-md active:scale-95 duration-200"
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-md active:scale-95 duration-200"
                 >
                   <Printer size={16} /> Print Audit Record
                 </button>
                 <button 
                   onClick={() => {
                     setViewingStaff(null);
-                    router.push(`/hq/dashboard/manager/staff/${viewingStaff.department}_${viewingStaff.id}`);
+                    router.push(`/hq/dashboard/manager/staff/${activeViewingStaff.department}_${activeViewingStaff.id}`);
                   }}
                   className="px-6 bg-white hover:bg-slate-50 text-slate-700 font-extrabold text-xs uppercase tracking-wider py-4 rounded-2xl transition-all border border-slate-200 active:scale-95 duration-200 shadow-sm"
                 >
