@@ -45,37 +45,78 @@ export default function HospitalAnalyticsPage() {
     try {
       setLoading(true);
 
-      // 1. Fetch all daily stats from hospital_daily_stats
+      // 1. Fetch transactions for hospital (both approved and active)
+      const txnsSnap = await getDocs(collection(db, 'hospital_transactions'));
+      const txnsList: any[] = [];
+      const txStatsByDate: Record<string, { checkupCount: number; usgCount: number; labTestsCount: number; operationsCount: number }> = {};
+
+      txnsSnap.docs.forEach(docSnap => {
+        const d = docSnap.data() as any;
+        if (d.status === 'rejected') return;
+
+        const txDate = d.date ? toDate(d.date) : null;
+        const txItem = {
+          id: docSnap.id,
+          amount: Number(d.amount || 0),
+          category: d.category || 'other',
+          date: txDate,
+          type: d.type || 'income',
+          hospitalPatientDetails: d.hospitalPatientDetails
+        };
+
+        if (d.status === 'approved' || !d.status) {
+          txnsList.push(txItem);
+        }
+
+        if (txDate && d.type !== 'expense') {
+          const dateStr = txDate.toISOString().split('T')[0];
+          if (!txStatsByDate[dateStr]) {
+            txStatsByDate[dateStr] = { checkupCount: 0, usgCount: 0, labTestsCount: 0, operationsCount: 0 };
+          }
+          const feeType = d.hospitalPatientDetails?.feeType;
+          const cat = d.category;
+
+          if (feeType === 'usg' || cat === 'usg') {
+            txStatsByDate[dateStr].usgCount++;
+          } else if (feeType === 'operation' || feeType === 'opration' || cat === 'operation' || cat === 'operation_theater') {
+            txStatsByDate[dateStr].operationsCount++;
+          } else if (cat === 'lab_test') {
+            txStatsByDate[dateStr].labTestsCount++;
+          } else if (feeType === 'checkup' || cat === 'opd_reception' || feeType === 'none' || !feeType) {
+            txStatsByDate[dateStr].checkupCount++;
+          }
+        }
+      });
+      setTransactions(txnsList);
+
+      // 2. Fetch all daily stats from hospital_daily_stats and merge with transaction stats
       const statsSnap = await getDocs(collection(db, 'hospital_daily_stats'));
-      const statsList = statsSnap.docs.map(doc => {
-        const d = doc.data() as any;
-        return {
-          date: doc.id, // YYYY-MM-DD
+      const docStatsByDate: Record<string, any> = {};
+      statsSnap.docs.forEach(docSnap => {
+        const d = docSnap.data() as any;
+        docStatsByDate[docSnap.id] = {
           checkupCount: Number(d.checkupCount || 0),
           usgCount: Number(d.usgCount || 0),
           labTestsCount: Number(d.labTestsCount || 0),
           operationsCount: Number(d.operationsCount || 0),
         };
-      }).sort((a, b) => a.date.localeCompare(b.date));
-      setDailyStats(statsList);
+      });
 
-      // 2. Fetch all approved transactions for hospital
-      const txnQuery = query(
-        collection(db, 'hospital_transactions'),
-        where('status', '==', 'approved')
-      );
-      const txnsSnap = await getDocs(txnQuery);
-      const txnsList = txnsSnap.docs.map(doc => {
-        const d = doc.data() as any;
+      const allDates = Array.from(new Set([...Object.keys(docStatsByDate), ...Object.keys(txStatsByDate)])).sort();
+      const combinedStatsList = allDates.map(dateStr => {
+        const docStat = docStatsByDate[dateStr] || { checkupCount: 0, usgCount: 0, labTestsCount: 0, operationsCount: 0 };
+        const txStat = txStatsByDate[dateStr] || { checkupCount: 0, usgCount: 0, labTestsCount: 0, operationsCount: 0 };
+
         return {
-          id: doc.id,
-          amount: Number(d.amount || 0),
-          category: d.category || 'other',
-          date: d.date ? toDate(d.date) : null,
-          type: d.type || 'income'
+          date: dateStr,
+          checkupCount: Math.max(docStat.checkupCount, txStat.checkupCount),
+          usgCount: Math.max(docStat.usgCount, txStat.usgCount),
+          labTestsCount: Math.max(docStat.labTestsCount, txStat.labTestsCount),
+          operationsCount: Math.max(docStat.operationsCount, txStat.operationsCount),
         };
       });
-      setTransactions(txnsList);
+
+      setDailyStats(combinedStatsList);
 
     } catch (err) {
       console.error('Failed to fetch hospital analytics data:', err);

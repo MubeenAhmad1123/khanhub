@@ -176,7 +176,7 @@ export default function CashierStationPage() {
 
   // Refined Hospital Cashier States for Common Hospital
   const [hospitalIncomeType, setHospitalIncomeType] = useState<'fee' | 'medicine' | 'none'>('none');
-  const [hospitalFeeType, setHospitalFeeType] = useState<'checkup' | 'usg' | 'bsr' | 'hb_test' | 'custom' | 'none'>('none');
+  const [hospitalFeeType, setHospitalFeeType] = useState<'checkup' | 'usg' | 'operation' | 'bsr' | 'hb_test' | 'custom' | 'none'>('none');
   const [hospitalCustomFeeName, setHospitalCustomFeeName] = useState('');
   const [hospitalExpenseReceiver, setHospitalExpenseReceiver] = useState('');
   const [hospitalExpenseReason, setHospitalExpenseReason] = useState('');
@@ -272,7 +272,7 @@ export default function CashierStationPage() {
     hospitalReceiverName: '',
     hospitalReason: '',
     hospitalTime: '',
-    hospitalFeeType: 'none' as 'none' | 'checkup' | 'usg' | 'bsr' | 'hb_test' | 'custom',
+    hospitalFeeType: 'none' as 'none' | 'checkup' | 'usg' | 'operation' | 'bsr' | 'hb_test' | 'custom',
     hospitalCustomFeeName: '',
     hospitalIncomeType: 'none' as 'none' | 'fee' | 'medicine',
   });
@@ -1478,10 +1478,15 @@ export default function CashierStationPage() {
         } else if (hospitalIncomeType === 'fee') {
           let feeName = 'Check-up Fee';
           if (hospitalFeeType === 'usg') feeName = 'USG Fee';
+          else if (hospitalFeeType === 'operation') feeName = 'Operation Fee';
           else if (hospitalFeeType === 'bsr') feeName = 'BSR Fee';
           else if (hospitalFeeType === 'hb_test') feeName = 'HB Test Fee';
           else if (hospitalFeeType === 'custom') feeName = hospitalCustomFeeName.trim();
-          resolvedCategory = { id: 'fee', name: feeName, appliesTo: 'income' } as any;
+          
+          let catId = 'fee';
+          if (hospitalFeeType === 'operation') catId = 'operation';
+          else if (hospitalFeeType === 'usg') catId = 'usg';
+          resolvedCategory = { id: catId, name: feeName, appliesTo: 'income' } as any;
         } else if (hospitalIncomeType === 'medicine') {
           resolvedCategory = { id: 'medicine_charge', name: 'Medicine / Treatment', appliesTo: 'income' } as any;
         }
@@ -1496,6 +1501,7 @@ export default function CashierStationPage() {
         if (hospitalIncomeType === 'fee') {
           let feeName = 'Check-up Fee';
           if (hospitalFeeType === 'usg') feeName = 'USG Fee';
+          else if (hospitalFeeType === 'operation') feeName = 'Operation Fee';
           else if (hospitalFeeType === 'bsr') feeName = 'BSR Fee';
           else if (hospitalFeeType === 'hb_test') feeName = 'HB Test Fee';
           else if (hospitalFeeType === 'custom') feeName = hospitalCustomFeeName.trim();
@@ -1913,6 +1919,7 @@ export default function CashierStationPage() {
             }
             let feeName = 'Check-up Fee';
             if (editDetailForm.hospitalFeeType === 'usg') feeName = 'USG Fee';
+            else if (editDetailForm.hospitalFeeType === 'operation') feeName = 'Operation Fee';
             else if (editDetailForm.hospitalFeeType === 'bsr') feeName = 'BSR Fee';
             else if (editDetailForm.hospitalFeeType === 'hb_test') feeName = 'HB Test Fee';
             else if (editDetailForm.hospitalFeeType === 'custom') feeName = editDetailForm.hospitalCustomFeeName.trim();
@@ -1943,6 +1950,7 @@ export default function CashierStationPage() {
       if (deptCode === 'hospital' && editDetailForm.hospitalIncomeType === 'fee') {
         let feeName = 'Check-up Fee';
         if (editDetailForm.hospitalFeeType === 'usg') feeName = 'USG Fee';
+        else if (editDetailForm.hospitalFeeType === 'operation') feeName = 'Operation Fee';
         else if (editDetailForm.hospitalFeeType === 'bsr') feeName = 'BSR Fee';
         else if (editDetailForm.hospitalFeeType === 'hb_test') feeName = 'HB Test Fee';
         else if (editDetailForm.hospitalFeeType === 'custom') feeName = editDetailForm.hospitalCustomFeeName.trim();
@@ -4154,6 +4162,7 @@ export default function CashierStationPage() {
                                      {([
                                        { id: 'checkup', label: 'Checkup' },
                                        { id: 'usg', label: 'USG' },
+                                       { id: 'operation', label: 'Operation' },
                                        { id: 'bsr', label: 'BSR' },
                                        { id: 'hb_test', label: 'HB Test' },
                                        { id: 'custom', label: 'Custom' },

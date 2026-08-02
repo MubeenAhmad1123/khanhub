@@ -173,29 +173,28 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
     let incomeCount = 0;
     let expenseCount = 0;
     let usgCount = 0;
+    let operationsCount = 0;
     let checkupCount = 0;
     const uniquePatients = new Set<string>();
     const deptTotals: Record<string, { income: number; expense: number; count: number }> = {};
     const incomeCategories: Record<string, { total: number; txs: Transaction[] }> = {};
     const expenseCategories: Record<string, { total: number; txs: Transaction[] }> = {};
 
-    transactions.forEach((tx) => {
+    transactions.forEach(tx => {
       const amt = Number(tx.amount) || 0;
       const isExp = getIsExpense(tx);
-      const deptKey = tx.departmentName || tx._dept || tx.departmentCode || 'General';
-      const catKey = tx.categoryName || tx.category || 'General';
+      const catKey = tx.categoryName || tx.category || 'Uncategorized';
+      const deptName = tx.departmentName || tx._dept || tx.departmentCode || 'General';
 
-      // Initialize Department
-      if (!deptTotals[deptKey]) {
-        deptTotals[deptKey] = { income: 0, expense: 0, count: 0 };
+      if (!deptTotals[deptName]) {
+        deptTotals[deptName] = { income: 0, expense: 0, count: 0 };
       }
-      deptTotals[deptKey].count++;
+      deptTotals[deptName].count++;
 
       if (isExp) {
         expenseCount++;
         totalExpense += amt;
-        deptTotals[deptKey].expense += amt;
-
+        deptTotals[deptName].expense += amt;
         if (!expenseCategories[catKey]) {
           expenseCategories[catKey] = { total: 0, txs: [] };
         }
@@ -204,8 +203,7 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
       } else {
         incomeCount++;
         totalIncome += amt;
-        deptTotals[deptKey].income += amt;
-
+        deptTotals[deptName].income += amt;
         if (!incomeCategories[catKey]) {
           incomeCategories[catKey] = { total: 0, txs: [] };
         }
@@ -220,6 +218,8 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
           if (details.type === 'fee') {
             if (details.feeType === 'usg') {
               usgCount++;
+            } else if (details.feeType === 'operation' || details.feeType === 'opration' || tx.category === 'operation') {
+              operationsCount++;
             } else if (details.feeType === 'checkup' || details.feeType === 'none' || !details.feeType) {
               checkupCount++;
             }
@@ -256,6 +256,7 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
       incomeCount,
       expenseCount,
       usgCount,
+      operationsCount,
       checkupCount,
       uniquePatients
     };
@@ -480,7 +481,7 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
 
               <div className="p-4 rounded-xl border border-zinc-200 bg-zinc-50/20">
                 <span className="text-[9px] font-black text-zinc-450 uppercase tracking-widest block mb-3">Hospital Metrics Summary</span>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   <div className="bg-zinc-50/50 p-2 rounded-lg border border-zinc-150">
                     <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block">Total Patients</span>
                     <span className="text-xs font-black text-zinc-800">{stats.uniquePatients.size} total</span>
@@ -492,6 +493,10 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
                   <div className="bg-zinc-50/50 p-2 rounded-lg border border-zinc-150">
                     <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block">USG</span>
                     <span className="text-xs font-black text-zinc-800">{stats.usgCount} entries</span>
+                  </div>
+                  <div className="bg-zinc-50/50 p-2 rounded-lg border border-zinc-150">
+                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block">Operations</span>
+                    <span className="text-xs font-black text-zinc-800">{stats.operationsCount} entries</span>
                   </div>
                 </div>
               </div>

@@ -452,6 +452,7 @@ export default function DailyReportPage() {
       incomeEntriesCount: 0,
       expenseEntriesCount: 0,
       usgCount: 0,
+      operationsCount: 0,
       checkupCount: 0,
       uniquePatients: new Set<string>()
     };
@@ -495,6 +496,8 @@ export default function DailyReportPage() {
           if (details.type === 'fee') {
             if (details.feeType === 'usg') {
               summary.usgCount += 1;
+            } else if (details.feeType === 'operation' || details.feeType === 'opration' || tx.category === 'operation') {
+              summary.operationsCount += 1;
             } else if (details.feeType === 'checkup' || details.feeType === 'none' || !details.feeType) {
               summary.checkupCount += 1;
             }
@@ -766,7 +769,7 @@ export default function DailyReportPage() {
                     <CheckCircle2 className="w-6 h-6 text-zinc-600" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-3">
                   <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
                     <span className="text-[10px] font-black text-zinc-500 uppercase tracking-wider block mb-1">Checkups</span>
                     <span className="text-xl font-black text-zinc-800">{stats.checkupCount}</span>
@@ -774,6 +777,10 @@ export default function DailyReportPage() {
                   <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
                     <span className="text-[10px] font-black text-zinc-500 uppercase tracking-wider block mb-1">USG Fees</span>
                     <span className="text-xl font-black text-zinc-800">{stats.usgCount}</span>
+                  </div>
+                  <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
+                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-wider block mb-1">Operations</span>
+                    <span className="text-xl font-black text-zinc-800">{stats.operationsCount}</span>
                   </div>
                 </div>
               </div>
