@@ -44,6 +44,37 @@ interface DailyReportRow {
   dutyItems?: any[];
 }
 
+const DEFAULT_UNIFORM_CONFIG = [
+  { key: 'uniform', label: 'Uniform' },
+  { key: 'shoes', label: 'Polished Shoes' },
+  { key: 'card', label: 'Identity Card' }
+];
+
+const DEFAULT_DUTY_CONFIG = [
+  { key: 'morning', label: 'Morning Duty' },
+  { key: 'afternoon', label: 'Afternoon Duty' },
+  { key: 'evening', label: 'Evening Duty' }
+];
+
+const normalizeChecklistConfig = (rawConfig: any, defaultConfig: { key: string; label: string }[]) => {
+  if (!Array.isArray(rawConfig) || rawConfig.length === 0) {
+    return defaultConfig;
+  }
+  return rawConfig.map((item: any, idx: number) => {
+    if (typeof item === 'string') {
+      const label = item.trim();
+      const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_') || `item_${idx}`;
+      return { key, label };
+    }
+    if (typeof item === 'object' && item !== null) {
+      const label = String(item.label || item.name || item.title || item.key || `Item ${idx + 1}`).trim();
+      const key = String(item.key || label.toLowerCase().replace(/[^a-z0-9]+/g, '_') || `item_${idx}`);
+      return { key, label };
+    }
+    return { key: `item_${idx}`, label: `Item ${idx + 1}` };
+  });
+};
+
 const getSimpleId = (id: string) => {
   if (!id) return '';
   const prefixes = ['hq_', 'rehab_', 'spims_', 'hospital_', 'sukoon_', 'welfare_', 'jobcenter_', 'media_', 'it_', 'job-center_', 'social-media_'];
@@ -357,25 +388,17 @@ export default function DailyReportPage() {
         const dress = dressMap.get(sid) || dressMap.get(simpleSid);
         const duty = dutyMap.get(sid) || dutyMap.get(simpleSid);
         const finesList = fineMap.get(sid) || fineMap.get(simpleSid) || [];
-        const uniformConfig = s.dressCodeConfig && s.dressCodeConfig.length > 0 ? s.dressCodeConfig : [
-          { key: 'uniform', label: 'Uniform' },
-          { key: 'shoes', label: 'Polished Shoes' },
-          { key: 'card', label: 'Identity Card' }
-        ];
+        const uniformConfig = normalizeChecklistConfig(s.dressCodeConfig, DEFAULT_UNIFORM_CONFIG);
         const uniformItems = dress?.items || [];
         const uniformMissing = uniformConfig.filter((c: any) => {
-          const item = uniformItems.find((i: any) => i.key === c.key);
+          const item = uniformItems.find((i: any) => i && (i.key === c.key || String(i.label || '').toLowerCase() === String(c.label || '').toLowerCase()));
           return !item || item.status === 'no';
         }).map((c: any) => c.label);
 
-        const dutyConfig = s.dutyConfig && s.dutyConfig.length > 0 ? s.dutyConfig : [
-          { key: 'morning', label: 'Morning Duty' },
-          { key: 'afternoon', label: 'Afternoon Duty' },
-          { key: 'evening', label: 'Evening Duty' }
-        ];
+        const dutyConfig = normalizeChecklistConfig(s.dutyConfig, DEFAULT_DUTY_CONFIG);
         const dutyItems = duty?.duties || [];
         const dutiesPending = dutyConfig.filter((c: any) => {
-          const item = dutyItems.find((d: any) => d.key === c.key);
+          const item = dutyItems.find((d: any) => d && (d.key === c.key || String(d.label || '').toLowerCase() === String(c.label || '').toLowerCase()));
           return !item || item.status !== 'done';
         }).map((c: any) => c.label);
 
@@ -622,28 +645,27 @@ export default function DailyReportPage() {
         }
 
         if (field === 'uniformStatus') {
-          const config = updatedRow.uniformConfig && updatedRow.uniformConfig.length > 0 ? updatedRow.uniformConfig : [
-            { key: 'uniform', label: 'Uniform' },
-            { key: 'shoes', label: 'Polished Shoes' },
-            { key: 'card', label: 'Identity Card' }
-          ];
+          const config = normalizeChecklistConfig(updatedRow.uniformConfig, DEFAULT_UNIFORM_CONFIG);
+          updatedRow.uniformConfig = config;
           if (value === 'yes') {
-            updatedRow.uniformItems = config.map((c: any) => ({ key: c.key, status: 'yes' }));
+            updatedRow.uniformItems = config.map((c: any) => ({ key: c.key, label: c.label, status: 'yes' }));
             updatedRow.details.uniformMissing = [];
           } else if (value === 'no') {
-            updatedRow.uniformItems = config.map((c: any) => ({ key: c.key, status: 'no' }));
+            updatedRow.uniformItems = config.map((c: any) => ({ key: c.key, label: c.label, status: 'no' }));
             updatedRow.details.uniformMissing = config.map((c: any) => c.label);
           } else if (value === 'incomplete') {
-            const checked = updatedRow.uniformItems?.filter((i: any) => i.status === 'yes').map((i: any) => i.key) || [];
+            const checked = updatedRow.uniformItems?.filter((i: any) => i && i.status === 'yes').map((i: any) => i.key) || [];
             if (checked.length === 0) {
               updatedRow.uniformItems = config.map((c: any, idx: number) => ({
                 key: c.key,
+                label: c.label,
                 status: idx === 0 ? 'yes' : 'no'
               }));
               updatedRow.details.uniformMissing = config.slice(1).map((c: any) => c.label);
             } else {
               updatedRow.uniformItems = config.map((c: any) => ({
                 key: c.key,
+                label: c.label,
                 status: checked.includes(c.key) ? 'yes' : 'no'
               }));
               updatedRow.details.uniformMissing = config.filter((c: any) => !checked.includes(c.key)).map((c: any) => c.label);
@@ -652,34 +674,33 @@ export default function DailyReportPage() {
               id: updatedRow.id,
               type: 'uniform',
               items: config,
-              checkedKeys: updatedRow.uniformItems.filter((i: any) => i.status === 'yes').map((i: any) => i.key)
+              checkedKeys: updatedRow.uniformItems.filter((i: any) => i && i.status === 'yes').map((i: any) => i.key)
             });
           }
         }
 
         if (field === 'dutyStatus') {
-          const config = updatedRow.dutyConfig && updatedRow.dutyConfig.length > 0 ? updatedRow.dutyConfig : [
-            { key: 'morning', label: 'Morning Duty' },
-            { key: 'afternoon', label: 'Afternoon Duty' },
-            { key: 'evening', label: 'Evening Duty' }
-          ];
+          const config = normalizeChecklistConfig(updatedRow.dutyConfig, DEFAULT_DUTY_CONFIG);
+          updatedRow.dutyConfig = config;
           if (value === 'yes') {
-            updatedRow.dutyItems = config.map((c: any) => ({ key: c.key, status: 'done' }));
+            updatedRow.dutyItems = config.map((c: any) => ({ key: c.key, label: c.label, status: 'done' }));
             updatedRow.details.dutiesPending = [];
           } else if (value === 'no') {
-            updatedRow.dutyItems = config.map((c: any) => ({ key: c.key, status: 'not_done' }));
+            updatedRow.dutyItems = config.map((c: any) => ({ key: c.key, label: c.label, status: 'not_done' }));
             updatedRow.details.dutiesPending = config.map((c: any) => c.label);
           } else if (value === 'incomplete') {
-            const checked = updatedRow.dutyItems?.filter((i: any) => i.status === 'done').map((i: any) => i.key) || [];
+            const checked = updatedRow.dutyItems?.filter((i: any) => i && i.status === 'done').map((i: any) => i.key) || [];
             if (checked.length === 0) {
               updatedRow.dutyItems = config.map((c: any, idx: number) => ({
                 key: c.key,
+                label: c.label,
                 status: idx === 0 ? 'done' : 'not_done'
               }));
               updatedRow.details.dutiesPending = config.slice(1).map((c: any) => c.label);
             } else {
               updatedRow.dutyItems = config.map((c: any) => ({
                 key: c.key,
+                label: c.label,
                 status: checked.includes(c.key) ? 'done' : 'not_done'
               }));
               updatedRow.details.dutiesPending = config.filter((c: any) => !checked.includes(c.key)).map((c: any) => c.label);
@@ -688,7 +709,7 @@ export default function DailyReportPage() {
               id: updatedRow.id,
               type: 'duty',
               items: config,
-              checkedKeys: updatedRow.dutyItems.filter((i: any) => i.status === 'done').map((i: any) => i.key)
+              checkedKeys: updatedRow.dutyItems.filter((i: any) => i && i.status === 'done').map((i: any) => i.key)
             });
           }
         }
@@ -700,9 +721,10 @@ export default function DailyReportPage() {
   };
 
   const handleSaveChecklist = (id: string, type: 'uniform' | 'duty', checkedKeys: string[], updatedItems: { key: string; label: string }[]) => {
+    const normalizedUpdatedItems = normalizeChecklistConfig(updatedItems, type === 'uniform' ? DEFAULT_UNIFORM_CONFIG : DEFAULT_DUTY_CONFIG);
     setReportData(prev => prev.map(row => {
       if (row.id === id) {
-        const total = updatedItems.length;
+        const total = normalizedUpdatedItems.length;
         const checkedCount = checkedKeys.length;
 
         let status: 'yes' | 'no' | 'incomplete' = 'no';
@@ -719,25 +741,27 @@ export default function DailyReportPage() {
 
         if (type === 'uniform') {
           updatedRow.uniformStatus = status;
-          updatedRow.uniformConfig = updatedItems;
-          updatedRow.uniformItems = updatedItems.map((c: any) => ({
+          updatedRow.uniformConfig = normalizedUpdatedItems;
+          updatedRow.uniformItems = normalizedUpdatedItems.map((c: any) => ({
             key: c.key,
+            label: c.label,
             status: checkedKeys.includes(c.key) ? 'yes' : 'no'
           }));
           updatedRow.details = {
             ...updatedRow.details,
-            uniformMissing: updatedItems.filter((c: any) => !checkedKeys.includes(c.key)).map((c: any) => c.label)
+            uniformMissing: normalizedUpdatedItems.filter((c: any) => !checkedKeys.includes(c.key)).map((c: any) => c.label)
           };
         } else {
           updatedRow.dutyStatus = status;
-          updatedRow.dutyConfig = updatedItems;
-          updatedRow.dutyItems = updatedItems.map((c: any) => ({
+          updatedRow.dutyConfig = normalizedUpdatedItems;
+          updatedRow.dutyItems = normalizedUpdatedItems.map((c: any) => ({
             key: c.key,
+            label: c.label,
             status: checkedKeys.includes(c.key) ? 'done' : 'pending'
           }));
           updatedRow.details = {
             ...updatedRow.details,
-            dutiesPending: updatedItems.filter((c: any) => !checkedKeys.includes(c.key)).map((c: any) => c.label)
+            dutiesPending: normalizedUpdatedItems.filter((c: any) => !checkedKeys.includes(c.key)).map((c: any) => c.label)
           };
         }
 
@@ -1400,16 +1424,12 @@ export default function DailyReportPage() {
                             <div className="flex flex-col items-center">
                               <button
                                 onClick={() => {
-                                  const config = (row as any).uniformConfig || [];
-                                  const checked = (row as any).uniformItems?.filter((i: any) => i.status === 'yes').map((i: any) => i.key) || [];
+                                  const config = normalizeChecklistConfig((row as any).uniformConfig, DEFAULT_UNIFORM_CONFIG);
+                                  const checked = (row as any).uniformItems?.filter((i: any) => i && i.status === 'yes').map((i: any) => i.key) || [];
                                   setActiveChecklist({
                                     id: row.id,
                                     type: 'uniform',
-                                    items: config.length > 0 ? config : [
-                                      { key: 'uniform', label: 'Uniform' },
-                                      { key: 'shoes', label: 'Polished Shoes' },
-                                      { key: 'card', label: 'Identity Card' }
-                                    ],
+                                    items: config,
                                     checkedKeys: checked
                                   });
                                 }}
@@ -1456,16 +1476,12 @@ export default function DailyReportPage() {
                             <div className="flex flex-col items-center">
                               <button
                                 onClick={() => {
-                                  const config = (row as any).dutyConfig || [];
-                                  const checked = (row as any).dutyItems?.filter((i: any) => i.status === 'done').map((i: any) => i.key) || [];
+                                  const config = normalizeChecklistConfig((row as any).dutyConfig, DEFAULT_DUTY_CONFIG);
+                                  const checked = (row as any).dutyItems?.filter((i: any) => i && i.status === 'done').map((i: any) => i.key) || [];
                                   setActiveChecklist({
                                     id: row.id,
                                     type: 'duty',
-                                    items: config.length > 0 ? config : [
-                                      { key: 'morning', label: 'Morning Duty' },
-                                      { key: 'afternoon', label: 'Afternoon Duty' },
-                                      { key: 'evening', label: 'Evening Duty' }
-                                    ],
+                                    items: config,
                                     checkedKeys: checked
                                   });
                                 }}
@@ -1678,16 +1694,12 @@ export default function DailyReportPage() {
                         <div className="mt-1">
                           <button
                             onClick={() => {
-                              const config = (row as any).uniformConfig || [];
-                              const checked = (row as any).uniformItems?.filter((i: any) => i.status === 'yes').map((i: any) => i.key) || [];
+                              const config = normalizeChecklistConfig((row as any).uniformConfig, DEFAULT_UNIFORM_CONFIG);
+                              const checked = (row as any).uniformItems?.filter((i: any) => i && i.status === 'yes').map((i: any) => i.key) || [];
                               setActiveChecklist({
                                 id: row.id,
                                 type: 'uniform',
-                                items: config.length > 0 ? config : [
-                                  { key: 'uniform', label: 'Uniform' },
-                                  { key: 'shoes', label: 'Polished Shoes' },
-                                  { key: 'card', label: 'Identity Card' }
-                                ],
+                                items: config,
                                 checkedKeys: checked
                               });
                             }}
@@ -1741,16 +1753,12 @@ export default function DailyReportPage() {
                         <div className="mt-1">
                           <button
                             onClick={() => {
-                              const config = (row as any).dutyConfig || [];
-                              const checked = (row as any).dutyItems?.filter((i: any) => i.status === 'done').map((i: any) => i.key) || [];
+                              const config = normalizeChecklistConfig((row as any).dutyConfig, DEFAULT_DUTY_CONFIG);
+                              const checked = (row as any).dutyItems?.filter((i: any) => i && i.status === 'done').map((i: any) => i.key) || [];
                               setActiveChecklist({
                                 id: row.id,
                                 type: 'duty',
-                                items: config.length > 0 ? config : [
-                                  { key: 'morning', label: 'Morning Duty' },
-                                  { key: 'afternoon', label: 'Afternoon Duty' },
-                                  { key: 'evening', label: 'Evening Duty' }
-                                ],
+                                items: config,
                                 checkedKeys: checked
                               });
                             }}
@@ -1869,7 +1877,7 @@ export default function DailyReportPage() {
 
               {/* Checklist checklist */}
               <div className="space-y-2 mb-4 max-h-52 overflow-y-auto pr-1">
-                {activeChecklist.items.map((item) => {
+                {normalizeChecklistConfig(activeChecklist.items, activeChecklist.type === 'uniform' ? DEFAULT_UNIFORM_CONFIG : DEFAULT_DUTY_CONFIG).map((item) => {
                   const isChecked = activeChecklist.checkedKeys.includes(item.key);
                   return (
                     <label
@@ -1940,13 +1948,15 @@ export default function DailyReportPage() {
                       
                       setActiveChecklist(prev => {
                         if (!prev) return null;
-                        if (prev.items.some(i => i.label.toLowerCase() === label.toLowerCase())) {
+                        const labelLower = label.toLowerCase();
+                        const normalizedPrevItems = normalizeChecklistConfig(prev.items, prev.type === 'uniform' ? DEFAULT_UNIFORM_CONFIG : DEFAULT_DUTY_CONFIG);
+                        if (normalizedPrevItems.some(i => String(i.label || '').toLowerCase() === labelLower)) {
                           toast.error("Item already exists in checklist");
                           return prev;
                         }
                         return {
                           ...prev,
-                          items: [...prev.items, { key, label }],
+                          items: [...normalizedPrevItems, { key, label }],
                           checkedKeys: [...prev.checkedKeys, key]
                         };
                       });
