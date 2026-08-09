@@ -4,11 +4,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { toDate, downloadElementAsPng } from '@/lib/utils';
 import {
   UserCog, Printer, Calendar, DollarSign, Loader2, Download,
   Plus, X, Receipt, Trash2, Eye, CheckCircle2, Info, CreditCard
 } from 'lucide-react';
-import { downloadElementAsPng } from '@/lib/utils';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -19,11 +19,6 @@ const ALL_PREFIXES = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', '
 
 function formatPKR(n: number) {
   return `Rs. ${Math.round(n).toLocaleString('en-PK')}`;
-}
-
-function getSimpleId(id: string) {
-  if (!id) return '';
-  return id.replace(/^(hq|rehab|spims|hospital|sukoon|welfare|jobcenter|job-center|media|social-media|it)_/, '');
 }
 
 function getDaysInMonth(year: number, monthZeroIndexed: number): string[] {
@@ -76,121 +71,157 @@ export default function SpimsPayrollPage() {
   const monthDays = getDaysInMonth(selectedYear, selectedMonth);
 
   const today = new Date();
+  const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-  const fetchAllMonthAdvanceTxns = async (mStr: string) => {
-    const allDocsMap = new Map<string, any>();
+  const isAdvanceTxInSelectedMonth = (tx: any, targetMonthStr: string) => {
+    if (tx.status === 'rejected') return false;
+    const cat = String(tx.category || '').toLowerCase();
+    const catName = String(tx.categoryName || '').toLowerCase();
+    const desc = String(tx.description || '').toLowerCase();
 
-    await Promise.all(ALL_PREFIXES.map(async (p) => {
-      const txCol = p ? `${p}_transactions` : 'transactions';
-      const advCol = p ? `${p}_advances` : 'advances';
+    const isAdvanceCat =
+      cat === 'advance_salary' ||
+      cat === 'advance' ||
+      cat === 'staff_advance' ||
+      catName.includes('advance') ||
+      desc.includes('advance') ||
+      (tx._collection && String(tx._collection).includes('advances'));
 
-      for (const cName of [txCol, advCol]) {
-        try {
-          const snap1 = await getDocs(query(collection(db, cName), where('date', '>=', `${mStr}-01`), where('date', '<=', `${mStr}-31`))).catch(() => ({ docs: [] }));
-          const snap2 = await getDocs(query(collection(db, cName), where('month', '==', mStr))).catch(() => ({ docs: [] }));
-          const snap3 = await getDocs(query(collection(db, cName), where('transactionDate', '>=', `${mStr}-01`), where('transactionDate', '<=', `${mStr}-31`))).catch(() => ({ docs: [] }));
-          
-          let snap4: any = { docs: [] };
-          if (cName.endsWith('_advances') || cName === 'advances') {
-            snap4 = await getDocs(collection(db, cName)).catch(() => ({ docs: [] }));
-          }
-
-          [...snap1.docs, ...snap2.docs, ...snap3.docs, ...snap4.docs].forEach((d: any) => {
-            if (d && d.id) {
-              allDocsMap.set(`${cName}-${d.id}`, { id: d.id, _collection: cName, ...d.data() });
-            }
-          });
-        } catch (e) {}
+    if (!isAdvanceCat) return false;
+    const txDate = tx.transactionDate || tx.date || tx.createdAt;
+    if (!txDate) {
+      if (tx.month) return String(tx.month) === targetMonthStr;
+      return true;
+    }
+    try {
+      const dObj = toDate(txDate);
+      if (dObj) {
+        const y = dObj.getFullYear();
+        const m = String(dObj.getMonth() + 1).padStart(2, '0');
+        return `${y}-${m}` === targetMonthStr;
       }
-    }));
-
-    const allTxns = Array.from(allDocsMap.values());
-
-    return allTxns.filter((tx: any) => {
-      if (tx.status === 'rejected') return false;
-
-      const cat = String(tx.category || '').toLowerCase();
-      const catName = String(tx.categoryName || '').toLowerCase();
-      const desc = String(tx.description || '').toLowerCase();
-
-      const isAdvanceCat =
-        cat === 'advance_salary' ||
-        cat === 'advance' ||
-        cat === 'staff_advance' ||
-        catName.includes('advance') ||
-        desc.includes('advance') ||
-        tx._collection.includes('advances');
-
-      if (!isAdvanceCat) return false;
-
-      const txDate = tx.transactionDate || tx.date || (tx.createdAt?.toDate ? tx.createdAt.toDate().toISOString().substring(0, 10) : tx.createdAt);
-      if (!txDate) {
-        if (tx.month) return String(tx.month) === mStr;
-        return true;
-      }
-
-      const dStr = String(txDate).substring(0, 7);
-      return dStr === mStr || tx.month === mStr;
-    });
+    } catch (e) {}
+    return String(txDate).startsWith(targetMonthStr);
   };
 
   const handleLoad = async () => {
     try {
       setLoading(true);
 
-      // Global advances fetch across all department collections
-      const globalAdvanceTxns = await fetchAllMonthAdvanceTxns(monthStr);
-
-      // Staff
+      // Staff Collection
       const staffSnap = await getDocs(query(collection(db, 'spims_staff'), where('isActive', '==', true)));
       const allStaff = staffSnap.docs
         .map(d => ({ id: d.id, ...d.data() as any }))
         .filter((s: any) => !['executive', 'hide'].includes(String(s.status || '').toLowerCase()))
         .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
 
-      // Fines by date range
-      const finesSnap = await getDocs(query(
-        collection(db, 'spims_fines'),
-        where('date', '>=', `${monthStr}-01`),
-        where('date', '<=', `${monthStr}-31`)
-      ));
-      const finesByMonthSnap = await getDocs(query(
-        collection(db, 'spims_fines'),
-        where('month', '==', monthStr)
-      ));
-      const allFinesDocs = new Map<string, any>();
-      [...finesSnap.docs, ...finesByMonthSnap.docs].forEach(d => {
-        allFinesDocs.set(d.id, { id: d.id, ...d.data() as any });
-      });
-      const allFines = Array.from(allFinesDocs.values());
+      // Fines
+      const finesSnap = await getDocs(collection(db, 'spims_fines')).catch(() => ({ docs: [] } as any));
+      const allFines = finesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
 
-      // Attendance records for this month
-      const attendanceSnap = await getDocs(query(
+      // Attendance for selected month
+      const attSnap = await getDocs(query(
         collection(db, 'spims_attendance'),
         where('date', '>=', `${monthStr}-01`),
         where('date', '<=', `${monthStr}-31`)
-      ));
-      const allAttDocs = attendanceSnap.docs.map(d => d.data() as any);
+      )).catch(() => ({ docs: [] } as any));
+      const allAttDocs = attSnap.docs.map((d: any) => d.data());
 
-      // Build salary rows
-      const salaryRows = allStaff.map((staff: any) => {
+      // Salary Slips
+      const salarySnap = await getDocs(collection(db, 'spims_salary_records')).catch(() => ({ docs: [] } as any));
+      const allSalarySlips = salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+
+      const staffMap = Object.fromEntries(allStaff.map((s: any) => [s.id, s.name || s.id]));
+
+      // Build salary rows for each staff
+      const salaryRows = await Promise.all(allStaff.map(async (staff: any) => {
         const gross = Number(staff.salary || 0);
         const dailyRate = gross / 30;
 
-        const simpleId = getSimpleId(staff.id);
+        const uid = staff.staffId || staff.id;
+        const loginId = staff.loginUserId || staff.uid || staff.userId || '';
+
+        // Candidate IDs
+        const candidateIds = new Set<string>();
+        if (uid) {
+          candidateIds.add(uid);
+          ALL_PREFIXES.forEach(p => {
+            candidateIds.add(uid.startsWith(`${p}_`) ? uid.replace(`${p}_`, '') : uid);
+            candidateIds.add(uid.startsWith(`${p}_`) ? uid : `${p}_${uid}`);
+          });
+        }
+        if (loginId) {
+          candidateIds.add(loginId);
+          ALL_PREFIXES.forEach(p => {
+            candidateIds.add(loginId.startsWith(`${p}_`) ? loginId.replace(`${p}_`, '') : loginId);
+            candidateIds.add(loginId.startsWith(`${p}_`) ? loginId : `${p}_${loginId}`);
+          });
+        }
+        if (staff.customId) candidateIds.add(staff.customId);
+        if (staff.employeeId) candidateIds.add(staff.employeeId);
+
+        const uniqueIds = Array.from(candidateIds).filter(Boolean);
         const staffNameLower = String(staff.name || '').toLowerCase();
 
-        const candidateIds = new Set([
-          staff.id,
-          simpleId,
-          staff.staffId,
-          staff.customId,
-          staff.uid,
-          staff.userId,
-        ].filter(Boolean));
+        // Fetch transactions & advances
+        const txDocsList: any[] = [];
+        for (const p of ALL_PREFIXES) {
+          for (const suffix of ['transactions', 'advances']) {
+            const colName = p ? `${p}_${suffix}` : suffix;
+            for (const candidateId of uniqueIds) {
+              try {
+                const s1 = await getDocs(query(collection(db, colName), where('staffId', '==', candidateId))).catch(() => ({ docs: [] }));
+                const s2 = await getDocs(query(collection(db, colName), where('patientId', '==', candidateId))).catch(() => ({ docs: [] }));
+                const s3 = await getDocs(query(collection(db, colName), where('userId', '==', candidateId))).catch(() => ({ docs: [] }));
+                
+                [...s1.docs, ...s2.docs, ...s3.docs].forEach((d: any) => {
+                  if (d && d.id) txDocsList.push({ id: d.id, _collection: colName, ...d.data() });
+                });
+              } catch (e) {}
+            }
+          }
+        }
 
-        // Filter attendance docs for this staff member
+        // Search by month & staffName
+        for (const p of ALL_PREFIXES) {
+          for (const suffix of ['transactions', 'advances']) {
+            const colName = p ? `${p}_${suffix}` : suffix;
+            try {
+              const snapByMonth = await getDocs(query(collection(db, colName), where('month', '==', monthStr))).catch(() => ({ docs: [] }));
+              snapByMonth.docs.forEach((d: any) => {
+                const data = d.data();
+                const desc = String(data.description || data.staffName || '').toLowerCase();
+                if (desc.includes(staffNameLower)) {
+                  txDocsList.push({ id: d.id, _collection: colName, ...data });
+                }
+              });
+            } catch (e) {}
+          }
+        }
+
+        // Deduplicate transactions
+        const txMap = new Map<string, any>();
+        txDocsList.forEach(t => txMap.set(t.id, t));
+        const staffTxns = Array.from(txMap.values());
+
+        // Filter advance transactions for selected month
+        const staffAdvanceTxns = staffTxns.filter(t => isAdvanceTxInSelectedMonth(t, monthStr));
+        const approvedAdvancesForMonth = staffAdvanceTxns.reduce((s: number, t: any) => s + (Number(t.amount) || 0), 0);
+
+        const staffDocAdvance = Number(staff.advance || staff.advanceSalary || staff.monthlyAdvance || 0);
+
+        // Salary Slip check
+        const slip = allSalarySlips.find((s: any) => {
+          if (s.month !== monthStr) return false;
+          if (candidateIds.has(s.staffId)) return true;
+          if (s.staffName && String(s.staffName).toLowerCase() === staffNameLower) return true;
+          return false;
+        });
+
+        const actualAdvance = Math.max(Number(slip?.advance || 0), approvedAdvancesForMonth, staffDocAdvance);
+
+        // Filter attendance docs
         const staffAtt = allAttDocs.filter((a: any) => {
           if (candidateIds.has(a.staffId) || candidateIds.has(a.userId)) return true;
           if (a.staffName && String(a.staffName).toLowerCase() === staffNameLower) return true;
@@ -202,66 +233,68 @@ export default function SpimsPayrollPage() {
           if (a.date) attMapByDate[a.date] = a;
         });
 
-        // Calculate absences & unmarked past days
-        const absences: Array<{ date: string; reason: string; isUnmarked: boolean }> = [];
-        monthDays.forEach(dayStr => {
-          if (dayStr > todayStr) return; // Future days not counted as absent
+        // Days passed in month
+        let daysPassed = 30;
+        if (monthStr === currentMonthStr) {
+          daysPassed = Math.min(today.getDate(), 30);
+        } else if (monthStr > currentMonthStr) {
+          daysPassed = 0;
+        }
 
+        const absences: Array<{ date: string; reason: string; isUnmarked: boolean }> = [];
+        let absentDaysCount = 0;
+        let unmarkedDaysCount = 0;
+
+        monthDays.forEach(dayStr => {
           const att = attMapByDate[dayStr];
-          if (att) {
-            const s = String(att.status || att.state || '').toLowerCase();
-            if (s === 'absent') {
+          const status = att ? String(att.status || att.state || '').toLowerCase() : 'unmarked';
+          const isPast = dayStr < todayStr;
+
+          if (status === 'absent') {
+            absentDaysCount++;
+            if (dayStr <= todayStr) {
               absences.push({
                 date: dayStr,
-                reason: att.reason || `Absent from duty (Daily rate: ${formatPKR(dailyRate)})`,
+                reason: att?.reason || `Absent from duty (Daily rate: ${formatPKR(dailyRate)})`,
                 isUnmarked: false,
               });
-            } else if (s === 'unmarked') {
+            }
+          } else if (status === 'unmarked') {
+            if (isPast) {
+              unmarkedDaysCount++;
               absences.push({
                 date: dayStr,
-                reason: `Unmarked Attendance / Absent (Daily rate: ${formatPKR(dailyRate)})`,
+                reason: `Unmarked Attendance (Past Day) (Daily rate: ${formatPKR(dailyRate)})`,
                 isUnmarked: true,
               });
             }
-          } else {
-            // Past day with NO attendance doc recorded at all
-            absences.push({
-              date: dayStr,
-              reason: `Unmarked Attendance (Past Day) (Daily rate: ${formatPKR(dailyRate)})`,
-              isUnmarked: true,
-            });
           }
         });
 
-        const absentDays = absences.length;
-        const absentDates = absences.map(a => a.date).sort();
-        const totalAbsentDeduction = Math.round(absentDays * dailyRate);
+        const totalAbsentDays = absentDaysCount + unmarkedDaysCount;
+        const payableDays = Math.max(0, daysPassed - totalAbsentDays);
 
-        // Filter fines for this staff member
+        const earnings = payableDays * dailyRate;
+        const totalAbsentDeduction = totalAbsentDays * dailyRate;
+
+        // Fines
         const staffFines = allFines.filter((f: any) => {
+          if (!f.date && !f.month) return false;
+          const fDateStr = f.date ? String(f.date).substring(0, 7) : String(f.month);
+          if (fDateStr !== monthStr) return false;
+
           if (candidateIds.has(f.staffId)) return true;
           if (f.staffName && String(f.staffName).toLowerCase() === staffNameLower) return true;
           return false;
         });
-        const totalFines = staffFines.reduce((s: number, f: any) => s + Number(f.amount || 0), 0);
 
-        // Advance calculation for this staff member
-        const staffAdvanceTxns = globalAdvanceTxns.filter((tx: any) => {
-          if (candidateIds.has(tx.staffId) || candidateIds.has(tx.patientId) || candidateIds.has(tx.userId) || candidateIds.has(tx.customId)) return true;
-          if (tx.staffName && String(tx.staffName).toLowerCase() === staffNameLower) return true;
-          if (tx.userName && String(tx.userName).toLowerCase() === staffNameLower) return true;
-          if (tx.name && String(tx.name).toLowerCase() === staffNameLower) return true;
-          if (tx.description && String(tx.description).toLowerCase().includes(staffNameLower)) return true;
-          return false;
-        });
-        const totalTxAdvance = staffAdvanceTxns.reduce((s: number, tx: any) => s + Number(tx.amount || 0), 0);
-        const staffDocAdvance = Number(staff.advance || staff.advanceSalary || staff.monthlyAdvance || 0);
-        const totalAdvance = Math.max(staffDocAdvance, totalTxAdvance);
+        const totalFines = staffFines.reduce((s: number, f: any) => s + (Number(f.amount) || 0), 0);
 
-        const deductions = totalAbsentDeduction + totalFines + totalAdvance;
-        const netPayable = Math.max(0, gross - deductions);
+        // Net payable formula matching staff detail page
+        const netPayable = Math.floor(Math.max(0, earnings - totalFines - actualAdvance));
+        const totalDeductions = Math.round(totalAbsentDeduction + totalFines + actualAdvance);
 
-        // Itemized date-wise deduction breakdown
+        // Deduction breakdown items
         const deductionItems: Array<{
           id: string;
           date: string;
@@ -293,7 +326,7 @@ export default function SpimsPayrollPage() {
         });
 
         staffAdvanceTxns.forEach((tx: any) => {
-          const dateStr = tx.date || tx.transactionDate || (tx.createdAt?.toDate ? tx.createdAt.toDate().toISOString().substring(0, 10) : tx.month) || monthStr;
+          const dateStr = tx.transactionDate || tx.date || (tx.createdAt?.toDate ? tx.createdAt.toDate().toISOString().substring(0, 10) : tx.month) || monthStr;
           deductionItems.push({
             id: tx.id || `adv-${dateStr}`,
             date: dateStr,
@@ -304,18 +337,17 @@ export default function SpimsPayrollPage() {
           });
         });
 
-        if (staffAdvanceTxns.length === 0 && staffDocAdvance > 0) {
+        if (staffAdvanceTxns.length === 0 && actualAdvance > 0) {
           deductionItems.push({
             id: `doc-adv-${staff.id}`,
             date: monthStr,
             type: 'advance',
-            amount: staffDocAdvance,
-            reason: 'Monthly Advance Salary',
+            amount: actualAdvance,
+            reason: 'Monthly Advance Salary Record',
             recordedBy: 'System Record',
           });
         }
 
-        // Sort chronologically by date
         deductionItems.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
         return {
@@ -325,34 +357,30 @@ export default function SpimsPayrollPage() {
           dept: 'spims',
           gross,
           dailyRate: Math.round(dailyRate),
-          absentDays,
-          absentDates,
-          totalAbsentDeduction,
+          payableDays,
+          earnings: Math.round(earnings),
+          absentDays: totalAbsentDays,
+          totalAbsentDeduction: Math.round(totalAbsentDeduction),
           finesCount: staffFines.length,
           staffFines,
           totalFines,
-          totalAdvance,
+          totalAdvance: actualAdvance,
           staffAdvanceTxns,
-          deductions,
+          deductions: totalDeductions,
           netPayable,
           deductionItems,
         };
-      });
+      }));
 
       const totalGross = salaryRows.reduce((s, r) => s + r.gross, 0);
       const totalNet = salaryRows.reduce((s, r) => s + r.netPayable, 0);
       const totalDeductions = salaryRows.reduce((s, r) => s + r.deductions, 0);
       const totalAdvancesAmount = salaryRows.reduce((s, r) => s + r.totalAdvance, 0);
 
-      // Enrich fines with staff name
-      const staffMap = Object.fromEntries(allStaff.map((s: any) => [s.id, s.name || s.id]));
-      const enrichedFines = allFines
-        .map((f: any) => ({ ...f, staffName: staffMap[f.staffId] || f.staffId }))
-        .sort((a: any, b: any) => {
-          const da = a.createdAt?.toDate?.() || new Date(0);
-          const db_ = b.createdAt?.toDate?.() || new Date(0);
-          return db_.getTime() - da.getTime();
-        });
+      const monthFinesFiltered = allFines.filter((f: any) => {
+        const fDateStr = f.date ? String(f.date).substring(0, 7) : String(f.month);
+        return fDateStr === monthStr;
+      }).map((f: any) => ({ ...f, staffName: staffMap[f.staffId] || f.staffId }));
 
       setData({
         allStaff,
@@ -361,7 +389,7 @@ export default function SpimsPayrollPage() {
         totalNet,
         totalDeductions,
         totalAdvancesAmount,
-        allFines: enrichedFines,
+        allFines: monthFinesFiltered,
         monthLabel: `${MONTHS[selectedMonth]} ${selectedYear}`,
       });
     } catch (err: any) {
@@ -552,7 +580,7 @@ export default function SpimsPayrollPage() {
                         <th className="px-3.5 py-3 text-left font-bold text-teal-800 border-b border-gray-200">Staff Member</th>
                         <th className="px-3.5 py-3 text-left font-bold text-teal-800 border-b border-gray-200">Designation</th>
                         <th className="px-3.5 py-3 text-right font-bold text-teal-800 border-b border-gray-200">Gross Salary</th>
-                        <th className="px-3.5 py-3 text-center font-bold text-teal-800 border-b border-gray-200">Absent / Unmarked</th>
+                        <th className="px-3.5 py-3 text-center font-bold text-teal-800 border-b border-gray-200">Earned Days</th>
                         <th className="px-3.5 py-3 text-right font-bold text-teal-800 border-b border-gray-200">Absent Ded.</th>
                         <th className="px-3.5 py-3 text-right font-bold text-teal-800 border-b border-gray-200">Fine Ded.</th>
                         <th className="px-3.5 py-3 text-right font-bold text-amber-800 border-b border-gray-200 bg-amber-50/70">Advance Ded.</th>
@@ -573,12 +601,12 @@ export default function SpimsPayrollPage() {
                           <td className="px-3.5 py-3.5 text-gray-500 text-xs">{r.designation}</td>
                           <td className="px-3.5 py-3.5 text-right font-medium text-gray-700">{formatPKR(r.gross)}</td>
                           <td className="px-3.5 py-3.5 text-center">
-                            <span className={`font-black text-xs px-2 py-0.5 rounded-md ${r.absentDays > 0 ? 'bg-orange-100 text-orange-700' : 'text-gray-300'}`}>
-                              {r.absentDays} {r.absentDays === 1 ? 'day' : 'days'}
+                            <span className="font-bold text-xs px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-100">
+                              {r.payableDays} Days ({formatPKR(r.earnings)})
                             </span>
                           </td>
                           <td className="px-3.5 py-3.5 text-right text-orange-600 font-medium text-xs">
-                            {r.totalAbsentDeduction > 0 ? formatPKR(r.totalAbsentDeduction) : '—'}
+                            {r.totalAbsentDeduction > 0 ? `${formatPKR(r.totalAbsentDeduction)} (${r.absentDays}d)` : '—'}
                           </td>
                           <td className="px-3.5 py-3.5 text-right text-red-600 font-medium text-xs">
                             {r.totalFines > 0 ? formatPKR(r.totalFines) : '—'}
@@ -785,7 +813,7 @@ export default function SpimsPayrollPage() {
 
             <div className="p-6 space-y-6">
 
-              {/* Salary Summary Cards */}
+              {/* Salary Summary Cards matching Staff Profile */}
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                 <div className="bg-gray-50 border border-gray-100 p-3 rounded-2xl text-center">
                   <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Base Salary</div>
@@ -793,10 +821,10 @@ export default function SpimsPayrollPage() {
                   <div className="text-[9px] text-gray-400 mt-0.5">Daily: {formatPKR(selectedStaffModal.dailyRate)}</div>
                 </div>
 
-                <div className="bg-orange-50 border border-orange-100 p-3 rounded-2xl text-center">
-                  <div className="text-[10px] font-bold text-orange-600 uppercase tracking-wider mb-0.5">Absent Ded.</div>
-                  <div className="text-xs font-black text-orange-700">{formatPKR(selectedStaffModal.totalAbsentDeduction)}</div>
-                  <div className="text-[9px] text-orange-500 mt-0.5">{selectedStaffModal.absentDays} {selectedStaffModal.absentDays === 1 ? 'day' : 'days'}</div>
+                <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-2xl text-center">
+                  <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-0.5">Earned Days</div>
+                  <div className="text-xs font-black text-emerald-800">{selectedStaffModal.payableDays} Days</div>
+                  <div className="text-[9px] text-emerald-600 mt-0.5">+{formatPKR(selectedStaffModal.earnings)}</div>
                 </div>
 
                 <div className="bg-red-50 border border-red-100 p-3 rounded-2xl text-center">
