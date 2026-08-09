@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import {
   UserCog, Printer, Calendar, DollarSign, Loader2, Download,
-  Plus, X, Receipt, Trash2, Eye, FileText, CheckCircle2, Info
+  Plus, X, Receipt, Trash2, Eye, CheckCircle2, Info, CreditCard
 } from 'lucide-react';
 import { downloadElementAsPng } from '@/lib/utils';
 
@@ -65,7 +65,7 @@ export default function RehabPayrollPage() {
         .filter((s: any) => !['executive', 'hide'].includes(String(s.status || '').toLowerCase()))
         .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
 
-      // Fines by date range (catches full-date fines like 2026-07-05 AND month-string fines)
+      // Fines by date range
       const finesSnap = await getDocs(query(
         collection(db, 'rehab_fines'),
         where('date', '>=', `${monthStr}-01`),
@@ -80,6 +80,48 @@ export default function RehabPayrollPage() {
         allFinesDocs.set(d.id, { id: d.id, ...d.data() as any });
       });
       const allFines = Array.from(allFinesDocs.values());
+
+      // Advances (Transactions + Advances collections)
+      const txCol = `rehab_transactions`;
+      const advCol = `rehab_advances`;
+
+      const txSnap = await getDocs(query(
+        collection(db, txCol),
+        where('date', '>=', `${monthStr}-01`),
+        where('date', '<=', `${monthStr}-31`)
+      )).catch(() => ({ docs: [] } as any));
+      const txByMonthSnap = await getDocs(query(
+        collection(db, txCol),
+        where('month', '==', monthStr)
+      )).catch(() => ({ docs: [] } as any));
+      const advSnap = await getDocs(query(
+        collection(db, advCol),
+        where('date', '>=', `${monthStr}-01`),
+        where('date', '<=', `${monthStr}-31`)
+      )).catch(() => ({ docs: [] } as any));
+      const advByMonthSnap = await getDocs(query(
+        collection(db, advCol),
+        where('month', '==', monthStr)
+      )).catch(() => ({ docs: [] } as any));
+
+      const allTxDocs = new Map<string, any>();
+      [...txSnap.docs, ...txByMonthSnap.docs, ...advSnap.docs, ...advByMonthSnap.docs].forEach((d: any) => {
+        allTxDocs.set(d.id, { id: d.id, ...d.data() });
+      });
+
+      const allAdvanceTxns = Array.from(allTxDocs.values()).filter((tx: any) => {
+        if (tx.status === 'rejected') return false;
+        const cat = String(tx.category || '').toLowerCase();
+        const catName = String(tx.categoryName || '').toLowerCase();
+        const desc = String(tx.description || '').toLowerCase();
+        return (
+          cat === 'advance_salary' ||
+          cat === 'advance' ||
+          cat === 'staff_advance' ||
+          catName.includes('advance') ||
+          desc.includes('advance')
+        );
+      });
 
       // Attendance absences for this month
       const attendanceSnap = await getDocs(query(
@@ -103,14 +145,20 @@ export default function RehabPayrollPage() {
         const staffFines = allFines.filter((f: any) => f.staffId === staff.id);
         const totalFines = staffFines.reduce((s: number, f: any) => s + Number(f.amount || 0), 0);
 
-        const deductions = totalAbsentDeduction + totalFines;
+        // Advance calculation
+        const staffAdvanceTxns = allAdvanceTxns.filter((tx: any) => tx.staffId === staff.id || tx.staffId === staff.staffId);
+        const totalTxAdvance = staffAdvanceTxns.reduce((s: number, tx: any) => s + Number(tx.amount || 0), 0);
+        const staffDocAdvance = Number(staff.advance || staff.advanceSalary || staff.monthlyAdvance || 0);
+        const totalAdvance = Math.max(staffDocAdvance, totalTxAdvance);
+
+        const deductions = totalAbsentDeduction + totalFines + totalAdvance;
         const netPayable = Math.max(0, gross - deductions);
 
         // Itemized date-wise deduction breakdown
         const deductionItems: Array<{
           id: string;
           date: string;
-          type: 'absent' | 'fine';
+          type: 'absent' | 'fine' | 'advance';
           amount: number;
           reason: string;
           recordedBy?: string;
@@ -137,6 +185,28 @@ export default function RehabPayrollPage() {
           });
         });
 
+        staffAdvanceTxns.forEach((tx: any) => {
+          deductionItems.push({
+            id: tx.id || `adv-${tx.date}`,
+            date: tx.date || tx.transactionDate || tx.month || monthStr,
+            type: 'advance',
+            amount: Number(tx.amount || 0),
+            reason: tx.description || tx.categoryName || 'Advance Salary taken',
+            recordedBy: tx.recordedBy || tx.cashierName || 'Cashier / Superadmin',
+          });
+        });
+
+        if (staffAdvanceTxns.length === 0 && staffDocAdvance > 0) {
+          deductionItems.push({
+            id: `doc-adv-${staff.id}`,
+            date: monthStr,
+            type: 'advance',
+            amount: staffDocAdvance,
+            reason: 'Monthly Advance Salary',
+            recordedBy: 'System Record',
+          });
+        }
+
         // Sort chronologically by date
         deductionItems.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
@@ -153,6 +223,8 @@ export default function RehabPayrollPage() {
           finesCount: staffFines.length,
           staffFines,
           totalFines,
+          totalAdvance,
+          staffAdvanceTxns,
           deductions,
           netPayable,
           deductionItems,
@@ -162,6 +234,7 @@ export default function RehabPayrollPage() {
       const totalGross = salaryRows.reduce((s, r) => s + r.gross, 0);
       const totalNet = salaryRows.reduce((s, r) => s + r.netPayable, 0);
       const totalDeductions = salaryRows.reduce((s, r) => s + r.deductions, 0);
+      const totalAdvancesAmount = salaryRows.reduce((s, r) => s + r.totalAdvance, 0);
 
       // Enrich fines with staff name
       const staffMap = Object.fromEntries(allStaff.map((s: any) => [s.id, s.name || s.id]));
@@ -179,6 +252,7 @@ export default function RehabPayrollPage() {
         totalGross,
         totalNet,
         totalDeductions,
+        totalAdvancesAmount,
         allFines: enrichedFines,
         monthLabel: `${MONTHS[selectedMonth]} ${selectedYear}`,
       });
@@ -223,7 +297,7 @@ export default function RehabPayrollPage() {
       await handleLoad();
     } catch (err: any) {
       alert('Failed to delete: ' + err.message);
-    } finally {
+    } fontally {
       setDeletingId(null);
     }
   };
@@ -263,7 +337,7 @@ export default function RehabPayrollPage() {
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <UserCog className="w-6 h-6 text-purple-600" /> Staff Payroll & Fines
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Monthly salary calculation, net payout, and date-wise deduction breakdown</p>
+            <p className="text-sm text-gray-500 mt-1">Monthly salary calculation, advance deductions, fines, and net payout</p>
           </div>
           {data && (
             <div className="flex gap-2 flex-wrap">
@@ -322,18 +396,22 @@ export default function RehabPayrollPage() {
             </div>
 
             {/* Grand Summary */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center shadow-sm">
-                <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Total Gross Salary</div>
-                <div className="text-2xl font-black text-teal-800">{formatPKR(data.totalGross)}</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-teal-50 border border-teal-100 p-4 rounded-2xl text-center shadow-sm">
+                <div className="text-[10px] font-bold text-teal-600 uppercase tracking-wider mb-1">Total Gross Salary</div>
+                <div className="text-xl font-black text-teal-800">{formatPKR(data.totalGross)}</div>
               </div>
-              <div className="bg-red-50 border border-red-100 p-5 rounded-2xl text-center shadow-sm">
-                <div className="text-xs font-bold text-red-500 uppercase tracking-wider mb-1">Total Deductions</div>
-                <div className="text-2xl font-black text-red-700">{formatPKR(data.totalDeductions)}</div>
+              <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl text-center shadow-sm">
+                <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Total Advances</div>
+                <div className="text-xl font-black text-amber-800">{formatPKR(data.totalAdvancesAmount)}</div>
               </div>
-              <div className="bg-purple-50 border border-purple-200 p-5 rounded-2xl text-center shadow-sm">
-                <div className="text-xs font-bold text-purple-700 uppercase tracking-wider mb-1">Total Net Salary To Pay</div>
-                <div className="text-2xl font-black text-purple-900">{formatPKR(data.totalNet)}</div>
+              <div className="bg-red-50 border border-red-100 p-4 rounded-2xl text-center shadow-sm">
+                <div className="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-1">Total Deductions</div>
+                <div className="text-xl font-black text-red-700">{formatPKR(data.totalDeductions)}</div>
+              </div>
+              <div className="bg-purple-50 border border-purple-200 p-4 rounded-2xl text-center shadow-sm">
+                <div className="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">Total Net To Pay</div>
+                <div className="text-xl font-black text-purple-900">{formatPKR(data.totalNet)}</div>
               </div>
             </div>
 
@@ -359,19 +437,20 @@ export default function RehabPayrollPage() {
 
                 {/* Salary Table */}
                 <div className="overflow-x-auto rounded-xl border border-gray-200">
-                  <table className="w-full text-sm border-collapse min-w-[850px]">
+                  <table className="w-full text-sm border-collapse min-w-[950px]">
                     <thead className="bg-purple-50">
                       <tr>
-                        <th className="px-4 py-3 text-left font-bold text-purple-800 border-b border-gray-200">#</th>
-                        <th className="px-4 py-3 text-left font-bold text-purple-800 border-b border-gray-200">Staff Member</th>
-                        <th className="px-4 py-3 text-left font-bold text-purple-800 border-b border-gray-200">Designation</th>
-                        <th className="px-4 py-3 text-right font-bold text-purple-800 border-b border-gray-200">Gross Salary</th>
-                        <th className="px-4 py-3 text-center font-bold text-purple-800 border-b border-gray-200">Absent Days</th>
-                        <th className="px-4 py-3 text-right font-bold text-purple-800 border-b border-gray-200">Absent Ded.</th>
-                        <th className="px-4 py-3 text-right font-bold text-purple-800 border-b border-gray-200">Fine Ded.</th>
-                        <th className="px-4 py-3 text-right font-bold text-purple-800 border-b border-gray-200">Total Ded.</th>
-                        <th className="px-4 py-3 text-right font-bold text-purple-800 border-b border-gray-200 bg-purple-100/70">Net Salary To Pay</th>
-                        <th className="px-3 py-3 text-center font-bold text-purple-800 border-b border-gray-200 no-print">Breakdown</th>
+                        <th className="px-3.5 py-3 text-left font-bold text-purple-800 border-b border-gray-200">#</th>
+                        <th className="px-3.5 py-3 text-left font-bold text-purple-800 border-b border-gray-200">Staff Member</th>
+                        <th className="px-3.5 py-3 text-left font-bold text-purple-800 border-b border-gray-200">Designation</th>
+                        <th className="px-3.5 py-3 text-right font-bold text-purple-800 border-b border-gray-200">Gross Salary</th>
+                        <th className="px-3.5 py-3 text-center font-bold text-purple-800 border-b border-gray-200">Absent</th>
+                        <th className="px-3.5 py-3 text-right font-bold text-purple-800 border-b border-gray-200">Absent Ded.</th>
+                        <th className="px-3.5 py-3 text-right font-bold text-purple-800 border-b border-gray-200">Fine Ded.</th>
+                        <th className="px-3.5 py-3 text-right font-bold text-amber-800 border-b border-gray-200 bg-amber-50/70">Advance Ded.</th>
+                        <th className="px-3.5 py-3 text-right font-bold text-purple-800 border-b border-gray-200">Total Ded.</th>
+                        <th className="px-3.5 py-3 text-right font-bold text-purple-800 border-b border-gray-200 bg-purple-100/70">Net Salary To Pay</th>
+                        <th className="px-2.5 py-3 text-center font-bold text-purple-800 border-b border-gray-200 no-print">Breakdown</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -381,30 +460,33 @@ export default function RehabPayrollPage() {
                           onClick={() => setSelectedStaffModal(r)}
                           className="hover:bg-purple-50/60 transition-colors border-b border-gray-100 cursor-pointer group"
                         >
-                          <td className="px-4 py-3.5 text-gray-400 font-mono text-xs">{i + 1}</td>
-                          <td className="px-4 py-3.5 font-bold text-gray-900 group-hover:text-purple-700 transition-colors">{r.name}</td>
-                          <td className="px-4 py-3.5 text-gray-500 text-xs">{r.designation}</td>
-                          <td className="px-4 py-3.5 text-right font-medium text-gray-700">{formatPKR(r.gross)}</td>
-                          <td className="px-4 py-3.5 text-center">
+                          <td className="px-3.5 py-3.5 text-gray-400 font-mono text-xs">{i + 1}</td>
+                          <td className="px-3.5 py-3.5 font-bold text-gray-900 group-hover:text-purple-700 transition-colors">{r.name}</td>
+                          <td className="px-3.5 py-3.5 text-gray-500 text-xs">{r.designation}</td>
+                          <td className="px-3.5 py-3.5 text-right font-medium text-gray-700">{formatPKR(r.gross)}</td>
+                          <td className="px-3.5 py-3.5 text-center">
                             <span className={`font-black text-xs px-2 py-0.5 rounded-md ${r.absentDays > 0 ? 'bg-orange-100 text-orange-700' : 'text-gray-300'}`}>
                               {r.absentDays} {r.absentDays === 1 ? 'day' : 'days'}
                             </span>
                           </td>
-                          <td className="px-4 py-3.5 text-right text-orange-600 font-medium text-xs">
+                          <td className="px-3.5 py-3.5 text-right text-orange-600 font-medium text-xs">
                             {r.totalAbsentDeduction > 0 ? formatPKR(r.totalAbsentDeduction) : '—'}
                           </td>
-                          <td className="px-4 py-3.5 text-right text-red-600 font-medium text-xs">
+                          <td className="px-3.5 py-3.5 text-right text-red-600 font-medium text-xs">
                             {r.totalFines > 0 ? formatPKR(r.totalFines) : '—'}
                           </td>
-                          <td className="px-4 py-3.5 text-right text-red-700 font-bold text-xs">
+                          <td className="px-3.5 py-3.5 text-right text-amber-700 font-bold text-xs bg-amber-50/40">
+                            {r.totalAdvance > 0 ? formatPKR(r.totalAdvance) : '—'}
+                          </td>
+                          <td className="px-3.5 py-3.5 text-right text-red-700 font-bold text-xs">
                             {r.deductions > 0 ? formatPKR(r.deductions) : '—'}
                           </td>
-                          <td className="px-4 py-3.5 text-right font-black text-purple-900 bg-purple-50 group-hover:bg-purple-100/80 transition-colors">
+                          <td className="px-3.5 py-3.5 text-right font-black text-purple-900 bg-purple-50 group-hover:bg-purple-100/80 transition-colors">
                             <span className="inline-block bg-purple-100 text-purple-800 px-2.5 py-1 rounded-lg border border-purple-200">
                               {formatPKR(r.netPayable)}
                             </span>
                           </td>
-                          <td className="px-3 py-3.5 text-center no-print">
+                          <td className="px-2.5 py-3.5 text-center no-print">
                             <button
                               onClick={(e) => { e.stopPropagation(); setSelectedStaffModal(r); }}
                               className="p-1.5 bg-gray-100 hover:bg-purple-600 hover:text-white rounded-lg text-gray-500 transition-colors"
@@ -416,11 +498,13 @@ export default function RehabPayrollPage() {
                         </tr>
                       ))}
                       <tr className="bg-purple-50 font-black text-xs">
-                        <td colSpan={3} className="px-4 py-3.5 text-purple-800 uppercase tracking-wider">TOTAL</td>
-                        <td className="px-4 py-3.5 text-right text-purple-800">{formatPKR(data.totalGross)}</td>
+                        <td colSpan={3} className="px-3.5 py-3.5 text-purple-800 uppercase tracking-wider">TOTAL</td>
+                        <td className="px-3.5 py-3.5 text-right text-purple-800">{formatPKR(data.totalGross)}</td>
                         <td />
-                        <td colSpan={3} className="px-4 py-3.5 text-right text-red-700">{formatPKR(data.totalDeductions)}</td>
-                        <td className="px-4 py-3.5 text-right text-purple-950 font-black text-sm bg-purple-100/90">{formatPKR(data.totalNet)}</td>
+                        <td colSpan={2} />
+                        <td className="px-3.5 py-3.5 text-right text-amber-800 bg-amber-100/60">{formatPKR(data.totalAdvancesAmount)}</td>
+                        <td className="px-3.5 py-3.5 text-right text-red-700">{formatPKR(data.totalDeductions)}</td>
+                        <td className="px-3.5 py-3.5 text-right text-purple-950 font-black text-sm bg-purple-100/90">{formatPKR(data.totalNet)}</td>
                         <td className="no-print" />
                       </tr>
                     </tbody>
@@ -594,29 +678,35 @@ export default function RehabPayrollPage() {
             <div className="p-6 space-y-6">
 
               {/* Salary Summary Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-center">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                <div className="bg-gray-50 border border-gray-100 p-3 rounded-2xl text-center">
                   <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Base Salary</div>
-                  <div className="text-sm font-black text-gray-900">{formatPKR(selectedStaffModal.gross)}</div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">Daily: {formatPKR(selectedStaffModal.dailyRate)}</div>
+                  <div className="text-xs font-black text-gray-900">{formatPKR(selectedStaffModal.gross)}</div>
+                  <div className="text-[9px] text-gray-400 mt-0.5">Daily: {formatPKR(selectedStaffModal.dailyRate)}</div>
                 </div>
 
-                <div className="bg-orange-50 border border-orange-100 p-3.5 rounded-2xl text-center">
+                <div className="bg-orange-50 border border-orange-100 p-3 rounded-2xl text-center">
                   <div className="text-[10px] font-bold text-orange-600 uppercase tracking-wider mb-0.5">Absent Ded.</div>
-                  <div className="text-sm font-black text-orange-700">{formatPKR(selectedStaffModal.totalAbsentDeduction)}</div>
-                  <div className="text-[10px] text-orange-500 mt-0.5">{selectedStaffModal.absentDays} {selectedStaffModal.absentDays === 1 ? 'day' : 'days'}</div>
+                  <div className="text-xs font-black text-orange-700">{formatPKR(selectedStaffModal.totalAbsentDeduction)}</div>
+                  <div className="text-[9px] text-orange-500 mt-0.5">{selectedStaffModal.absentDays} {selectedStaffModal.absentDays === 1 ? 'day' : 'days'}</div>
                 </div>
 
-                <div className="bg-red-50 border border-red-100 p-3.5 rounded-2xl text-center">
+                <div className="bg-red-50 border border-red-100 p-3 rounded-2xl text-center">
                   <div className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-0.5">Fine Ded.</div>
-                  <div className="text-sm font-black text-red-700">{formatPKR(selectedStaffModal.totalFines)}</div>
-                  <div className="text-[10px] text-red-500 mt-0.5">{selectedStaffModal.staffFines?.length || 0} fines</div>
+                  <div className="text-xs font-black text-red-700">{formatPKR(selectedStaffModal.totalFines)}</div>
+                  <div className="text-[9px] text-red-500 mt-0.5">{selectedStaffModal.staffFines?.length || 0} fines</div>
                 </div>
 
-                <div className="bg-purple-50 border border-purple-200 p-3.5 rounded-2xl text-center">
-                  <div className="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-0.5">Net Salary to Pay</div>
-                  <div className="text-base font-black text-purple-900">{formatPKR(selectedStaffModal.netPayable)}</div>
-                  <div className="text-[10px] text-purple-600 font-bold mt-0.5">Final Payout</div>
+                <div className="bg-amber-50 border border-amber-100 p-3 rounded-2xl text-center">
+                  <div className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-0.5">Advance Ded.</div>
+                  <div className="text-xs font-black text-amber-800">{formatPKR(selectedStaffModal.totalAdvance)}</div>
+                  <div className="text-[9px] text-amber-600 mt-0.5">Salary Advance</div>
+                </div>
+
+                <div className="bg-purple-50 border border-purple-200 p-3 rounded-2xl text-center col-span-2 sm:col-span-1">
+                  <div className="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-0.5">Net To Pay</div>
+                  <div className="text-xs font-black text-purple-900">{formatPKR(selectedStaffModal.netPayable)}</div>
+                  <div className="text-[9px] text-purple-600 font-bold mt-0.5">Final Payout</div>
                 </div>
               </div>
 
@@ -625,7 +715,7 @@ export default function RehabPayrollPage() {
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-gray-900 flex items-center gap-2 text-sm">
                     <Calendar className="w-4 h-4 text-purple-600" />
-                    Date-Wise Deduction History
+                    Date-Wise Deduction & Advance History
                   </h3>
                   <span className="text-xs font-bold text-gray-400">
                     {selectedStaffModal.deductionItems.length} total items
@@ -635,9 +725,9 @@ export default function RehabPayrollPage() {
                 {selectedStaffModal.deductionItems.length === 0 ? (
                   <div className="bg-green-50 border border-green-100 rounded-2xl p-6 text-center text-emerald-800 space-y-1">
                     <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-600" />
-                    <p className="font-bold text-sm">No Deductions Recorded!</p>
+                    <p className="font-bold text-sm">No Deductions or Advances Recorded!</p>
                     <p className="text-xs text-emerald-600">
-                      This staff member has zero absences and zero fines for {data?.monthLabel}. Full base salary of {formatPKR(selectedStaffModal.gross)} will be paid.
+                      This staff member has zero absences, zero fines, and zero advance salary taken for {data?.monthLabel}. Full base salary of {formatPKR(selectedStaffModal.gross)} will be paid.
                     </p>
                   </div>
                 ) : (
@@ -662,9 +752,13 @@ export default function RehabPayrollPage() {
                                 <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold text-[10px]">
                                   Absent Deduction
                                 </span>
-                              ) : (
+                              ) : item.type === 'fine' ? (
                                 <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold text-[10px]">
                                   Fine Deduction
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                                  <CreditCard className="w-3 h-3" /> Advance Salary
                                 </span>
                               )}
                             </td>
@@ -680,7 +774,7 @@ export default function RehabPayrollPage() {
                           </tr>
                         ))}
                         <tr className="bg-red-50/60 font-black">
-                          <td colSpan={3} className="px-3.5 py-2.5 text-red-800">TOTAL DEDUCTIONS</td>
+                          <td colSpan={3} className="px-3.5 py-2.5 text-red-800">TOTAL DEDUCTIONS (Absents + Fines + Advances)</td>
                           <td className="px-3.5 py-2.5 text-right text-red-700">-{formatPKR(selectedStaffModal.deductions)}</td>
                         </tr>
                       </tbody>
@@ -693,7 +787,7 @@ export default function RehabPayrollPage() {
               <div className="bg-purple-900 text-white rounded-2xl p-4 flex items-center justify-between">
                 <div>
                   <div className="text-[11px] text-purple-200 font-medium">Final Money To Pay Staff</div>
-                  <div className="text-xs text-purple-300">Base Salary - Total Deductions</div>
+                  <div className="text-xs text-purple-300">Base Salary - Total Deductions (Absents + Fines + Advances)</div>
                 </div>
                 <div className="text-2xl font-black text-purple-300">
                   {formatPKR(selectedStaffModal.netPayable)}
