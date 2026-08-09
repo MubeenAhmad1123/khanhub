@@ -15,6 +15,8 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+const ALL_PREFIXES = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'jobcenter', 'media', 'it', ''];
+
 function formatPKR(n: number) {
   return `Rs. ${Math.round(n).toLocaleString('en-PK')}`;
 }
@@ -76,9 +78,69 @@ export default function SpimsPayrollPage() {
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
+  const fetchAllMonthAdvanceTxns = async (mStr: string) => {
+    const allDocsMap = new Map<string, any>();
+
+    await Promise.all(ALL_PREFIXES.map(async (p) => {
+      const txCol = p ? `${p}_transactions` : 'transactions';
+      const advCol = p ? `${p}_advances` : 'advances';
+
+      for (const cName of [txCol, advCol]) {
+        try {
+          const snap1 = await getDocs(query(collection(db, cName), where('date', '>=', `${mStr}-01`), where('date', '<=', `${mStr}-31`))).catch(() => ({ docs: [] }));
+          const snap2 = await getDocs(query(collection(db, cName), where('month', '==', mStr))).catch(() => ({ docs: [] }));
+          const snap3 = await getDocs(query(collection(db, cName), where('transactionDate', '>=', `${mStr}-01`), where('transactionDate', '<=', `${mStr}-31`))).catch(() => ({ docs: [] }));
+          
+          let snap4: any = { docs: [] };
+          if (cName.endsWith('_advances') || cName === 'advances') {
+            snap4 = await getDocs(collection(db, cName)).catch(() => ({ docs: [] }));
+          }
+
+          [...snap1.docs, ...snap2.docs, ...snap3.docs, ...snap4.docs].forEach((d: any) => {
+            if (d && d.id) {
+              allDocsMap.set(`${cName}-${d.id}`, { id: d.id, _collection: cName, ...d.data() });
+            }
+          });
+        } catch (e) {}
+      }
+    }));
+
+    const allTxns = Array.from(allDocsMap.values());
+
+    return allTxns.filter((tx: any) => {
+      if (tx.status === 'rejected') return false;
+
+      const cat = String(tx.category || '').toLowerCase();
+      const catName = String(tx.categoryName || '').toLowerCase();
+      const desc = String(tx.description || '').toLowerCase();
+
+      const isAdvanceCat =
+        cat === 'advance_salary' ||
+        cat === 'advance' ||
+        cat === 'staff_advance' ||
+        catName.includes('advance') ||
+        desc.includes('advance') ||
+        tx._collection.includes('advances');
+
+      if (!isAdvanceCat) return false;
+
+      const txDate = tx.transactionDate || tx.date || (tx.createdAt?.toDate ? tx.createdAt.toDate().toISOString().substring(0, 10) : tx.createdAt);
+      if (!txDate) {
+        if (tx.month) return String(tx.month) === mStr;
+        return true;
+      }
+
+      const dStr = String(txDate).substring(0, 7);
+      return dStr === mStr || tx.month === mStr;
+    });
+  };
+
   const handleLoad = async () => {
     try {
       setLoading(true);
+
+      // Global advances fetch across all department collections
+      const globalAdvanceTxns = await fetchAllMonthAdvanceTxns(monthStr);
 
       // Staff
       const staffSnap = await getDocs(query(collection(db, 'spims_staff'), where('isActive', '==', true)));
@@ -102,48 +164,6 @@ export default function SpimsPayrollPage() {
         allFinesDocs.set(d.id, { id: d.id, ...d.data() as any });
       });
       const allFines = Array.from(allFinesDocs.values());
-
-      // Advances (Transactions + Advances collections)
-      const txCol = `spims_transactions`;
-      const advCol = `spims_advances`;
-
-      const txSnap = await getDocs(query(
-        collection(db, txCol),
-        where('date', '>=', `${monthStr}-01`),
-        where('date', '<=', `${monthStr}-31`)
-      )).catch(() => ({ docs: [] } as any));
-      const txByMonthSnap = await getDocs(query(
-        collection(db, txCol),
-        where('month', '==', monthStr)
-      )).catch(() => ({ docs: [] } as any));
-      const advSnap = await getDocs(query(
-        collection(db, advCol),
-        where('date', '>=', `${monthStr}-01`),
-        where('date', '<=', `${monthStr}-31`)
-      )).catch(() => ({ docs: [] } as any));
-      const advByMonthSnap = await getDocs(query(
-        collection(db, advCol),
-        where('month', '==', monthStr)
-      )).catch(() => ({ docs: [] } as any));
-
-      const allTxDocs = new Map<string, any>();
-      [...txSnap.docs, ...txByMonthSnap.docs, ...advSnap.docs, ...advByMonthSnap.docs].forEach((d: any) => {
-        allTxDocs.set(d.id, { id: d.id, ...d.data() });
-      });
-
-      const allAdvanceTxns = Array.from(allTxDocs.values()).filter((tx: any) => {
-        if (tx.status === 'rejected') return false;
-        const cat = String(tx.category || '').toLowerCase();
-        const catName = String(tx.categoryName || '').toLowerCase();
-        const desc = String(tx.description || '').toLowerCase();
-        return (
-          cat === 'advance_salary' ||
-          cat === 'advance' ||
-          cat === 'staff_advance' ||
-          catName.includes('advance') ||
-          desc.includes('advance')
-        );
-      });
 
       // Attendance records for this month
       const attendanceSnap = await getDocs(query(
@@ -226,9 +246,11 @@ export default function SpimsPayrollPage() {
         const totalFines = staffFines.reduce((s: number, f: any) => s + Number(f.amount || 0), 0);
 
         // Advance calculation for this staff member
-        const staffAdvanceTxns = allAdvanceTxns.filter((tx: any) => {
-          if (candidateIds.has(tx.staffId) || candidateIds.has(tx.patientId) || candidateIds.has(tx.userId)) return true;
+        const staffAdvanceTxns = globalAdvanceTxns.filter((tx: any) => {
+          if (candidateIds.has(tx.staffId) || candidateIds.has(tx.patientId) || candidateIds.has(tx.userId) || candidateIds.has(tx.customId)) return true;
           if (tx.staffName && String(tx.staffName).toLowerCase() === staffNameLower) return true;
+          if (tx.userName && String(tx.userName).toLowerCase() === staffNameLower) return true;
+          if (tx.name && String(tx.name).toLowerCase() === staffNameLower) return true;
           if (tx.description && String(tx.description).toLowerCase().includes(staffNameLower)) return true;
           return false;
         });
@@ -271,9 +293,10 @@ export default function SpimsPayrollPage() {
         });
 
         staffAdvanceTxns.forEach((tx: any) => {
+          const dateStr = tx.date || tx.transactionDate || (tx.createdAt?.toDate ? tx.createdAt.toDate().toISOString().substring(0, 10) : tx.month) || monthStr;
           deductionItems.push({
-            id: tx.id || `adv-${tx.date}`,
-            date: tx.date || tx.transactionDate || tx.month || monthStr,
+            id: tx.id || `adv-${dateStr}`,
+            date: dateStr,
             type: 'advance',
             amount: Number(tx.amount || 0),
             reason: tx.description || tx.categoryName || 'Advance Salary taken',
