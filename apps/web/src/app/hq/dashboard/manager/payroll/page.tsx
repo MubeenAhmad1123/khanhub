@@ -177,6 +177,9 @@ export default function ManagerPayrollPage() {
             'doctor', 'nurse', 'counselor', 'personnel', 'other',
           ]);
 
+          const daysInThisCalendarMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+          const monthEndStr = `${monthStr}-${String(daysInThisCalendarMonth).padStart(2, '0')}`;
+
           const staffSnap = await getDocs(collection(db, staffCol));
           const allStaff = staffSnap.docs
             .map(d => ({ id: d.id, ...d.data() as any, dept }))
@@ -190,6 +193,13 @@ export default function ManagerPayrollPage() {
 
               const hasSalaryField = s.monthlySalary !== undefined || s.salary !== undefined;
               if (role && !STAFF_ROLES.has(role) && !hasSalaryField) return false;
+
+              // Exclude if staff joined after selected month
+              const joiningRaw = s.joiningDate || s.startDate || s.dateJoined || s.createdAt;
+              const joiningStr = formatDateString(joiningRaw);
+              if (joiningStr && joiningStr > monthEndStr) {
+                return false;
+              }
 
               const statusStr = String(s.status || '').toLowerCase();
               return s.isActive !== false && !['inactive', 'resigned', 'terminated', 'executive', 'hide'].includes(statusStr);
@@ -284,10 +294,39 @@ export default function ManagerPayrollPage() {
               if (dStr) attMapByDate[dStr] = a;
             });
 
-            // Calculate days passed in month
-            let daysPassed = 30;
+            // Joining Date calculation
+            const joiningRaw = staff.joiningDate || staff.startDate || staff.dateJoined || staff.createdAt;
+            const joiningDateStr = formatDateString(joiningRaw);
+
+            let joiningDay = 1;
+            let joinedMidMonth = false;
+
+            if (joiningDateStr && joiningDateStr.startsWith(monthStr)) {
+              joiningDay = parseInt(joiningDateStr.substring(8, 10), 10) || 1;
+              if (joiningDay > 1) {
+                joinedMidMonth = true;
+              }
+            }
+
+            let totalBaseDaysForStaff = 30;
+            if (joinedMidMonth) {
+              totalBaseDaysForStaff = Math.max(0, 30 - joiningDay + 1);
+            }
+
+            // Calculate days passed in month (always based on 30-day standard)
+            let daysPassed = totalBaseDaysForStaff;
             if (monthStr === currentMonthStr) {
-              daysPassed = Math.min(today.getDate(), 30);
+              const currentDay = today.getDate();
+              if (joinedMidMonth) {
+                if (currentDay < joiningDay) {
+                  daysPassed = 0;
+                } else {
+                  const elapsedDays = currentDay - joiningDay + 1;
+                  daysPassed = Math.min(elapsedDays, totalBaseDaysForStaff);
+                }
+              } else {
+                daysPassed = Math.min(currentDay, 30);
+              }
             } else if (monthStr > currentMonthStr) {
               daysPassed = 0;
             }
@@ -297,6 +336,11 @@ export default function ManagerPayrollPage() {
             let unmarkedDaysCount = 0;
 
             monthDays.forEach(dayStr => {
+              // Ignore dates before staff joining date
+              if (joiningDateStr && dayStr < joiningDateStr) {
+                return;
+              }
+
               const att = attMapByDate[dayStr];
               const status = att ? String(att.status || att.state || '').toLowerCase() : 'unmarked';
               const isPast = dayStr < todayStr;

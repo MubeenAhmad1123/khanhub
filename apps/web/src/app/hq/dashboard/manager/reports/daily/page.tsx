@@ -261,6 +261,28 @@ export default function DailyReportPage() {
           return false;
         }
 
+        // Check Joining Date: staff should only appear on or after their joining date
+        const joiningRaw = s.joiningDate || s.startDate || s.dateJoined || s.createdAt;
+        if (joiningRaw) {
+          let joiningStr = '';
+          if (typeof joiningRaw === 'string' && joiningRaw.length >= 10) {
+            joiningStr = joiningRaw.substring(0, 10);
+          } else {
+            try {
+              const dObj = toDate(joiningRaw);
+              if (dObj) {
+                const y = dObj.getFullYear();
+                const m = String(dObj.getMonth() + 1).padStart(2, '0');
+                const d = String(dObj.getDate()).padStart(2, '0');
+                joiningStr = `${y}-${m}-${d}`;
+              }
+            } catch (e) {}
+          }
+          if (joiningStr && reportDate < joiningStr) {
+            return false; // Joined after reportDate -> do not show
+          }
+        }
+
         // Exclude patients, students, families, clients, seekers, and superadmins
         const EXCLUDED_ROLES = ['patient', 'family', 'student', 'client', 'seeker', 'user', 'superadmin', 'donor', 'child', 'oldage', 'beneficiary', 'orphan'];
         if (EXCLUDED_ROLES.some(ex => r.includes(ex) || desig.includes(ex))) {

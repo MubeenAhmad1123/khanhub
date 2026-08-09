@@ -428,10 +428,53 @@ export default function StaffProfilePage() {
     const todayStr = new Date().toISOString().slice(0, 10);
     const isCurrentMonth = selectedMonth === todayStr.slice(0, 7);
 
-    // Calculate days passed in month
-    let daysPassed = 30;
+    const joiningDateRaw = staff.joiningDate || staff.startDate || staff.dateJoined || staff.createdAt;
+    let joiningDateStr = '';
+    if (joiningDateRaw) {
+      if (typeof joiningDateRaw === 'string' && joiningDateRaw.length >= 10) {
+        joiningDateStr = joiningDateRaw.substring(0, 10);
+      } else {
+        try {
+          const dObj = toDate(joiningDateRaw);
+          if (dObj) {
+            const y = dObj.getFullYear();
+            const m = String(dObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dObj.getDate()).padStart(2, '0');
+            joiningDateStr = `${y}-${m}-${d}`;
+          }
+        } catch (e) {}
+      }
+    }
+
+    let joiningDay = 1;
+    let joinedMidMonth = false;
+
+    if (joiningDateStr && joiningDateStr.startsWith(selectedMonth)) {
+      joiningDay = parseInt(joiningDateStr.substring(8, 10), 10) || 1;
+      if (joiningDay > 1) {
+        joinedMidMonth = true;
+      }
+    }
+
+    let totalBaseDaysForStaff = 30;
+    if (joinedMidMonth) {
+      totalBaseDaysForStaff = Math.max(0, 30 - joiningDay + 1);
+    }
+
+    // Calculate days passed in month (always based on 30-day standard)
+    let daysPassed = totalBaseDaysForStaff;
     if (isCurrentMonth) {
-      daysPassed = Math.min(new Date().getDate(), 30);
+      const currentDay = new Date().getDate();
+      if (joinedMidMonth) {
+        if (currentDay < joiningDay) {
+          daysPassed = 0;
+        } else {
+          const elapsedDays = currentDay - joiningDay + 1;
+          daysPassed = Math.min(elapsedDays, totalBaseDaysForStaff);
+        }
+      } else {
+        daysPassed = Math.min(currentDay, 30);
+      }
     } else if (selectedMonth > todayStr.slice(0, 7)) {
       daysPassed = 0;
     }
@@ -447,6 +490,11 @@ export default function StaffProfilePage() {
     const deductedDatesList: { date: string; status: string; deduction: number }[] = [];
 
     days.forEach(dayStr => {
+      // Skip dates before staff joining date
+      if (joiningDateStr && dayStr < joiningDateStr) {
+        return;
+      }
+
       const att = attendanceMap[dayStr];
       const status = att ? att.status : 'unmarked';
       const isPast = dayStr < todayStr;
