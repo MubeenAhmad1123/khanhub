@@ -19,6 +19,24 @@ function formatPKR(n: number) {
   return `Rs. ${Math.round(n).toLocaleString('en-PK')}`;
 }
 
+function getSimpleId(id: string) {
+  if (!id) return '';
+  return id.replace(/^(hq|rehab|spims|hospital|sukoon|welfare|jobcenter|job-center|media|social-media|it)_/, '');
+}
+
+function getDaysInMonth(year: number, monthZeroIndexed: number): string[] {
+  const date = new Date(year, monthZeroIndexed, 1);
+  const days: string[] = [];
+  while (date.getMonth() === monthZeroIndexed) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    days.push(`${y}-${m}-${d}`);
+    date.setDate(date.getDate() + 1);
+  }
+  return days;
+}
+
 export default function SpimsPayrollPage() {
   const router = useRouter();
   const [session, setSession] = useState<any>(null);
@@ -53,6 +71,10 @@ export default function SpimsPayrollPage() {
   }, [router]);
 
   const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+  const monthDays = getDaysInMonth(selectedYear, selectedMonth);
+
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
   const handleLoad = async () => {
     try {
@@ -123,33 +145,93 @@ export default function SpimsPayrollPage() {
         );
       });
 
-      // Attendance absences & unmarked records for this month
+      // Attendance records for this month
       const attendanceSnap = await getDocs(query(
         collection(db, 'spims_attendance'),
         where('date', '>=', `${monthStr}-01`),
         where('date', '<=', `${monthStr}-31`)
       ));
-      const allAbsences = attendanceSnap.docs
-        .map(d => d.data() as any)
-        .filter((a: any) => {
-          const status = String(a.status || a.state || '').toLowerCase();
-          return status === 'absent' || status === 'unmarked';
-        });
+      const allAttDocs = attendanceSnap.docs.map(d => d.data() as any);
 
       // Build salary rows
       const salaryRows = allStaff.map((staff: any) => {
         const gross = Number(staff.salary || 0);
         const dailyRate = gross / 30;
-        const absences = allAbsences.filter((a: any) => a.staffId === staff.id);
+
+        const simpleId = getSimpleId(staff.id);
+        const staffNameLower = String(staff.name || '').toLowerCase();
+
+        const candidateIds = new Set([
+          staff.id,
+          simpleId,
+          staff.staffId,
+          staff.customId,
+          staff.uid,
+          staff.userId,
+        ].filter(Boolean));
+
+        // Filter attendance docs for this staff member
+        const staffAtt = allAttDocs.filter((a: any) => {
+          if (candidateIds.has(a.staffId) || candidateIds.has(a.userId)) return true;
+          if (a.staffName && String(a.staffName).toLowerCase() === staffNameLower) return true;
+          return false;
+        });
+
+        const attMapByDate: Record<string, any> = {};
+        staffAtt.forEach((a: any) => {
+          if (a.date) attMapByDate[a.date] = a;
+        });
+
+        // Calculate absences & unmarked past days
+        const absences: Array<{ date: string; reason: string; isUnmarked: boolean }> = [];
+        monthDays.forEach(dayStr => {
+          if (dayStr > todayStr) return; // Future days not counted as absent
+
+          const att = attMapByDate[dayStr];
+          if (att) {
+            const s = String(att.status || att.state || '').toLowerCase();
+            if (s === 'absent') {
+              absences.push({
+                date: dayStr,
+                reason: att.reason || `Absent from duty (Daily rate: ${formatPKR(dailyRate)})`,
+                isUnmarked: false,
+              });
+            } else if (s === 'unmarked') {
+              absences.push({
+                date: dayStr,
+                reason: `Unmarked Attendance / Absent (Daily rate: ${formatPKR(dailyRate)})`,
+                isUnmarked: true,
+              });
+            }
+          } else {
+            // Past day with NO attendance doc recorded at all
+            absences.push({
+              date: dayStr,
+              reason: `Unmarked Attendance (Past Day) (Daily rate: ${formatPKR(dailyRate)})`,
+              isUnmarked: true,
+            });
+          }
+        });
+
         const absentDays = absences.length;
-        const absentDates = absences.map((a: any) => a.date).sort();
+        const absentDates = absences.map(a => a.date).sort();
         const totalAbsentDeduction = Math.round(absentDays * dailyRate);
 
-        const staffFines = allFines.filter((f: any) => f.staffId === staff.id);
+        // Filter fines for this staff member
+        const staffFines = allFines.filter((f: any) => {
+          if (candidateIds.has(f.staffId)) return true;
+          if (f.staffName && String(f.staffName).toLowerCase() === staffNameLower) return true;
+          return false;
+        });
         const totalFines = staffFines.reduce((s: number, f: any) => s + Number(f.amount || 0), 0);
 
-        // Advance calculation
-        const staffAdvanceTxns = allAdvanceTxns.filter((tx: any) => tx.staffId === staff.id || tx.staffId === staff.staffId);
+        // Advance calculation for this staff member
+        const staffAdvanceTxns = allAdvanceTxns.filter((tx: any) => {
+          if (candidateIds.has(tx.staffId) || candidateIds.has(tx.patientId) || candidateIds.has(tx.userId)) return true;
+          if (tx.staffName && String(tx.staffName).toLowerCase() === staffNameLower) return true;
+          if (tx.description && String(tx.description).toLowerCase().includes(staffNameLower)) return true;
+          return false;
+        });
         const totalTxAdvance = staffAdvanceTxns.reduce((s: number, tx: any) => s + Number(tx.amount || 0), 0);
         const staffDocAdvance = Number(staff.advance || staff.advanceSalary || staff.monthlyAdvance || 0);
         const totalAdvance = Math.max(staffDocAdvance, totalTxAdvance);
@@ -168,16 +250,12 @@ export default function SpimsPayrollPage() {
         }> = [];
 
         absences.forEach((a: any, idx: number) => {
-          const status = String(a.status || a.state || '').toLowerCase();
-          const isUnmarked = status === 'unmarked';
           deductionItems.push({
             id: `absent-${a.date}-${idx}`,
             date: a.date,
             type: 'absent',
             amount: Math.round(dailyRate),
-            reason: isUnmarked
-              ? `Unmarked Attendance / Absent (Daily rate: ${formatPKR(dailyRate)})`
-              : `Absent from duty (Daily rate: ${formatPKR(dailyRate)})`,
+            reason: a.reason,
           });
         });
 
