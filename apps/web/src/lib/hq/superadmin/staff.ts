@@ -118,7 +118,7 @@ async function loadAttendanceMonth(dept: StaffDept, staffId: string, monthKey: s
       else present++;
     }
     else if (s.includes('late')) late++;
-    else if (s.includes('absent')) absent++;
+    else if (s.includes('absent') || s.includes('unmarked')) absent++;
   }
   return { present, absent, late };
 }

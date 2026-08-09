@@ -177,7 +177,7 @@ export default function ManagerPayrollPage() {
             );
           });
 
-          // Attendance absences for selected month
+          // Attendance absences & unmarked records for selected month
           const attCol = `${prefix}_attendance`;
           const attSnap = await getDocs(query(
             collection(db, attCol),
@@ -185,9 +185,13 @@ export default function ManagerPayrollPage() {
             where('date', '<=', `${monthStr}-31`)
           )).catch(() => ({ docs: [] } as any));
 
+          // Unmarked attendance counts as absent
           const allAbsences = attSnap.docs
             .map((d: any) => d.data())
-            .filter((a: any) => a.status === 'absent');
+            .filter((a: any) => {
+              const status = String(a.status || a.state || '').toLowerCase();
+              return status === 'absent' || status === 'unmarked';
+            });
 
           // Salary rows
           const staffMap = Object.fromEntries(allStaff.map((s: any) => [s.id, s.name || s.displayName || s.id]));
@@ -223,12 +227,16 @@ export default function ManagerPayrollPage() {
             }> = [];
 
             absences.forEach((a: any, idx: number) => {
+              const status = String(a.status || a.state || '').toLowerCase();
+              const isUnmarked = status === 'unmarked';
               deductionItems.push({
                 id: `absent-${a.date}-${idx}`,
                 date: a.date,
                 type: 'absent',
                 amount: Math.round(dailyRate),
-                reason: `Absent from duty (Daily rate: ${formatPKR(dailyRate)})`,
+                reason: isUnmarked
+                  ? `Unmarked Attendance / Absent (Daily rate: ${formatPKR(dailyRate)})`
+                  : `Absent from duty (Daily rate: ${formatPKR(dailyRate)})`,
               });
             });
 
@@ -425,7 +433,7 @@ export default function ManagerPayrollPage() {
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <UserCog className="w-6 h-6 text-emerald-600" /> All-Department Payroll & Fines
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Monthly salary calculation, advance deductions, fines, and net payout</p>
+            <p className="text-sm text-gray-500 mt-1">Monthly salary calculation, advance deductions, fines, and net payout (Unmarked attendance = Absent)</p>
           </div>
           {data && (
             <div className="flex gap-2 flex-wrap">
@@ -572,7 +580,7 @@ export default function ManagerPayrollPage() {
                         <th className="px-3.5 py-3 text-left font-bold text-emerald-900 border-b border-gray-200">Dept</th>
                         <th className="px-3.5 py-3 text-left font-bold text-emerald-900 border-b border-gray-200">Designation</th>
                         <th className="px-3.5 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Gross Salary</th>
-                        <th className="px-3.5 py-3 text-center font-bold text-emerald-900 border-b border-gray-200">Absent</th>
+                        <th className="px-3.5 py-3 text-center font-bold text-emerald-900 border-b border-gray-200">Absent / Unmarked</th>
                         <th className="px-3.5 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Absent Ded.</th>
                         <th className="px-3.5 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Fine Ded.</th>
                         <th className="px-3.5 py-3 text-right font-bold text-amber-800 border-b border-gray-200 bg-amber-50/70">Advance Ded.</th>
