@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { getDeptPrefix, getDeptCollection, type StaffDept, listStaffCards } from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
-import { downloadElementAsPng } from '@/lib/utils';
+import { toDate, downloadElementAsPng } from '@/lib/utils';
 
 interface DailyReportRow {
   id: string;

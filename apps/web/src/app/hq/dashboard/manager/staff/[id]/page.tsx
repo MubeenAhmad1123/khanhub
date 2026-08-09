@@ -428,7 +428,7 @@ export default function StaffProfilePage() {
     const todayStr = new Date().toISOString().slice(0, 10);
     const isCurrentMonth = selectedMonth === todayStr.slice(0, 7);
 
-    const joiningDateRaw = staff.joiningDate || staff.startDate || staff.dateJoined || staff.createdAt;
+    const joiningDateRaw = staff.joiningDate || (staff as any).startDate || (staff as any).dateJoined || (staff as any).createdAt;
     let joiningDateStr = '';
     if (joiningDateRaw) {
       if (typeof joiningDateRaw === 'string' && joiningDateRaw.length >= 10) {
