@@ -21,6 +21,21 @@ function formatPKR(n: number) {
   return `Rs. ${Math.round(n).toLocaleString('en-PK')}`;
 }
 
+function formatDateString(val: any): string {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  try {
+    const dObj = toDate(val);
+    if (dObj) {
+      const y = dObj.getFullYear();
+      const m = String(dObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dObj.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+  } catch (e) {}
+  return String(val || '');
+}
+
 function getDaysInMonth(year: number, monthZeroIndexed: number): string[] {
   const date = new Date(year, monthZeroIndexed, 1);
   const days: string[] = [];
@@ -117,16 +132,8 @@ export default function SpimsPayrollPage() {
       if (tx.month) return String(tx.month) === targetMonthStr;
       return true;
     }
-    try {
-      const dObj = toDate(txDate);
-      if (dObj) {
-        const y = dObj.getFullYear();
-        const m = String(dObj.getMonth() + 1).padStart(2, '0');
-        return `${y}-${m}` === targetMonthStr;
-      }
-    } catch (e) {}
-    
-    if (typeof txDate === 'string' && txDate.startsWith(targetMonthStr)) {
+    const parsedStr = formatDateString(txDate);
+    if (parsedStr && parsedStr.startsWith(targetMonthStr)) {
       return true;
     }
     if (tx.month) {
@@ -228,7 +235,8 @@ export default function SpimsPayrollPage() {
 
         const attMapByDate: Record<string, any> = {};
         staffAtt.forEach((a: any) => {
-          if (a.date) attMapByDate[a.date] = a;
+          const dStr = formatDateString(a.date);
+          if (dStr) attMapByDate[dStr] = a;
         });
 
         // Days passed in month
@@ -277,9 +285,8 @@ export default function SpimsPayrollPage() {
 
         // Fines
         const staffFines = allFines.filter((f: any) => {
-          if (!f.date && !f.month) return false;
-          const fDateStr = f.date ? String(f.date).substring(0, 7) : String(f.month);
-          if (fDateStr !== monthStr) return false;
+          const fDateStr = formatDateString(f.date || f.month);
+          if (!fDateStr || !fDateStr.startsWith(monthStr)) return false;
 
           if (candidateIds.has(String(f.staffId))) return true;
           if (f.staffName && String(f.staffName).toLowerCase() === staffNameLower) return true;
@@ -305,7 +312,7 @@ export default function SpimsPayrollPage() {
         absences.forEach((a: any, idx: number) => {
           deductionItems.push({
             id: `absent-${a.date}-${idx}`,
-            date: a.date,
+            date: String(a.date),
             type: 'absent',
             amount: Math.round(dailyRate),
             reason: a.reason,
@@ -313,9 +320,10 @@ export default function SpimsPayrollPage() {
         });
 
         staffFines.forEach((f: any) => {
+          const dStr = formatDateString(f.date || f.month) || '—';
           deductionItems.push({
-            id: f.id || `fine-${f.date}`,
-            date: f.date || f.month || '—',
+            id: f.id || `fine-${dStr}`,
+            date: dStr,
             type: 'fine',
             amount: Number(f.amount || 0),
             reason: f.reason || 'Fine imposed',
@@ -324,7 +332,7 @@ export default function SpimsPayrollPage() {
         });
 
         staffAdvanceTxns.forEach((tx: any) => {
-          const dateStr = tx.transactionDate || tx.date || (tx.createdAt?.toDate ? tx.createdAt.toDate().toISOString().substring(0, 10) : tx.month) || monthStr;
+          const dateStr = formatDateString(tx.transactionDate || tx.date || tx.createdAt) || String(tx.month || monthStr);
           deductionItems.push({
             id: tx.id || `adv-${dateStr}`,
             date: dateStr,
@@ -346,7 +354,7 @@ export default function SpimsPayrollPage() {
           });
         }
 
-        deductionItems.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+        deductionItems.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
 
         return {
           id: staff.id,
@@ -376,9 +384,13 @@ export default function SpimsPayrollPage() {
       const totalAdvancesAmount = salaryRows.reduce((s, r) => s + r.totalAdvance, 0);
 
       const monthFinesFiltered = allFines.filter((f: any) => {
-        const fDateStr = f.date ? String(f.date).substring(0, 7) : String(f.month);
-        return fDateStr === monthStr;
-      }).map((f: any) => ({ ...f, staffName: staffMap[f.staffId] || f.staffId }));
+        const fDateStr = formatDateString(f.date || f.month);
+        return fDateStr.startsWith(monthStr);
+      }).map((f: any) => ({
+        ...f,
+        date: formatDateString(f.date || f.month),
+        staffName: staffMap[f.staffId] || f.staffId
+      }));
 
       setData({
         allStaff,
