@@ -8,7 +8,8 @@ import { useHqSession } from '@/hooks/hq/useHqSession';
 import { getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 import {
   UserCog, Printer, Calendar, DollarSign, Loader2, Download,
-  Plus, X, Receipt, Trash2, Building2
+  Plus, X, Receipt, Trash2, Building2, Eye, FileText, CheckCircle2,
+  AlertTriangle, Info
 } from 'lucide-react';
 import { downloadElementAsPng } from '@/lib/utils';
 
@@ -26,19 +27,19 @@ const DEPT_LABELS: Record<string, string> = {
 };
 
 const DEPT_COLORS: Record<string, string> = {
-  hq: 'bg-indigo-100 text-indigo-700',
-  rehab: 'bg-rose-100 text-rose-700',
-  spims: 'bg-teal-100 text-teal-700',
-  hospital: 'bg-blue-100 text-blue-700',
-  sukoon: 'bg-purple-100 text-purple-700',
-  welfare: 'bg-amber-100 text-amber-700',
-  'job-center': 'bg-orange-100 text-orange-700',
-  'social-media': 'bg-pink-100 text-pink-700',
-  it: 'bg-slate-100 text-slate-700',
+  hq: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  rehab: 'bg-rose-100 text-rose-700 border-rose-200',
+  spims: 'bg-teal-100 text-teal-700 border-teal-200',
+  hospital: 'bg-blue-100 text-blue-700 border-blue-200',
+  sukoon: 'bg-purple-100 text-purple-700 border-purple-200',
+  welfare: 'bg-amber-100 text-amber-700 border-amber-200',
+  'job-center': 'bg-orange-100 text-orange-700 border-orange-200',
+  'social-media': 'bg-pink-100 text-pink-700 border-pink-200',
+  it: 'bg-slate-100 text-slate-700 border-slate-200',
 };
 
 function formatPKR(n: number) {
-  return `Rs. ${n.toLocaleString('en-PK')}`;
+  return `Rs. ${Math.round(n).toLocaleString('en-PK')}`;
 }
 
 export default function ManagerPayrollPage() {
@@ -56,6 +57,9 @@ export default function ManagerPayrollPage() {
 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
+
+  // Staff deduction modal state
+  const [selectedStaffModal, setSelectedStaffModal] = useState<any | null>(null);
 
   // Fine form
   const [showFineForm, setShowFineForm] = useState(false);
@@ -123,7 +127,7 @@ export default function ManagerPayrollPage() {
             where('date', '>=', `${monthStr}-01`),
             where('date', '<=', `${monthStr}-31`)
           )).catch(() => ({ docs: [] } as any));
-          // Also grab fines stored with 'month' field (some auto-fines use month: '2026-07')
+          
           const finesByMonthSnap = await getDocs(query(
             collection(db, finesCol),
             where('month', '==', monthStr)
@@ -148,17 +152,56 @@ export default function ManagerPayrollPage() {
             .filter((a: any) => a.status === 'absent');
 
           // Salary rows
-          const staffMap = Object.fromEntries(allStaff.map((s: any) => [s.id, s.name || s.id]));
+          const staffMap = Object.fromEntries(allStaff.map((s: any) => [s.id, s.name || s.displayName || s.id]));
+          
           const salaryRows = allStaff.map((staff: any) => {
             const gross = Number(staff.monthlySalary || staff.salary || 0);
             const dailyRate = gross / 30;
             const absences = allAbsences.filter((a: any) => a.staffId === staff.id);
             const absentDays = absences.length;
             const absentDates = absences.map((a: any) => a.date).sort();
+            const totalAbsentDeduction = Math.round(absentDays * dailyRate);
+
             const staffFines = allFines.filter((f: any) => f.staffId === staff.id);
             const totalFines = staffFines.reduce((s: number, f: any) => s + Number(f.amount || 0), 0);
-            const deductions = Math.round(absentDays * dailyRate) + totalFines;
+
+            const deductions = totalAbsentDeduction + totalFines;
             const netPayable = Math.max(0, gross - deductions);
+
+            // Itemized date-wise deduction breakdown
+            const deductionItems: Array<{
+              id: string;
+              date: string;
+              type: 'absent' | 'fine';
+              amount: number;
+              reason: string;
+              recordedBy?: string;
+            }> = [];
+
+            absences.forEach((a: any, idx: number) => {
+              deductionItems.push({
+                id: `absent-${a.date}-${idx}`,
+                date: a.date,
+                type: 'absent',
+                amount: Math.round(dailyRate),
+                reason: `Absent from duty (Daily rate: ${formatPKR(dailyRate)})`,
+              });
+            });
+
+            staffFines.forEach((f: any) => {
+              deductionItems.push({
+                id: f.id || `fine-${f.date}`,
+                date: f.date || f.month || '—',
+                type: 'fine',
+                amount: Number(f.amount || 0),
+                reason: f.reason || 'Fine imposed',
+                recordedBy: f.recordedBy || 'Manager',
+              });
+            });
+
+            // Sort chronologically by date
+            deductionItems.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
             return {
               id: staff.id,
               name: staff.name || staff.displayName || '—',
@@ -168,9 +211,12 @@ export default function ManagerPayrollPage() {
               dailyRate: Math.round(dailyRate),
               absentDays,
               absentDates,
+              totalAbsentDeduction,
+              staffFines,
               totalFines,
               deductions,
               netPayable,
+              deductionItems,
             };
           });
 
@@ -200,6 +246,7 @@ export default function ManagerPayrollPage() {
         totalGross: allSalaryRows.reduce((s, r) => s + r.gross, 0),
         totalNet: allSalaryRows.reduce((s, r) => s + r.netPayable, 0),
         totalDeductions: allSalaryRows.reduce((s, r) => s + r.deductions, 0),
+        totalAbsentDeductions: allSalaryRows.reduce((s, r) => s + r.totalAbsentDeduction, 0),
         totalFinesAmount: allFines.reduce((s: number, f: any) => s + Number(f.amount || 0), 0),
         monthLabel: `${MONTHS[selectedMonth]} ${selectedYear}`,
       });
@@ -308,7 +355,7 @@ export default function ManagerPayrollPage() {
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <UserCog className="w-6 h-6 text-emerald-600" /> All-Department Payroll & Fines
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Monthly salary calculation and fine management across all departments</p>
+            <p className="text-sm text-gray-500 mt-1">Monthly salary calculation, net payout, and date-wise deduction breakdown</p>
           </div>
           {data && (
             <div className="flex gap-2 flex-wrap">
@@ -368,21 +415,21 @@ export default function ManagerPayrollPage() {
 
             {/* Grand Summary */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-white border border-gray-100 rounded-2xl p-5 text-center">
+              <div className="bg-white border border-gray-100 rounded-2xl p-5 text-center shadow-sm">
                 <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Total Staff</div>
                 <div className="text-3xl font-black text-gray-900">{data.allSalaryRows.length}</div>
               </div>
-              <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
-                <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Total Gross</div>
+              <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center shadow-sm">
+                <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Total Gross Salary</div>
                 <div className="text-xl font-black text-teal-800">{formatPKR(data.totalGross)}</div>
               </div>
-              <div className="bg-red-50 border border-red-100 p-5 rounded-2xl text-center">
+              <div className="bg-red-50 border border-red-100 p-5 rounded-2xl text-center shadow-sm">
                 <div className="text-xs font-bold text-red-500 uppercase tracking-wider mb-1">Total Deductions</div>
                 <div className="text-xl font-black text-red-700">{formatPKR(data.totalDeductions)}</div>
               </div>
-              <div className="bg-green-50 border border-green-100 p-5 rounded-2xl text-center">
-                <div className="text-xs font-bold text-green-600 uppercase tracking-wider mb-1">Total Net Payable</div>
-                <div className="text-xl font-black text-green-800">{formatPKR(data.totalNet)}</div>
+              <div className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl text-center shadow-sm">
+                <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Net Salary To Pay</div>
+                <div className="text-xl font-black text-emerald-900">{formatPKR(data.totalNet)}</div>
               </div>
             </div>
 
@@ -400,90 +447,121 @@ export default function ManagerPayrollPage() {
             {tab === 'salary' && (
               <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
 
-                {/* Dept filter */}
-                <div className="flex flex-wrap items-center gap-2 no-print">
-                  <Building2 className="w-4 h-4 text-gray-400" />
-                  <span className="text-xs font-bold text-gray-500 uppercase">Filter by Dept:</span>
-                  {['all', ...availableFineDepts].map(d => (
-                    <button
-                      key={d}
-                      onClick={() => setDeptFilter(d)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${deptFilter === d ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                    >
-                      {d === 'all' ? 'All Departments' : DEPT_LABELS[d] || d}
-                    </button>
-                  ))}
+                {/* Dept filter & helper note */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 no-print">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Building2 className="w-4 h-4 text-gray-400" />
+                    <span className="text-xs font-bold text-gray-500 uppercase">Filter by Dept:</span>
+                    {['all', ...availableFineDepts].map(d => (
+                      <button
+                        key={d}
+                        onClick={() => setDeptFilter(d)}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${deptFilter === d ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                      >
+                        {d === 'all' ? 'All Departments' : DEPT_LABELS[d] || d}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5" /> Click any staff member to view date-wise deduction breakdown
+                  </div>
                 </div>
 
                 {/* Filtered summary */}
                 {deptFilter !== 'all' && (
                   <div className="grid grid-cols-3 gap-3">
                     <div className="bg-teal-50 border border-teal-100 p-4 rounded-xl text-center">
-                      <div className="text-xs font-bold text-teal-600 mb-1">Gross</div>
+                      <div className="text-xs font-bold text-teal-600 mb-1">Gross Salary</div>
                       <div className="text-lg font-black text-teal-800">{formatPKR(filteredTotalGross)}</div>
                     </div>
                     <div className="bg-red-50 border border-red-100 p-4 rounded-xl text-center">
-                      <div className="text-xs font-bold text-red-500 mb-1">Deductions</div>
+                      <div className="text-xs font-bold text-red-500 mb-1">Total Deductions</div>
                       <div className="text-lg font-black text-red-700">{formatPKR(filteredTotalDeductions)}</div>
                     </div>
-                    <div className="bg-green-50 border border-green-100 p-4 rounded-xl text-center">
-                      <div className="text-xs font-bold text-green-600 mb-1">Net Payable</div>
-                      <div className="text-lg font-black text-green-800">{formatPKR(filteredTotalNet)}</div>
+                    <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl text-center">
+                      <div className="text-xs font-bold text-emerald-700 mb-1">Net Salary to Pay</div>
+                      <div className="text-lg font-black text-emerald-900">{formatPKR(filteredTotalNet)}</div>
                     </div>
                   </div>
                 )}
 
                 <div className="overflow-x-auto rounded-xl border border-gray-200">
-                  <table className="w-full text-sm border-collapse min-w-[750px]">
+                  <table className="w-full text-sm border-collapse min-w-[900px]">
                     <thead className="bg-emerald-50">
                       <tr>
-                        <th className="px-4 py-3 text-left font-bold text-emerald-800 border-b border-gray-200">#</th>
-                        <th className="px-4 py-3 text-left font-bold text-emerald-800 border-b border-gray-200">Staff Member</th>
-                        <th className="px-4 py-3 text-left font-bold text-emerald-800 border-b border-gray-200">Dept</th>
-                        <th className="px-4 py-3 text-left font-bold text-emerald-800 border-b border-gray-200">Designation</th>
-                        <th className="px-4 py-3 text-right font-bold text-emerald-800 border-b border-gray-200">Gross</th>
-                        <th className="px-4 py-3 text-center font-bold text-emerald-800 border-b border-gray-200">Absent</th>
-                        <th className="px-4 py-3 text-right font-bold text-emerald-800 border-b border-gray-200">Absent Ded.</th>
-                        <th className="px-4 py-3 text-right font-bold text-emerald-800 border-b border-gray-200">Fines</th>
-                        <th className="px-4 py-3 text-right font-bold text-emerald-800 border-b border-gray-200">Net Payable</th>
+                        <th className="px-4 py-3 text-left font-bold text-emerald-900 border-b border-gray-200">#</th>
+                        <th className="px-4 py-3 text-left font-bold text-emerald-900 border-b border-gray-200">Staff Member</th>
+                        <th className="px-4 py-3 text-left font-bold text-emerald-900 border-b border-gray-200">Dept</th>
+                        <th className="px-4 py-3 text-left font-bold text-emerald-900 border-b border-gray-200">Designation</th>
+                        <th className="px-4 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Gross Salary</th>
+                        <th className="px-4 py-3 text-center font-bold text-emerald-900 border-b border-gray-200">Absent Days</th>
+                        <th className="px-4 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Absent Ded.</th>
+                        <th className="px-4 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Fine Ded.</th>
+                        <th className="px-4 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Total Ded.</th>
+                        <th className="px-4 py-3 text-right font-bold text-emerald-900 border-b border-gray-200 bg-emerald-100/70">Net Salary To Pay</th>
+                        <th className="px-3 py-3 text-center font-bold text-emerald-900 border-b border-gray-200 no-print">Breakdown</th>
                       </tr>
                     </thead>
                     <tbody>
                       {salaryRows.length === 0 ? (
-                        <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400">No staff found for selected department.</td></tr>
+                        <tr><td colSpan={11} className="px-4 py-10 text-center text-gray-400">No staff found for selected department.</td></tr>
                       ) : salaryRows.map((r: any, i: number) => (
-                        <tr key={`${r.dept}-${r.id}`} className="hover:bg-gray-50 border-b border-gray-100">
-                          <td className="px-4 py-3 text-gray-400 font-mono text-xs">{i + 1}</td>
-                          <td className="px-4 py-3 font-bold text-gray-900">{r.name}</td>
-                          <td className="px-4 py-3">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${DEPT_COLORS[r.dept] || 'bg-gray-100 text-gray-600'}`}>
+                        <tr
+                          key={`${r.dept}-${r.id}`}
+                          onClick={() => setSelectedStaffModal(r)}
+                          className="hover:bg-emerald-50/60 transition-colors border-b border-gray-100 cursor-pointer group"
+                        >
+                          <td className="px-4 py-3.5 text-gray-400 font-mono text-xs">{i + 1}</td>
+                          <td className="px-4 py-3.5 font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">
+                            {r.name}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${DEPT_COLORS[r.dept] || 'bg-gray-100 text-gray-600'}`}>
                               {DEPT_LABELS[r.dept] || r.dept}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-gray-500 text-xs">{r.designation}</td>
-                          <td className="px-4 py-3 text-right text-gray-700">{formatPKR(r.gross)}</td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`font-black text-sm ${r.absentDays > 0 ? 'text-orange-600' : 'text-gray-300'}`}>{r.absentDays}</span>
-                            {r.absentDays > 0 && (
-                              <div className="text-[10px] text-gray-400 mt-0.5 max-w-[120px] truncate">{r.absentDates.join(', ')}</div>
-                            )}
+                          <td className="px-4 py-3.5 text-gray-500 text-xs">{r.designation}</td>
+                          <td className="px-4 py-3.5 text-right font-medium text-gray-700">{formatPKR(r.gross)}</td>
+                          <td className="px-4 py-3.5 text-center">
+                            <span className={`font-black text-xs px-2 py-0.5 rounded-md ${r.absentDays > 0 ? 'bg-orange-100 text-orange-700' : 'text-gray-300'}`}>
+                              {r.absentDays} {r.absentDays === 1 ? 'day' : 'days'}
+                            </span>
                           </td>
-                          <td className="px-4 py-3 text-right text-orange-600 font-medium text-sm">
-                            {r.absentDays > 0 ? formatPKR(Math.round(r.absentDays * r.dailyRate)) : '—'}
+                          <td className="px-4 py-3.5 text-right text-orange-600 font-medium text-xs">
+                            {r.totalAbsentDeduction > 0 ? formatPKR(r.totalAbsentDeduction) : '—'}
                           </td>
-                          <td className="px-4 py-3 text-right text-red-600 font-medium text-sm">
+                          <td className="px-4 py-3.5 text-right text-red-600 font-medium text-xs">
                             {r.totalFines > 0 ? formatPKR(r.totalFines) : '—'}
                           </td>
-                          <td className="px-4 py-3 text-right font-black text-green-800 bg-green-50">{formatPKR(r.netPayable)}</td>
+                          <td className="px-4 py-3.5 text-right text-red-700 font-bold text-xs">
+                            {r.deductions > 0 ? formatPKR(r.deductions) : '—'}
+                          </td>
+                          <td className="px-4 py-3.5 text-right font-black text-emerald-900 bg-emerald-50 group-hover:bg-emerald-100/80 transition-colors">
+                            <span className="inline-block bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg border border-emerald-200">
+                              {formatPKR(r.netPayable)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3.5 text-center no-print">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setSelectedStaffModal(r); }}
+                              className="p-1.5 bg-gray-100 hover:bg-emerald-600 hover:text-white rounded-lg text-gray-500 transition-colors"
+                              title="Click to view date-wise deduction breakdown"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          </td>
                         </tr>
                       ))}
                       {salaryRows.length > 0 && (
-                        <tr className="bg-emerald-50 font-black">
-                          <td colSpan={4} className="px-4 py-3 text-emerald-800">TOTAL ({salaryRows.length} staff)</td>
-                          <td className="px-4 py-3 text-right text-emerald-800">{formatPKR(filteredTotalGross)}</td>
+                        <tr className="bg-emerald-50 font-black text-xs">
+                          <td colSpan={4} className="px-4 py-3.5 text-emerald-900 uppercase tracking-wider">
+                            TOTAL ({salaryRows.length} STAFF MEMBERS)
+                          </td>
+                          <td className="px-4 py-3.5 text-right text-emerald-900">{formatPKR(filteredTotalGross)}</td>
                           <td />
-                          <td colSpan={2} className="px-4 py-3 text-right text-red-700">{formatPKR(filteredTotalDeductions)}</td>
-                          <td className="px-4 py-3 text-right text-green-800">{formatPKR(filteredTotalNet)}</td>
+                          <td colSpan={3} className="px-4 py-3.5 text-right text-red-700">{formatPKR(filteredTotalDeductions)}</td>
+                          <td className="px-4 py-3.5 text-right text-emerald-950 font-black text-sm bg-emerald-100/90">{formatPKR(filteredTotalNet)}</td>
+                          <td className="no-print" />
                         </tr>
                       )}
                     </tbody>
@@ -660,6 +738,161 @@ export default function ManagerPayrollPage() {
           </div>
         )}
       </div>
+
+      {/* ── STAFF DEDUCTION & PAYOUT BREAKDOWN MODAL ── */}
+      {selectedStaffModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto no-print">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border border-gray-100 overflow-hidden my-8 transform transition-all">
+            
+            {/* Modal Header */}
+            <div className="bg-emerald-800 text-white p-6 relative">
+              <button
+                onClick={() => setSelectedStaffModal(null)}
+                className="absolute top-5 right-5 text-emerald-200 hover:text-white bg-emerald-900/50 p-2 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-3 mb-1">
+                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border bg-white/10 text-emerald-100 border-emerald-600`}>
+                  {DEPT_LABELS[selectedStaffModal.dept] || selectedStaffModal.dept}
+                </span>
+                <span className="text-xs text-emerald-200">{data?.monthLabel}</span>
+              </div>
+              <h2 className="text-2xl font-black tracking-tight">{selectedStaffModal.name}</h2>
+              <p className="text-xs text-emerald-200 mt-0.5">{selectedStaffModal.designation}</p>
+            </div>
+
+            <div className="p-6 space-y-6">
+
+              {/* Salary Summary Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-center">
+                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Base Salary</div>
+                  <div className="text-sm font-black text-gray-900">{formatPKR(selectedStaffModal.gross)}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">Daily: {formatPKR(selectedStaffModal.dailyRate)}</div>
+                </div>
+
+                <div className="bg-orange-50 border border-orange-100 p-3.5 rounded-2xl text-center">
+                  <div className="text-[10px] font-bold text-orange-600 uppercase tracking-wider mb-0.5">Absent Ded.</div>
+                  <div className="text-sm font-black text-orange-700">{formatPKR(selectedStaffModal.totalAbsentDeduction)}</div>
+                  <div className="text-[10px] text-orange-500 mt-0.5">{selectedStaffModal.absentDays} {selectedStaffModal.absentDays === 1 ? 'day' : 'days'}</div>
+                </div>
+
+                <div className="bg-red-50 border border-red-100 p-3.5 rounded-2xl text-center">
+                  <div className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-0.5">Fine Ded.</div>
+                  <div className="text-sm font-black text-red-700">{formatPKR(selectedStaffModal.totalFines)}</div>
+                  <div className="text-[10px] text-red-500 mt-0.5">{selectedStaffModal.staffFines?.length || 0} fines</div>
+                </div>
+
+                <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl text-center">
+                  <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-0.5">Net Salary to Pay</div>
+                  <div className="text-base font-black text-emerald-900">{formatPKR(selectedStaffModal.netPayable)}</div>
+                  <div className="text-[10px] text-emerald-600 font-bold mt-0.5">Final Payout</div>
+                </div>
+              </div>
+
+              {/* Date-wise Itemized Deduction Log */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2 text-sm">
+                    <Calendar className="w-4 h-4 text-emerald-600" />
+                    Date-Wise Deduction History
+                  </h3>
+                  <span className="text-xs font-bold text-gray-400">
+                    {selectedStaffModal.deductionItems.length} total items
+                  </span>
+                </div>
+
+                {selectedStaffModal.deductionItems.length === 0 ? (
+                  <div className="bg-green-50 border border-green-100 rounded-2xl p-6 text-center text-emerald-800 space-y-1">
+                    <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-600" />
+                    <p className="font-bold text-sm">No Deductions Recorded!</p>
+                    <p className="text-xs text-emerald-600">
+                      This staff member has zero absences and zero fines for {data?.monthLabel}. Full base salary of {formatPKR(selectedStaffModal.gross)} will be paid.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="border border-gray-200 rounded-2xl overflow-hidden">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-3.5 py-2.5 font-bold text-gray-600">Date</th>
+                          <th className="px-3.5 py-2.5 font-bold text-gray-600">Deduction Type</th>
+                          <th className="px-3.5 py-2.5 font-bold text-gray-600">Reason / Description</th>
+                          <th className="px-3.5 py-2.5 font-bold text-gray-600 text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {selectedStaffModal.deductionItems.map((item: any) => (
+                          <tr key={item.id} className="hover:bg-gray-50/80">
+                            <td className="px-3.5 py-3 font-mono font-bold text-gray-800 whitespace-nowrap">
+                              {item.date}
+                            </td>
+                            <td className="px-3.5 py-3">
+                              {item.type === 'absent' ? (
+                                <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                                  Absent Deduction
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                                  Fine Deduction
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3.5 py-3 text-gray-700">
+                              <div>{item.reason}</div>
+                              {item.recordedBy && (
+                                <div className="text-[10px] text-gray-400 mt-0.5">By: {item.recordedBy}</div>
+                              )}
+                            </td>
+                            <td className="px-3.5 py-3 text-right font-bold text-red-600 whitespace-nowrap">
+                              -{formatPKR(item.amount)}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="bg-red-50/60 font-black">
+                          <td colSpan={3} className="px-3.5 py-2.5 text-red-800">TOTAL DEDUCTIONS</td>
+                          <td className="px-3.5 py-2.5 text-right text-red-700">-{formatPKR(selectedStaffModal.deductions)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Net Payout Summary Banner in Modal */}
+              <div className="bg-emerald-900 text-white rounded-2xl p-4 flex items-center justify-between">
+                <div>
+                  <div className="text-[11px] text-emerald-200 font-medium">Final Money To Pay Staff</div>
+                  <div className="text-xs text-emerald-300">Base Salary - Total Deductions</div>
+                </div>
+                <div className="text-2xl font-black text-emerald-300">
+                  {formatPKR(selectedStaffModal.netPayable)}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+              <button
+                onClick={() => setSelectedStaffModal(null)}
+                className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl text-xs transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors"
+              >
+                <Printer className="w-3.5 h-3.5" /> Print Statement
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

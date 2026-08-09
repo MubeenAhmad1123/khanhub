@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import {
   UserCog, Printer, Calendar, DollarSign, Loader2, Download,
-  Plus, X, Receipt, Trash2
+  Plus, X, Receipt, Trash2, Eye, FileText, CheckCircle2, Info
 } from 'lucide-react';
 import { downloadElementAsPng } from '@/lib/utils';
 
@@ -16,7 +16,7 @@ const MONTHS = [
 ];
 
 function formatPKR(n: number) {
-  return `Rs. ${n.toLocaleString('en-PK')}`;
+  return `Rs. ${Math.round(n).toLocaleString('en-PK')}`;
 }
 
 export default function RehabPayrollPage() {
@@ -32,6 +32,9 @@ export default function RehabPayrollPage() {
 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
+
+  // Staff deduction modal state
+  const [selectedStaffModal, setSelectedStaffModal] = useState<any | null>(null);
 
   // Fine form
   const [showFineForm, setShowFineForm] = useState(false);
@@ -95,22 +98,64 @@ export default function RehabPayrollPage() {
         const absences = allAbsences.filter((a: any) => a.staffId === staff.id);
         const absentDays = absences.length;
         const absentDates = absences.map((a: any) => a.date).sort();
+        const totalAbsentDeduction = Math.round(absentDays * dailyRate);
+
         const staffFines = allFines.filter((f: any) => f.staffId === staff.id);
         const totalFines = staffFines.reduce((s: number, f: any) => s + Number(f.amount || 0), 0);
-        const deductions = Math.round(absentDays * dailyRate) + totalFines;
+
+        const deductions = totalAbsentDeduction + totalFines;
         const netPayable = Math.max(0, gross - deductions);
+
+        // Itemized date-wise deduction breakdown
+        const deductionItems: Array<{
+          id: string;
+          date: string;
+          type: 'absent' | 'fine';
+          amount: number;
+          reason: string;
+          recordedBy?: string;
+        }> = [];
+
+        absences.forEach((a: any, idx: number) => {
+          deductionItems.push({
+            id: `absent-${a.date}-${idx}`,
+            date: a.date,
+            type: 'absent',
+            amount: Math.round(dailyRate),
+            reason: `Absent from duty (Daily rate: ${formatPKR(dailyRate)})`,
+          });
+        });
+
+        staffFines.forEach((f: any) => {
+          deductionItems.push({
+            id: f.id || `fine-${f.date}`,
+            date: f.date || f.month || '—',
+            type: 'fine',
+            amount: Number(f.amount || 0),
+            reason: f.reason || 'Fine imposed',
+            recordedBy: f.recordedBy || 'Superadmin',
+          });
+        });
+
+        // Sort chronologically by date
+        deductionItems.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
         return {
           id: staff.id,
           name: staff.name || '—',
           designation: staff.designation || staff.role || '—',
+          dept: 'rehab',
           gross,
           dailyRate: Math.round(dailyRate),
           absentDays,
           absentDates,
+          totalAbsentDeduction,
           finesCount: staffFines.length,
+          staffFines,
           totalFines,
           deductions,
           netPayable,
+          deductionItems,
         };
       });
 
@@ -218,7 +263,7 @@ export default function RehabPayrollPage() {
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <UserCog className="w-6 h-6 text-purple-600" /> Staff Payroll & Fines
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Monthly salary calculation and fine management for all staff</p>
+            <p className="text-sm text-gray-500 mt-1">Monthly salary calculation, net payout, and date-wise deduction breakdown</p>
           </div>
           {data && (
             <div className="flex gap-2 flex-wrap">
@@ -276,10 +321,26 @@ export default function RehabPayrollPage() {
               <p className="text-xs text-gray-400 mt-1">Generated: {new Date().toLocaleString()}</p>
             </div>
 
+            {/* Grand Summary */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center shadow-sm">
+                <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Total Gross Salary</div>
+                <div className="text-2xl font-black text-teal-800">{formatPKR(data.totalGross)}</div>
+              </div>
+              <div className="bg-red-50 border border-red-100 p-5 rounded-2xl text-center shadow-sm">
+                <div className="text-xs font-bold text-red-500 uppercase tracking-wider mb-1">Total Deductions</div>
+                <div className="text-2xl font-black text-red-700">{formatPKR(data.totalDeductions)}</div>
+              </div>
+              <div className="bg-purple-50 border border-purple-200 p-5 rounded-2xl text-center shadow-sm">
+                <div className="text-xs font-bold text-purple-700 uppercase tracking-wider mb-1">Total Net Salary To Pay</div>
+                <div className="text-2xl font-black text-purple-900">{formatPKR(data.totalNet)}</div>
+              </div>
+            </div>
+
             {/* Tabs */}
             <div className="flex bg-white rounded-2xl border border-gray-100 p-1 w-full no-print">
               <button onClick={() => setTab('salary')} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === 'salary' ? 'bg-purple-600 text-white shadow' : 'text-gray-500 hover:text-gray-800'}`}>
-                Salary Sheet
+                Salary Sheet ({data.salaryRows.length} staff)
               </button>
               <button onClick={() => setTab('fines')} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === 'fines' ? 'bg-purple-600 text-white shadow' : 'text-gray-500 hover:text-gray-800'}`}>
                 Fines Ledger ({data.allFines.length})
@@ -288,66 +349,79 @@ export default function RehabPayrollPage() {
 
             {/* ── SALARY SHEET ── */}
             {tab === 'salary' && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
-                    <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Total Gross</div>
-                    <div className="text-2xl font-black text-teal-800">{formatPKR(data.totalGross)}</div>
-                  </div>
-                  <div className="bg-red-50 border border-red-100 p-5 rounded-2xl text-center">
-                    <div className="text-xs font-bold text-red-500 uppercase tracking-wider mb-1">Total Deductions</div>
-                    <div className="text-2xl font-black text-red-700">{formatPKR(data.totalDeductions)}</div>
-                  </div>
-                  <div className="bg-green-50 border border-green-100 p-5 rounded-2xl text-center">
-                    <div className="text-xs font-bold text-green-600 uppercase tracking-wider mb-1">Total Net Payable</div>
-                    <div className="text-2xl font-black text-green-800">{formatPKR(data.totalNet)}</div>
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+                
+                <div className="flex justify-end no-print">
+                  <div className="text-xs text-purple-700 bg-purple-50 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5" /> Click any staff member to view date-wise deduction breakdown
                   </div>
                 </div>
 
                 {/* Salary Table */}
                 <div className="overflow-x-auto rounded-xl border border-gray-200">
-                  <table className="w-full text-sm border-collapse min-w-[700px]">
+                  <table className="w-full text-sm border-collapse min-w-[850px]">
                     <thead className="bg-purple-50">
                       <tr>
                         <th className="px-4 py-3 text-left font-bold text-purple-800 border-b border-gray-200">#</th>
                         <th className="px-4 py-3 text-left font-bold text-purple-800 border-b border-gray-200">Staff Member</th>
                         <th className="px-4 py-3 text-left font-bold text-purple-800 border-b border-gray-200">Designation</th>
-                        <th className="px-4 py-3 text-right font-bold text-purple-800 border-b border-gray-200">Gross</th>
+                        <th className="px-4 py-3 text-right font-bold text-purple-800 border-b border-gray-200">Gross Salary</th>
                         <th className="px-4 py-3 text-center font-bold text-purple-800 border-b border-gray-200">Absent Days</th>
-                        <th className="px-4 py-3 text-right font-bold text-purple-800 border-b border-gray-200">Absent Deduction</th>
-                        <th className="px-4 py-3 text-right font-bold text-purple-800 border-b border-gray-200">Fines</th>
-                        <th className="px-4 py-3 text-right font-bold text-purple-800 border-b border-gray-200">Net Payable</th>
+                        <th className="px-4 py-3 text-right font-bold text-purple-800 border-b border-gray-200">Absent Ded.</th>
+                        <th className="px-4 py-3 text-right font-bold text-purple-800 border-b border-gray-200">Fine Ded.</th>
+                        <th className="px-4 py-3 text-right font-bold text-purple-800 border-b border-gray-200">Total Ded.</th>
+                        <th className="px-4 py-3 text-right font-bold text-purple-800 border-b border-gray-200 bg-purple-100/70">Net Salary To Pay</th>
+                        <th className="px-3 py-3 text-center font-bold text-purple-800 border-b border-gray-200 no-print">Breakdown</th>
                       </tr>
                     </thead>
                     <tbody>
                       {data.salaryRows.map((r: any, i: number) => (
-                        <tr key={r.id} className="hover:bg-gray-50 border-b border-gray-100">
-                          <td className="px-4 py-3 text-gray-400 font-mono text-xs">{i + 1}</td>
-                          <td className="px-4 py-3 font-bold text-gray-900">{r.name}</td>
-                          <td className="px-4 py-3 text-gray-500 text-xs">{r.designation}</td>
-                          <td className="px-4 py-3 text-right text-gray-700">{formatPKR(r.gross)}</td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`font-black text-sm ${r.absentDays > 0 ? 'text-orange-600' : 'text-gray-400'}`}>{r.absentDays}</span>
-                            {r.absentDays > 0 && (
-                              <div className="text-[10px] text-gray-400 mt-0.5">{r.absentDates.join(', ')}</div>
-                            )}
+                        <tr
+                          key={r.id}
+                          onClick={() => setSelectedStaffModal(r)}
+                          className="hover:bg-purple-50/60 transition-colors border-b border-gray-100 cursor-pointer group"
+                        >
+                          <td className="px-4 py-3.5 text-gray-400 font-mono text-xs">{i + 1}</td>
+                          <td className="px-4 py-3.5 font-bold text-gray-900 group-hover:text-purple-700 transition-colors">{r.name}</td>
+                          <td className="px-4 py-3.5 text-gray-500 text-xs">{r.designation}</td>
+                          <td className="px-4 py-3.5 text-right font-medium text-gray-700">{formatPKR(r.gross)}</td>
+                          <td className="px-4 py-3.5 text-center">
+                            <span className={`font-black text-xs px-2 py-0.5 rounded-md ${r.absentDays > 0 ? 'bg-orange-100 text-orange-700' : 'text-gray-300'}`}>
+                              {r.absentDays} {r.absentDays === 1 ? 'day' : 'days'}
+                            </span>
                           </td>
-                          <td className="px-4 py-3 text-right text-orange-600 font-medium">
-                            {r.absentDays > 0 ? formatPKR(Math.round(r.absentDays * r.dailyRate)) : '—'}
+                          <td className="px-4 py-3.5 text-right text-orange-600 font-medium text-xs">
+                            {r.totalAbsentDeduction > 0 ? formatPKR(r.totalAbsentDeduction) : '—'}
                           </td>
-                          <td className="px-4 py-3 text-right text-red-600 font-medium">
+                          <td className="px-4 py-3.5 text-right text-red-600 font-medium text-xs">
                             {r.totalFines > 0 ? formatPKR(r.totalFines) : '—'}
                           </td>
-                          <td className="px-4 py-3 text-right font-black text-green-800 bg-green-50">{formatPKR(r.netPayable)}</td>
+                          <td className="px-4 py-3.5 text-right text-red-700 font-bold text-xs">
+                            {r.deductions > 0 ? formatPKR(r.deductions) : '—'}
+                          </td>
+                          <td className="px-4 py-3.5 text-right font-black text-purple-900 bg-purple-50 group-hover:bg-purple-100/80 transition-colors">
+                            <span className="inline-block bg-purple-100 text-purple-800 px-2.5 py-1 rounded-lg border border-purple-200">
+                              {formatPKR(r.netPayable)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3.5 text-center no-print">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setSelectedStaffModal(r); }}
+                              className="p-1.5 bg-gray-100 hover:bg-purple-600 hover:text-white rounded-lg text-gray-500 transition-colors"
+                              title="Click to view date-wise deduction breakdown"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          </td>
                         </tr>
                       ))}
-                      <tr className="bg-purple-50 font-black">
-                        <td colSpan={3} className="px-4 py-3 text-purple-800">TOTAL</td>
-                        <td className="px-4 py-3 text-right text-purple-800">{formatPKR(data.totalGross)}</td>
+                      <tr className="bg-purple-50 font-black text-xs">
+                        <td colSpan={3} className="px-4 py-3.5 text-purple-800 uppercase tracking-wider">TOTAL</td>
+                        <td className="px-4 py-3.5 text-right text-purple-800">{formatPKR(data.totalGross)}</td>
                         <td />
-                        <td colSpan={2} className="px-4 py-3 text-right text-red-700">{formatPKR(data.totalDeductions)}</td>
-                        <td className="px-4 py-3 text-right text-green-800">{formatPKR(data.totalNet)}</td>
+                        <td colSpan={3} className="px-4 py-3.5 text-right text-red-700">{formatPKR(data.totalDeductions)}</td>
+                        <td className="px-4 py-3.5 text-right text-purple-950 font-black text-sm bg-purple-100/90">{formatPKR(data.totalNet)}</td>
+                        <td className="no-print" />
                       </tr>
                     </tbody>
                   </table>
@@ -496,6 +570,158 @@ export default function RehabPayrollPage() {
           </div>
         )}
       </div>
+
+      {/* ── STAFF DEDUCTION & PAYOUT BREAKDOWN MODAL ── */}
+      {selectedStaffModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto no-print">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border border-gray-100 overflow-hidden my-8 transform transition-all">
+            
+            {/* Modal Header */}
+            <div className="bg-purple-900 text-white p-6 relative">
+              <button
+                onClick={() => setSelectedStaffModal(null)}
+                className="absolute top-5 right-5 text-purple-200 hover:text-white bg-purple-950/50 p-2 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-xs text-purple-200">{data?.monthLabel}</span>
+              </div>
+              <h2 className="text-2xl font-black tracking-tight">{selectedStaffModal.name}</h2>
+              <p className="text-xs text-purple-200 mt-0.5">{selectedStaffModal.designation}</p>
+            </div>
+
+            <div className="p-6 space-y-6">
+
+              {/* Salary Summary Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-gray-50 border border-gray-100 p-3.5 rounded-2xl text-center">
+                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Base Salary</div>
+                  <div className="text-sm font-black text-gray-900">{formatPKR(selectedStaffModal.gross)}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">Daily: {formatPKR(selectedStaffModal.dailyRate)}</div>
+                </div>
+
+                <div className="bg-orange-50 border border-orange-100 p-3.5 rounded-2xl text-center">
+                  <div className="text-[10px] font-bold text-orange-600 uppercase tracking-wider mb-0.5">Absent Ded.</div>
+                  <div className="text-sm font-black text-orange-700">{formatPKR(selectedStaffModal.totalAbsentDeduction)}</div>
+                  <div className="text-[10px] text-orange-500 mt-0.5">{selectedStaffModal.absentDays} {selectedStaffModal.absentDays === 1 ? 'day' : 'days'}</div>
+                </div>
+
+                <div className="bg-red-50 border border-red-100 p-3.5 rounded-2xl text-center">
+                  <div className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-0.5">Fine Ded.</div>
+                  <div className="text-sm font-black text-red-700">{formatPKR(selectedStaffModal.totalFines)}</div>
+                  <div className="text-[10px] text-red-500 mt-0.5">{selectedStaffModal.staffFines?.length || 0} fines</div>
+                </div>
+
+                <div className="bg-purple-50 border border-purple-200 p-3.5 rounded-2xl text-center">
+                  <div className="text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-0.5">Net Salary to Pay</div>
+                  <div className="text-base font-black text-purple-900">{formatPKR(selectedStaffModal.netPayable)}</div>
+                  <div className="text-[10px] text-purple-600 font-bold mt-0.5">Final Payout</div>
+                </div>
+              </div>
+
+              {/* Date-wise Itemized Deduction Log */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2 text-sm">
+                    <Calendar className="w-4 h-4 text-purple-600" />
+                    Date-Wise Deduction History
+                  </h3>
+                  <span className="text-xs font-bold text-gray-400">
+                    {selectedStaffModal.deductionItems.length} total items
+                  </span>
+                </div>
+
+                {selectedStaffModal.deductionItems.length === 0 ? (
+                  <div className="bg-green-50 border border-green-100 rounded-2xl p-6 text-center text-emerald-800 space-y-1">
+                    <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-600" />
+                    <p className="font-bold text-sm">No Deductions Recorded!</p>
+                    <p className="text-xs text-emerald-600">
+                      This staff member has zero absences and zero fines for {data?.monthLabel}. Full base salary of {formatPKR(selectedStaffModal.gross)} will be paid.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="border border-gray-200 rounded-2xl overflow-hidden">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-3.5 py-2.5 font-bold text-gray-600">Date</th>
+                          <th className="px-3.5 py-2.5 font-bold text-gray-600">Deduction Type</th>
+                          <th className="px-3.5 py-2.5 font-bold text-gray-600">Reason / Description</th>
+                          <th className="px-3.5 py-2.5 font-bold text-gray-600 text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {selectedStaffModal.deductionItems.map((item: any) => (
+                          <tr key={item.id} className="hover:bg-gray-50/80">
+                            <td className="px-3.5 py-3 font-mono font-bold text-gray-800 whitespace-nowrap">
+                              {item.date}
+                            </td>
+                            <td className="px-3.5 py-3">
+                              {item.type === 'absent' ? (
+                                <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                                  Absent Deduction
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                                  Fine Deduction
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3.5 py-3 text-gray-700">
+                              <div>{item.reason}</div>
+                              {item.recordedBy && (
+                                <div className="text-[10px] text-gray-400 mt-0.5">By: {item.recordedBy}</div>
+                              )}
+                            </td>
+                            <td className="px-3.5 py-3 text-right font-bold text-red-600 whitespace-nowrap">
+                              -{formatPKR(item.amount)}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="bg-red-50/60 font-black">
+                          <td colSpan={3} className="px-3.5 py-2.5 text-red-800">TOTAL DEDUCTIONS</td>
+                          <td className="px-3.5 py-2.5 text-right text-red-700">-{formatPKR(selectedStaffModal.deductions)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Net Payout Summary Banner in Modal */}
+              <div className="bg-purple-900 text-white rounded-2xl p-4 flex items-center justify-between">
+                <div>
+                  <div className="text-[11px] text-purple-200 font-medium">Final Money To Pay Staff</div>
+                  <div className="text-xs text-purple-300">Base Salary - Total Deductions</div>
+                </div>
+                <div className="text-2xl font-black text-purple-300">
+                  {formatPKR(selectedStaffModal.netPayable)}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+              <button
+                onClick={() => setSelectedStaffModal(null)}
+                className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl text-xs transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs transition-colors"
+              >
+                <Printer className="w-3.5 h-3.5" /> Print Statement
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
