@@ -74,7 +74,7 @@ export default function SpimsPayrollPage() {
   const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-  const fetchGlobalTransactionsForMonth = async (mStr: string) => {
+  const fetchGlobalTransactionsForMonth = async () => {
     const txMap = new Map<string, any>();
 
     await Promise.all(ALL_PREFIXES.map(async (p) => {
@@ -83,16 +83,8 @@ export default function SpimsPayrollPage() {
 
       for (const colName of [txCol, advCol]) {
         try {
-          const s1 = await getDocs(query(collection(db, colName), where('month', '==', mStr))).catch(() => ({ docs: [] }));
-          const s2 = await getDocs(query(collection(db, colName), where('date', '>=', `${mStr}-01`), where('date', '<=', `${mStr}-31`))).catch(() => ({ docs: [] }));
-          const s3 = await getDocs(query(collection(db, colName), where('transactionDate', '>=', `${mStr}-01`), where('transactionDate', '<=', `${mStr}-31`))).catch(() => ({ docs: [] }));
-          
-          let s4: any = { docs: [] };
-          if (colName.includes('advances')) {
-            s4 = await getDocs(collection(db, colName)).catch(() => ({ docs: [] }));
-          }
-
-          [...s1.docs, ...s2.docs, ...s3.docs, ...s4.docs].forEach((d: any) => {
+          const snap = await getDocs(collection(db, colName)).catch(() => ({ docs: [] }));
+          snap.docs.forEach((d: any) => {
             if (d && d.id) {
               txMap.set(`${colName}-${d.id}`, { id: d.id, _collection: colName, ...d.data() });
             }
@@ -109,6 +101,7 @@ export default function SpimsPayrollPage() {
     const cat = String(tx.category || '').toLowerCase();
     const catName = String(tx.categoryName || '').toLowerCase();
     const desc = String(tx.description || '').toLowerCase();
+    const col = String(tx._collection || '').toLowerCase();
 
     const isAdvanceCat =
       cat === 'advance_salary' ||
@@ -116,7 +109,7 @@ export default function SpimsPayrollPage() {
       cat === 'staff_advance' ||
       catName.includes('advance') ||
       desc.includes('advance') ||
-      (tx._collection && String(tx._collection).includes('advances'));
+      col.includes('advances');
 
     if (!isAdvanceCat) return false;
     const txDate = tx.transactionDate || tx.date || tx.createdAt;
@@ -132,14 +125,21 @@ export default function SpimsPayrollPage() {
         return `${y}-${m}` === targetMonthStr;
       }
     } catch (e) {}
-    return String(txDate).startsWith(targetMonthStr);
+    
+    if (typeof txDate === 'string' && txDate.startsWith(targetMonthStr)) {
+      return true;
+    }
+    if (tx.month) {
+      return String(tx.month) === targetMonthStr;
+    }
+    return false;
   };
 
   const handleLoad = useCallback(async () => {
     try {
       setLoading(true);
 
-      const globalTxns = await fetchGlobalTransactionsForMonth(monthStr);
+      const globalTxns = await fetchGlobalTransactionsForMonth();
 
       // Staff Collection
       const staffSnap = await getDocs(query(collection(db, 'spims_staff'), where('isActive', '==', true)));
@@ -175,30 +175,27 @@ export default function SpimsPayrollPage() {
         const loginId = staff.loginUserId || staff.uid || staff.userId || '';
 
         const candidateIds = new Set<string>();
-        if (uid) {
-          candidateIds.add(uid);
+        const rawIds = [uid, loginId, staff.customId, staff.employeeId, staff.userId, staff.staffId].filter(Boolean);
+
+        rawIds.forEach(idStr => {
+          const id = String(idStr);
+          candidateIds.add(id);
+          const stripped = id.replace(/^(hq|rehab|spims|hospital|sukoon|welfare|jobcenter|media|it)_/, '');
+          candidateIds.add(stripped);
           ALL_PREFIXES.forEach(p => {
-            candidateIds.add(uid.startsWith(`${p}_`) ? uid.replace(`${p}_`, '') : uid);
-            candidateIds.add(uid.startsWith(`${p}_`) ? uid : `${p}_${uid}`);
+            if (p) {
+              candidateIds.add(`${p}_${stripped}`);
+            }
           });
-        }
-        if (loginId) {
-          candidateIds.add(loginId);
-          ALL_PREFIXES.forEach(p => {
-            candidateIds.add(loginId.startsWith(`${p}_`) ? loginId.replace(`${p}_`, '') : loginId);
-            candidateIds.add(loginId.startsWith(`${p}_`) ? loginId : `${p}_${loginId}`);
-          });
-        }
-        if (staff.customId) candidateIds.add(staff.customId);
-        if (staff.employeeId) candidateIds.add(staff.employeeId);
+        });
 
         const staffNameLower = String(staff.name || '').toLowerCase();
 
         // Match advances from globalTxns array
         const staffAdvanceTxns = globalTxns.filter((tx: any) => {
           if (!isAdvanceTxInSelectedMonth(tx, monthStr)) return false;
-          const txStaffId = tx.staffId || tx.patientId || tx.userId || tx.customId || '';
-          if (candidateIds.has(txStaffId)) return true;
+          const txStaffId = String(tx.staffId || tx.patientId || tx.userId || tx.customId || tx.employeeId || tx.memberId || '');
+          if (txStaffId && candidateIds.has(txStaffId)) return true;
 
           if (staffNameLower) {
             if (tx.staffName && String(tx.staffName).toLowerCase() === staffNameLower) return true;
@@ -215,7 +212,7 @@ export default function SpimsPayrollPage() {
         // Salary Slip check
         const slip = allSalarySlips.find((s: any) => {
           if (s.month !== monthStr) return false;
-          if (candidateIds.has(s.staffId)) return true;
+          if (candidateIds.has(String(s.staffId))) return true;
           if (s.staffName && String(s.staffName).toLowerCase() === staffNameLower) return true;
           return false;
         });
@@ -224,7 +221,7 @@ export default function SpimsPayrollPage() {
 
         // Filter attendance docs
         const staffAtt = allAttDocs.filter((a: any) => {
-          if (candidateIds.has(a.staffId) || candidateIds.has(a.userId)) return true;
+          if (candidateIds.has(String(a.staffId)) || candidateIds.has(String(a.userId))) return true;
           if (a.staffName && String(a.staffName).toLowerCase() === staffNameLower) return true;
           return false;
         });
@@ -284,7 +281,7 @@ export default function SpimsPayrollPage() {
           const fDateStr = f.date ? String(f.date).substring(0, 7) : String(f.month);
           if (fDateStr !== monthStr) return false;
 
-          if (candidateIds.has(f.staffId)) return true;
+          if (candidateIds.has(String(f.staffId))) return true;
           if (f.staffName && String(f.staffName).toLowerCase() === staffNameLower) return true;
           return false;
         });
