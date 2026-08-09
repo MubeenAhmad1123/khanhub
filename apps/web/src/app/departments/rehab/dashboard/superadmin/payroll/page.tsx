@@ -297,7 +297,7 @@ export default function RehabPayrollPage() {
       await handleLoad();
     } catch (err: any) {
       alert('Failed to delete: ' + err.message);
-    } fontally {
+    } finally {
       setDeletingId(null);
     }
   };
