@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { db } from '@/lib/firebase';
-import { listStaffCards, type StaffCardRow, type StaffDept } from '@/lib/hq/superadmin/staff';
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { listStaffCards, getDeptPrefix, type StaffCardRow } from '@/lib/hq/superadmin/staff';
+import { useHqSession } from '@/hooks/hq/useHqSession';
 import { toast } from 'react-hot-toast';
-import { Loader2, Plus, Trash2, Download, Search, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Plus, Trash2, Download, Search, CheckCircle, AlertCircle, Receipt, CheckCircle2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 // Department Display Name Mapping
@@ -31,9 +33,14 @@ const formatToDMY = (dateStr: string): string => {
 };
 
 export default function FineLetterGenerator() {
+  const { session } = useHqSession();
   const [staffList, setStaffList] = useState<StaffCardRow[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
   const [downloading, setDownloading] = useState(false);
+
+  // Fine recording states
+  const [recordingFine, setRecordingFine] = useState(false);
+  const [fineRecordedDocId, setFineRecordedDocId] = useState<string | null>(null);
 
   // Staff Dropdown States
   const [selectedStaff, setSelectedStaff] = useState<StaffCardRow | null>(null);
@@ -95,6 +102,7 @@ export default function FineLetterGenerator() {
     setSelectedStaff(s);
     setSearchQuery(s.name);
     setIsDropdownOpen(false);
+    setFineRecordedDocId(null); // Reset recorded status for new staff
 
     const deptName = DEPT_DISPLAY_NAME[s.dept] || s.dept || '';
     setForm(prev => ({
@@ -111,12 +119,14 @@ export default function FineLetterGenerator() {
   // Add violation row
   const addViolationRow = () => {
     setViolations([...violations, { description: '', amount: 0 }]);
+    setFineRecordedDocId(null);
   };
 
   // Remove violation row
   const removeViolationRow = (index: number) => {
     if (violations.length > 1) {
       setViolations(violations.filter((_, i) => i !== index));
+      setFineRecordedDocId(null);
     }
   };
 
@@ -130,6 +140,7 @@ export default function FineLetterGenerator() {
       updated[index].description = value as string;
     }
     setViolations(updated);
+    setFineRecordedDocId(null);
   };
 
   // Calculate total fine payable
@@ -148,6 +159,54 @@ export default function FineLetterGenerator() {
     if (hasInvalidViolation) return false;
     return true;
   }, [selectedStaff, form, violations]);
+
+  // Record Fine to Staff Profile in Firestore
+  const handleRecordFineToProfile = async () => {
+    if (!isValid || !selectedStaff) return;
+
+    const violationReasons = violations
+      .map(v => v.description.trim())
+      .filter(Boolean)
+      .join('; ');
+
+    const confirmMsg = `Confirm adding a fine of Rs. ${totalFinePayable.toLocaleString('en-PK')} to ${selectedStaff.name}'s profile?\n\nViolations: ${violationReasons}`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      setRecordingFine(true);
+      const prefix = getDeptPrefix(selectedStaff.dept);
+
+      // Clean simple staff ID
+      let cleanStaffId = selectedStaff.staffId || selectedStaff.id;
+      if (cleanStaffId.includes('_')) {
+        cleanStaffId = cleanStaffId.split('_').pop() || cleanStaffId;
+      }
+
+      const finePayload = {
+        staffId: cleanStaffId,
+        staffName: selectedStaff.name,
+        dept: selectedStaff.dept,
+        amount: Number(totalFinePayable),
+        reason: violationReasons || form.subject,
+        date: form.date,
+        month: form.date.substring(0, 7),
+        recordedBy: session?.name || session?.customId || 'Manager',
+        status: 'unpaid',
+        source: 'fine_letter_generator',
+        referenceNumber: form.referenceNumber,
+        createdAt: Timestamp.now(),
+      };
+
+      const docRef = await addDoc(collection(db, `${prefix}_fines`), finePayload);
+      setFineRecordedDocId(docRef.id);
+      toast.success(`Fine of Rs. ${totalFinePayable.toLocaleString('en-PK')} recorded to ${selectedStaff.name}'s profile!`);
+    } catch (err: any) {
+      console.error('Error recording fine to profile:', err);
+      toast.error('Failed to record fine to profile: ' + err.message);
+    } finally {
+      setRecordingFine(false);
+    }
+  };
 
   // Download image functionality
   const downloadImage = async () => {
@@ -389,17 +448,46 @@ export default function FineLetterGenerator() {
         {/* Total Fine live display */}
         <div className="flex justify-between items-center bg-slate-900 text-white px-5 py-4 rounded-2xl">
           <span className="text-xs font-bold uppercase tracking-wider opacity-85">Total Fine Calculated</span>
-          <span className="text-lg font-black font-mono">Rs. {totalFinePayable}/-</span>
+          <span className="text-lg font-black font-mono">Rs. {totalFinePayable.toLocaleString('en-PK')}/-</span>
         </div>
 
-        {/* Action Button */}
-        <div className="pt-2">
+        {/* Action Buttons */}
+        <div className="space-y-3 pt-2">
           {!selectedStaff && (
-            <div className="flex items-center gap-2 text-amber-600 bg-amber-50 border border-amber-100 p-3 rounded-2xl text-xs font-semibold mb-3">
+            <div className="flex items-center gap-2 text-amber-600 bg-amber-50 border border-amber-100 p-3 rounded-2xl text-xs font-semibold">
               <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>Please select a staff member to enable download.</span>
+              <span>Please select a staff member to record fine or download letter.</span>
             </div>
           )}
+
+          {/* Confirm & Record Fine to Staff Profile Button */}
+          {fineRecordedDocId ? (
+            <div className="w-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold py-3 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-sm">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>Fine of Rs. {totalFinePayable.toLocaleString('en-PK')} Recorded to {selectedStaff?.name}&apos;s Profile!</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={!isValid || recordingFine}
+              onClick={handleRecordFineToProfile}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-100 disabled:text-slate-400 text-white font-bold py-3.5 rounded-2xl text-sm transition-all shadow-sm flex items-center justify-center gap-2"
+            >
+              {recordingFine ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Recording Fine to Profile...
+                </>
+              ) : (
+                <>
+                  <Receipt className="w-4 h-4" />
+                  Confirm & Add Fine to {selectedStaff?.name || 'Staff'}&apos;s Profile
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Download as Image Button */}
           <button
             type="button"
             disabled={!isValid || downloading}
@@ -414,7 +502,7 @@ export default function FineLetterGenerator() {
             ) : (
               <>
                 <Download className="w-4 h-4" />
-                Download as Image (PNG)
+                Download Letter as Image (PNG)
               </>
             )}
           </button>
@@ -523,7 +611,7 @@ export default function FineLetterGenerator() {
             {/* Callout section */}
             <div className="mt-6 p-4 text-center rounded-xl" style={{ border: '2px solid #0f172a', backgroundColor: 'rgba(248, 250, 252, 0.4)' }}>
               <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#64748b' }}>Total Fine Payable</p>
-              <p className="text-xl font-black tracking-wide mt-1" style={{ color: '#0f172a' }}>Rs. {totalFinePayable}/-</p>
+              <p className="text-xl font-black tracking-wide mt-1" style={{ color: '#0f172a' }}>Rs. {totalFinePayable.toLocaleString('en-PK')}/-</p>
             </div>
 
             {/* Footer Signatures */}
