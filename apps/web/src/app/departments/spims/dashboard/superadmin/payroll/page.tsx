@@ -74,6 +74,36 @@ export default function SpimsPayrollPage() {
   const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
+  const fetchGlobalTransactionsForMonth = async (mStr: string) => {
+    const txMap = new Map<string, any>();
+
+    await Promise.all(ALL_PREFIXES.map(async (p) => {
+      const txCol = p ? `${p}_transactions` : 'transactions';
+      const advCol = p ? `${p}_advances` : 'advances';
+
+      for (const colName of [txCol, advCol]) {
+        try {
+          const s1 = await getDocs(query(collection(db, colName), where('month', '==', mStr))).catch(() => ({ docs: [] }));
+          const s2 = await getDocs(query(collection(db, colName), where('date', '>=', `${mStr}-01`), where('date', '<=', `${mStr}-31`))).catch(() => ({ docs: [] }));
+          const s3 = await getDocs(query(collection(db, colName), where('transactionDate', '>=', `${mStr}-01`), where('transactionDate', '<=', `${mStr}-31`))).catch(() => ({ docs: [] }));
+          
+          let s4: any = { docs: [] };
+          if (colName.includes('advances')) {
+            s4 = await getDocs(collection(db, colName)).catch(() => ({ docs: [] }));
+          }
+
+          [...s1.docs, ...s2.docs, ...s3.docs, ...s4.docs].forEach((d: any) => {
+            if (d && d.id) {
+              txMap.set(`${colName}-${d.id}`, { id: d.id, _collection: colName, ...d.data() });
+            }
+          });
+        } catch (e) {}
+      }
+    }));
+
+    return Array.from(txMap.values());
+  };
+
   const isAdvanceTxInSelectedMonth = (tx: any, targetMonthStr: string) => {
     if (tx.status === 'rejected') return false;
     const cat = String(tx.category || '').toLowerCase();
@@ -109,6 +139,8 @@ export default function SpimsPayrollPage() {
     try {
       setLoading(true);
 
+      const globalTxns = await fetchGlobalTransactionsForMonth(monthStr);
+
       // Staff Collection
       const staffSnap = await getDocs(query(collection(db, 'spims_staff'), where('isActive', '==', true)));
       const allStaff = staffSnap.docs
@@ -135,14 +167,13 @@ export default function SpimsPayrollPage() {
       const staffMap = Object.fromEntries(allStaff.map((s: any) => [s.id, s.name || s.id]));
 
       // Build salary rows for each staff
-      const salaryRows = await Promise.all(allStaff.map(async (staff: any) => {
+      const salaryRows = allStaff.map((staff: any) => {
         const gross = Number(staff.salary || 0);
         const dailyRate = gross / 30;
 
         const uid = staff.staffId || staff.id;
         const loginId = staff.loginUserId || staff.uid || staff.userId || '';
 
-        // Candidate IDs
         const candidateIds = new Set<string>();
         if (uid) {
           candidateIds.add(uid);
@@ -161,54 +192,24 @@ export default function SpimsPayrollPage() {
         if (staff.customId) candidateIds.add(staff.customId);
         if (staff.employeeId) candidateIds.add(staff.employeeId);
 
-        const uniqueIds = Array.from(candidateIds).filter(Boolean);
         const staffNameLower = String(staff.name || '').toLowerCase();
 
-        // Fetch transactions & advances
-        const txDocsList: any[] = [];
-        for (const p of ALL_PREFIXES) {
-          for (const suffix of ['transactions', 'advances']) {
-            const colName = p ? `${p}_${suffix}` : suffix;
-            for (const candidateId of uniqueIds) {
-              try {
-                const s1 = await getDocs(query(collection(db, colName), where('staffId', '==', candidateId))).catch(() => ({ docs: [] }));
-                const s2 = await getDocs(query(collection(db, colName), where('patientId', '==', candidateId))).catch(() => ({ docs: [] }));
-                const s3 = await getDocs(query(collection(db, colName), where('userId', '==', candidateId))).catch(() => ({ docs: [] }));
-                
-                [...s1.docs, ...s2.docs, ...s3.docs].forEach((d: any) => {
-                  if (d && d.id) txDocsList.push({ id: d.id, _collection: colName, ...d.data() });
-                });
-              } catch (e) {}
-            }
+        // Match advances from globalTxns array (in-memory, 0 network overhead)
+        const staffAdvanceTxns = globalTxns.filter((tx: any) => {
+          if (!isAdvanceTxInSelectedMonth(tx, monthStr)) return false;
+          const txStaffId = tx.staffId || tx.patientId || tx.userId || tx.customId || '';
+          if (candidateIds.has(txStaffId)) return true;
+
+          if (staffNameLower) {
+            if (tx.staffName && String(tx.staffName).toLowerCase() === staffNameLower) return true;
+            if (tx.userName && String(tx.userName).toLowerCase() === staffNameLower) return true;
+            if (tx.name && String(tx.name).toLowerCase() === staffNameLower) return true;
+            if (tx.description && String(tx.description).toLowerCase().includes(staffNameLower)) return true;
           }
-        }
+          return false;
+        });
 
-        // Search by month & staffName
-        for (const p of ALL_PREFIXES) {
-          for (const suffix of ['transactions', 'advances']) {
-            const colName = p ? `${p}_${suffix}` : suffix;
-            try {
-              const snapByMonth = await getDocs(query(collection(db, colName), where('month', '==', monthStr))).catch(() => ({ docs: [] }));
-              snapByMonth.docs.forEach((d: any) => {
-                const data = d.data();
-                const desc = String(data.description || data.staffName || '').toLowerCase();
-                if (desc.includes(staffNameLower)) {
-                  txDocsList.push({ id: d.id, _collection: colName, ...data });
-                }
-              });
-            } catch (e) {}
-          }
-        }
-
-        // Deduplicate transactions
-        const txMap = new Map<string, any>();
-        txDocsList.forEach(t => txMap.set(t.id, t));
-        const staffTxns = Array.from(txMap.values());
-
-        // Filter advance transactions for selected month
-        const staffAdvanceTxns = staffTxns.filter(t => isAdvanceTxInSelectedMonth(t, monthStr));
         const approvedAdvancesForMonth = staffAdvanceTxns.reduce((s: number, t: any) => s + (Number(t.amount) || 0), 0);
-
         const staffDocAdvance = Number(staff.advance || staff.advanceSalary || staff.monthlyAdvance || 0);
 
         // Salary Slip check
@@ -370,7 +371,7 @@ export default function SpimsPayrollPage() {
           netPayable,
           deductionItems,
         };
-      }));
+      });
 
       const totalGross = salaryRows.reduce((s, r) => s + r.gross, 0);
       const totalNet = salaryRows.reduce((s, r) => s + r.netPayable, 0);
