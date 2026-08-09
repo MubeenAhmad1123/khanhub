@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
@@ -83,11 +83,6 @@ export default function ManagerPayrollPage() {
 
   const printRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (sessionLoading) return;
-    if (!session || !['manager', 'superadmin'].includes(session.role)) router.push('/hq/login');
-  }, [session, sessionLoading, router]);
-
   const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
   const monthDays = getDaysInMonth(selectedYear, selectedMonth);
 
@@ -156,11 +151,10 @@ export default function ManagerPayrollPage() {
     return String(txDate).startsWith(targetMonthStr);
   };
 
-  const handleLoad = async () => {
+  const handleLoad = useCallback(async () => {
     try {
       setLoading(true);
 
-      // Fetch transactions globally ONCE for all departments (avoids HTTP 400 connection limit)
       const globalTxns = await fetchGlobalTransactionsForMonth(monthStr);
 
       const results = await Promise.all(ALL_DEPTS.map(async (dept) => {
@@ -457,7 +451,17 @@ export default function ManagerPayrollPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [monthStr, monthDays, currentMonthStr, todayStr, today]);
+
+  // Auto-load on mount & month/year change
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!session || !['manager', 'superadmin'].includes(session.role)) {
+      router.push('/hq/login');
+      return;
+    }
+    handleLoad();
+  }, [session, sessionLoading, router, handleLoad]);
 
   const handleAddFine = async () => {
     if (!fineForm.dept || !fineForm.staffId || !fineForm.amount || !fineForm.reason) {
@@ -533,7 +537,14 @@ export default function ManagerPayrollPage() {
 
   const availableFineDepts = data ? ALL_DEPTS.filter(d => (data.byDept[d]?.allStaff?.length || 0) > 0) : [];
 
-  if (sessionLoading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>;
+  if (sessionLoading || (loading && !data)) return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="text-center space-y-3">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600 mx-auto" />
+        <p className="text-sm font-bold text-gray-600">Loading All-Department Payroll...</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 text-black">
@@ -600,7 +611,7 @@ export default function ManagerPayrollPage() {
               className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
-              Load All Departments
+              Refresh Payroll
             </button>
           </div>
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
@@ -135,7 +135,7 @@ export default function SpimsPayrollPage() {
     return String(txDate).startsWith(targetMonthStr);
   };
 
-  const handleLoad = async () => {
+  const handleLoad = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -194,7 +194,7 @@ export default function SpimsPayrollPage() {
 
         const staffNameLower = String(staff.name || '').toLowerCase();
 
-        // Match advances from globalTxns array (in-memory, 0 network overhead)
+        // Match advances from globalTxns array
         const staffAdvanceTxns = globalTxns.filter((tx: any) => {
           if (!isAdvanceTxInSelectedMonth(tx, monthStr)) return false;
           const txStaffId = tx.staffId || tx.patientId || tx.userId || tx.customId || '';
@@ -398,7 +398,13 @@ export default function SpimsPayrollPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [monthStr, monthDays, currentMonthStr, todayStr, today]);
+
+  useEffect(() => {
+    if (session) {
+      handleLoad();
+    }
+  }, [session, handleLoad]);
 
   const handleAddFine = async () => {
     if (!fineForm.staffId || !fineForm.amount || !fineForm.reason) {
@@ -450,6 +456,15 @@ export default function SpimsPayrollPage() {
   ) || [];
 
   const filteredFinesTotal = filteredFines.reduce((s: number, f: any) => s + Number(f.amount || 0), 0);
+
+  if (loading && !data) return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="text-center space-y-3">
+        <Loader2 className="w-8 h-8 animate-spin text-teal-600 mx-auto" />
+        <p className="text-sm font-bold text-gray-600">Loading SPIMS Payroll...</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 text-black">
@@ -516,7 +531,7 @@ export default function SpimsPayrollPage() {
               className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white px-8 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
-              Load Payroll
+              Refresh Payroll
             </button>
           </div>
         </div>
