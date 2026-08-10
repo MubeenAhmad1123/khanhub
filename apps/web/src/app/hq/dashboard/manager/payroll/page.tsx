@@ -888,14 +888,18 @@ export default function ManagerPayrollPage() {
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 text-black">
       <style>{`
         @media print {
-          aside, header, .no-print, .pointer-events-none { display: none !important; }
+          aside, header, nav, .no-print, .pointer-events-none { display: none !important; }
           html, body, div[class*="min-h-screen"], div[class*="lg:ml-"], main, div[class*="max-w-"] {
             margin: 0 !important; padding: 0 !important; min-height: 0 !important;
             height: auto !important; background: white !important; box-shadow: none !important;
             width: 100% !important; max-width: 100% !important;
           }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .overflow-x-auto { overflow: visible !important; }
-          #hq-payroll-print { position: relative !important; left: 0 !important; top: 0 !important; width: 100% !important; padding: 24px !important; }
+          #hq-payroll-print { position: relative !important; left: 0 !important; top: 0 !important; width: 100% !important; padding: 20px !important; }
+          table { width: 100% !important; page-break-inside: auto; border-collapse: collapse !important; }
+          tr { page-break-inside: avoid; page-break-after: auto; }
+          th, td { border: 1px solid #cbd5e1 !important; }
         }
       `}</style>
 
@@ -910,12 +914,12 @@ export default function ManagerPayrollPage() {
             <p className="text-sm text-gray-500 mt-1">Customize salary, add remaining arrears, deduct security fee, manage negative salary balances, and track staff advances</p>
           </div>
           {data && (
-            <div className="flex gap-2 flex-wrap">
-              <button onClick={handleDownload} className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors">
+            <div className="flex gap-2 flex-wrap items-center">
+              <button onClick={handleDownload} className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-md">
                 <Download className="w-4 h-4" /> Download Image
               </button>
-              <button onClick={handlePrint} className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-900 transition-colors">
-                <Printer className="w-4 h-4" /> Print / PDF
+              <button onClick={handlePrint} className="flex items-center gap-2 bg-gray-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-sm font-black tracking-wide shadow-lg shadow-gray-900/20 transition-all transform hover:scale-[1.02] border border-gray-800">
+                <Printer className="w-4 h-4 text-emerald-400" /> Print Payroll Sheet
               </button>
             </div>
           )}
@@ -958,11 +962,23 @@ export default function ManagerPayrollPage() {
         {data && (
           <div id="hq-payroll-print" ref={printRef} className="space-y-6">
 
-            {/* Print Header */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 text-center">
-              <h2 className="text-xl font-black text-gray-900">Khan Hub — All Departments Payroll Report</h2>
-              <p className="text-base font-bold text-emerald-700 mt-1">{data.monthLabel}</p>
-              <p className="text-xs text-gray-400 mt-1">Generated: {new Date().toLocaleString()}</p>
+            {/* Print Header Box */}
+            <div className="bg-white rounded-2xl border-2 border-slate-900 p-6 text-center shadow-sm relative overflow-hidden">
+              <div className="flex items-center justify-between border-b-2 border-slate-900 pb-4 mb-4">
+                <div className="text-left">
+                  <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">KHAN HUB PLATFORM</h2>
+                  <p className="text-xs font-extrabold text-emerald-700 uppercase tracking-widest">Official Executive Payroll & Salary Statement</p>
+                </div>
+                <div className="text-right">
+                  <span className="inline-block bg-slate-900 text-white px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider">
+                    {data.monthLabel}
+                  </span>
+                  <p className="text-[10px] font-bold text-slate-500 mt-1">Generated: {new Date().toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-700">
+                <span>All Departments Included</span> • <span>Verified Record</span> • <span>KhanHub HQ System</span>
+              </div>
             </div>
 
             {/* Grand Summary */}
@@ -1007,7 +1023,7 @@ export default function ManagerPayrollPage() {
             {tab === 'salary' && (
               <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
 
-                {/* Dept filter & helper note */}
+                {/* Dept filter & print action row */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 no-print">
                   <div className="flex flex-wrap items-center gap-2">
                     <Building2 className="w-4 h-4 text-gray-400" />
@@ -1022,8 +1038,16 @@ export default function ManagerPayrollPage() {
                       </button>
                     ))}
                   </div>
-                  <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5">
-                    <SlidersHorizontal className="w-3.5 h-3.5" /> Negative Net Salary (e.g. -Rs. 5,000) shows in red and syncs to staff profile!
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handlePrint}
+                      className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-xl text-xs font-black tracking-wider uppercase shadow-md transition-all transform hover:scale-105"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-emerald-300" /> Print Out Sheet
+                    </button>
+                    <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 border border-emerald-100">
+                      <SlidersHorizontal className="w-3.5 h-3.5" /> Negative Net Salary (e.g. -Rs. 5,000) shows in red and syncs to staff profile!
+                    </div>
                   </div>
                 </div>
 
@@ -1204,6 +1228,23 @@ export default function ManagerPayrollPage() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Print-Only Official Signature Footer Box */}
+                <div className="hidden print:grid grid-cols-3 gap-6 pt-12 mt-8 border-t-2 border-slate-900 text-center text-xs font-bold text-slate-800">
+                  <div className="space-y-10">
+                    <div className="border-b-2 border-slate-400 pb-1">PREPARED BY (HR / MANAGER)</div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase">Signature & Date</div>
+                  </div>
+                  <div className="space-y-10">
+                    <div className="border-b-2 border-slate-400 pb-1">CHECKED BY (CASHIER / FINANCE)</div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase">Signature & Date</div>
+                  </div>
+                  <div className="space-y-10">
+                    <div className="border-b-2 border-slate-400 pb-1">APPROVED BY (SUPER ADMIN)</div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase">Official Stamp & Signature</div>
+                  </div>
+                </div>
+
               </div>
             )}
 
