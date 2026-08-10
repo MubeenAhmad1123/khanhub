@@ -3,14 +3,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, where, addDoc, deleteDoc, doc, Timestamp, setDoc } from 'firebase/firestore';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 import { toDate, downloadElementAsPng } from '@/lib/utils';
 import {
   UserCog, Printer, Calendar, DollarSign, Loader2, Download,
   Plus, X, Receipt, Trash2, Building2, Eye, CheckCircle2,
-  Info, CreditCard
+  Info, CreditCard, SlidersHorizontal, PlusCircle, MinusCircle,
+  Save
 } from 'lucide-react';
 
 const MONTHS = [
@@ -87,8 +88,22 @@ export default function ManagerPayrollPage() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
 
-  // Staff deduction modal state
+  // Staff breakdown modal state
   const [selectedStaffModal, setSelectedStaffModal] = useState<any | null>(null);
+
+  // Staff customization modal state
+  const [customizeModalStaff, setCustomizeModalStaff] = useState<any | null>(null);
+  const [customizeForm, setCustomizeForm] = useState({
+    remainingBalance: '',
+    bonus: '',
+    allowance: '',
+    securityFee: '',
+    previousAdvance: '',
+    notes: '',
+    customAdditions: [] as Array<{ id: string; label: string; amount: string }>,
+    customDeductions: [] as Array<{ id: string; label: string; amount: string }>,
+  });
+  const [savingCustomization, setSavingCustomization] = useState(false);
 
   // Fine form
   const [showFineForm, setShowFineForm] = useState(false);
@@ -213,6 +228,11 @@ export default function ManagerPayrollPage() {
           const finesSnap = await getDocs(collection(db, finesCol)).catch(() => ({ docs: [] } as any));
           const allFines = finesSnap.docs.map((d: any) => ({ id: d.id, dept, ...d.data() }));
 
+          // Custom Salary Adjustments (e.g. security fee, remaining arrears, custom additions/deductions)
+          const adjCol = `${prefix}_salary_adjustments`;
+          const adjSnap = await getDocs(collection(db, adjCol)).catch(() => ({ docs: [] } as any));
+          const allAdjustments = adjSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+
           // Attendance for selected month
           const attCol = `${prefix}_attendance`;
           const attSnap = await getDocs(query(
@@ -279,7 +299,36 @@ export default function ManagerPayrollPage() {
               return false;
             });
 
-            const actualAdvance = Math.max(Number(slip?.advance || 0), approvedAdvancesForMonth, staffDocAdvance);
+            // Find Custom Adjustment Doc for staff
+            const customAdj = allAdjustments.find((a: any) => {
+              if (a.month !== monthStr) return false;
+              if (candidateIds.has(String(a.staffId))) return true;
+              if (a.staffName && String(a.staffName).toLowerCase() === staffNameLower) return true;
+              return false;
+            });
+
+            const customAdvanceVal = Number(customAdj?.previousAdvance || 0);
+            const actualAdvance = Math.max(Number(slip?.advance || 0), approvedAdvancesForMonth, staffDocAdvance, customAdvanceVal);
+
+            // Additional Custom Additions (Remaining balance/arrears, bonus, allowance, custom items)
+            const remainingBalance = Number(customAdj?.remainingBalance || 0);
+            const bonus = Number(customAdj?.bonus || 0);
+            const allowance = Number(customAdj?.allowance || 0);
+            const customAdditionsList: Array<{ label: string; amount: number }> = (customAdj?.customAdditions || []).map((ca: any) => ({
+              label: ca.label || 'Custom Addition',
+              amount: Number(ca.amount || 0)
+            }));
+
+            const totalCustomAdditions = remainingBalance + bonus + allowance + customAdditionsList.reduce((acc, c) => acc + c.amount, 0);
+
+            // Additional Custom Deductions (Security fee, damage/penalties, custom items)
+            const securityFee = Number(customAdj?.securityFee || 0);
+            const customDeductionsList: Array<{ label: string; amount: number }> = (customAdj?.customDeductions || []).map((cd: any) => ({
+              label: cd.label || 'Custom Deduction',
+              amount: Number(cd.amount || 0)
+            }));
+
+            const totalCustomDeductions = securityFee + customDeductionsList.reduce((acc, c) => acc + c.amount, 0);
 
             // Filter attendance docs for this staff member
             const staffAtt = allAttDocs.filter((a: any) => {
@@ -369,7 +418,7 @@ export default function ManagerPayrollPage() {
             const totalAbsentDays = absentDaysCount + unmarkedDaysCount;
             const payableDays = Math.max(0, daysPassed - totalAbsentDays);
 
-            const earnings = payableDays * dailyRate;
+            const baseEarnedSalary = payableDays * dailyRate;
             const totalAbsentDeduction = totalAbsentDays * dailyRate;
 
             // Filter fines for this staff member
@@ -384,24 +433,74 @@ export default function ManagerPayrollPage() {
 
             const totalFines = staffFines.reduce((s: number, f: any) => s + (Number(f.amount) || 0), 0);
 
-            // Net payable formula matching staff detail page
-            const netPayable = Math.floor(Math.max(0, earnings - totalFines - actualAdvance));
-            const totalDeductions = Math.round(totalAbsentDeduction + totalFines + actualAdvance);
+            // Total Gross & Total Net formula with Additions & Deductions
+            const totalEarningsWithAdditions = baseEarnedSalary + totalCustomAdditions;
+            const totalDeductions = Math.round(totalAbsentDeduction + totalFines + actualAdvance + totalCustomDeductions);
+            const netPayable = Math.floor(Math.max(0, totalEarningsWithAdditions - totalDeductions));
 
-            // Itemized date-wise deduction breakdown
-            const deductionItems: Array<{
+            // Itemized date-wise deduction & addition breakdown
+            const breakdownItems: Array<{
               id: string;
               date: string;
-              type: 'absent' | 'fine' | 'advance';
+              category: 'addition' | 'deduction';
+              type: 'absent' | 'fine' | 'advance' | 'security' | 'remaining' | 'bonus' | 'allowance' | 'custom_add' | 'custom_ded';
               amount: number;
               reason: string;
               recordedBy?: string;
             }> = [];
 
+            // Additions to breakdown
+            if (remainingBalance > 0) {
+              breakdownItems.push({
+                id: `rem-${staff.id}`,
+                date: monthStr,
+                category: 'addition',
+                type: 'remaining',
+                amount: remainingBalance,
+                reason: 'Remaining Salary / Previous Arrears Added',
+                recordedBy: customAdj?.updatedBy || 'Manager',
+              });
+            }
+            if (bonus > 0) {
+              breakdownItems.push({
+                id: `bonus-${staff.id}`,
+                date: monthStr,
+                category: 'addition',
+                type: 'bonus',
+                amount: bonus,
+                reason: 'Performance Bonus / Reward',
+                recordedBy: customAdj?.updatedBy || 'Manager',
+              });
+            }
+            if (allowance > 0) {
+              breakdownItems.push({
+                id: `allow-${staff.id}`,
+                date: monthStr,
+                category: 'addition',
+                type: 'allowance',
+                amount: allowance,
+                reason: 'Overtime / Special Allowance',
+                recordedBy: customAdj?.updatedBy || 'Manager',
+              });
+            }
+            customAdditionsList.forEach((ca, idx) => {
+              breakdownItems.push({
+                id: `cadd-${staff.id}-${idx}`,
+                date: monthStr,
+                category: 'addition',
+                type: 'custom_add',
+                amount: ca.amount,
+                reason: ca.label || 'Custom Salary Addition',
+                recordedBy: customAdj?.updatedBy || 'Manager',
+              });
+            });
+
+            // Deductions to breakdown
             absences.forEach((a: any, idx: number) => {
-              deductionItems.push({
+              breakdownItems.push({
                 id: `absent-${a.date}-${idx}`,
                 date: String(a.date),
+                category: 'deduction',
                 type: 'absent',
                 amount: Math.round(dailyRate),
                 reason: a.reason,
@@ -410,9 +509,10 @@ export default function ManagerPayrollPage() {
 
             staffFines.forEach((f: any) => {
               const dStr = formatDateString(f.date || f.month) || '—';
-              deductionItems.push({
+              breakdownItems.push({
                 id: f.id || `fine-${dStr}`,
                 date: dStr,
+                category: 'deduction',
                 type: 'fine',
                 amount: Number(f.amount || 0),
                 reason: f.reason || 'Fine imposed',
@@ -422,9 +522,10 @@ export default function ManagerPayrollPage() {
 
             staffAdvanceTxns.forEach((tx: any) => {
               const dateStr = formatDateString(tx.transactionDate || tx.date || tx.createdAt) || String(tx.month || monthStr);
-              deductionItems.push({
+              breakdownItems.push({
                 id: tx.id || `adv-${dateStr}`,
                 date: dateStr,
+                category: 'deduction',
                 type: 'advance',
                 amount: Number(tx.amount || 0),
                 reason: tx.description || tx.categoryName || 'Advance Salary taken',
@@ -433,18 +534,43 @@ export default function ManagerPayrollPage() {
             });
 
             if (staffAdvanceTxns.length === 0 && actualAdvance > 0) {
-              deductionItems.push({
+              breakdownItems.push({
                 id: `doc-adv-${staff.id}`,
                 date: monthStr,
+                category: 'deduction',
                 type: 'advance',
                 amount: actualAdvance,
-                reason: 'Monthly Advance Salary Record',
-                recordedBy: 'System Record',
+                reason: customAdvanceVal > 0 ? 'Previous Advance Salary Adjustment' : 'Monthly Advance Salary Record',
+                recordedBy: customAdj?.updatedBy || 'System Record',
               });
             }
 
+            if (securityFee > 0) {
+              breakdownItems.push({
+                id: `sec-${staff.id}`,
+                date: monthStr,
+                category: 'deduction',
+                type: 'security',
+                amount: securityFee,
+                reason: 'Security Fee Deduction',
+                recordedBy: customAdj?.updatedBy || 'Manager',
+              });
+            }
+
+            customDeductionsList.forEach((cd, idx) => {
+              breakdownItems.push({
+                id: `cded-${staff.id}-${idx}`,
+                date: monthStr,
+                category: 'deduction',
+                type: 'custom_ded',
+                amount: cd.amount,
+                reason: cd.label || 'Custom Salary Deduction',
+                recordedBy: customAdj?.updatedBy || 'Manager',
+              });
+            });
+
             // Safe sort with string conversion
-            deductionItems.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+            breakdownItems.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
 
             return {
               id: staff.id,
@@ -454,16 +580,27 @@ export default function ManagerPayrollPage() {
               gross,
               dailyRate: Math.round(dailyRate),
               payableDays,
-              earnings: Math.round(earnings),
+              earnings: Math.round(baseEarnedSalary),
               absentDays: totalAbsentDays,
               totalAbsentDeduction: Math.round(totalAbsentDeduction),
               staffFines,
               totalFines,
               totalAdvance: actualAdvance,
               staffAdvanceTxns,
+              // Custom Salary Customizations
+              customAdj,
+              remainingBalance,
+              bonus,
+              allowance,
+              customAdditionsList,
+              totalCustomAdditions,
+              securityFee,
+              customDeductionsList,
+              totalCustomDeductions,
+              notes: customAdj?.notes || '',
               deductions: totalDeductions,
               netPayable,
-              deductionItems,
+              breakdownItems,
             };
           });
 
@@ -494,6 +631,8 @@ export default function ManagerPayrollPage() {
         allStaff,
         totalGross: allSalaryRows.reduce((s, r) => s + r.gross, 0),
         totalNet: allSalaryRows.reduce((s, r) => s + r.netPayable, 0),
+        totalAdditions: allSalaryRows.reduce((s, r) => s + r.totalCustomAdditions, 0),
+        totalSecurityFees: allSalaryRows.reduce((s, r) => s + r.securityFee, 0),
         totalDeductions: allSalaryRows.reduce((s, r) => s + r.deductions, 0),
         totalAbsentDeductions: allSalaryRows.reduce((s, r) => s + r.totalAbsentDeduction, 0),
         totalFinesAmount: allFines.reduce((s: number, f: any) => s + Number(f.amount || 0), 0),
@@ -505,7 +644,7 @@ export default function ManagerPayrollPage() {
     } finally {
       setLoading(false);
     }
-  }, [monthStr, monthDays, currentMonthStr, todayStr, today]);
+  }, [monthStr, monthDays, currentMonthStr, todayStr, today, selectedMonth, selectedYear]);
 
   // Auto-load on mount & month/year change
   useEffect(() => {
@@ -516,6 +655,72 @@ export default function ManagerPayrollPage() {
     }
     handleLoad();
   }, [session, sessionLoading, router, handleLoad]);
+
+  // Customization Form Handler
+  const openCustomizeModal = (staffRow: any) => {
+    const adj = staffRow.customAdj || {};
+    setCustomizeModalStaff(staffRow);
+    setCustomizeForm({
+      remainingBalance: adj.remainingBalance ? String(adj.remainingBalance) : '',
+      bonus: adj.bonus ? String(adj.bonus) : '',
+      allowance: adj.allowance ? String(adj.allowance) : '',
+      securityFee: adj.securityFee ? String(adj.securityFee) : '',
+      previousAdvance: adj.previousAdvance ? String(adj.previousAdvance) : (staffRow.totalAdvance ? String(staffRow.totalAdvance) : ''),
+      notes: adj.notes || '',
+      customAdditions: adj.customAdditions ? adj.customAdditions.map((ca: any) => ({
+        id: ca.id || String(Math.random()),
+        label: ca.label || '',
+        amount: String(ca.amount || '')
+      })) : [],
+      customDeductions: adj.customDeductions ? adj.customDeductions.map((cd: any) => ({
+        id: cd.id || String(Math.random()),
+        label: cd.label || '',
+        amount: String(cd.amount || '')
+      })) : [],
+    });
+  };
+
+  const handleSaveCustomization = async () => {
+    if (!customizeModalStaff) return;
+    try {
+      setSavingCustomization(true);
+      const prefix = getDeptPrefix(customizeModalStaff.dept as StaffDept);
+      const docId = `${customizeModalStaff.id}_${monthStr}`;
+      const adjRef = doc(db, `${prefix}_salary_adjustments`, docId);
+
+      const parsedAdditions = customizeForm.customAdditions
+        .filter(ca => ca.label.trim() && Number(ca.amount) > 0)
+        .map(ca => ({ id: ca.id, label: ca.label.trim(), amount: Number(ca.amount) }));
+
+      const parsedDeductions = customizeForm.customDeductions
+        .filter(cd => cd.label.trim() && Number(cd.amount) > 0)
+        .map(cd => ({ id: cd.id, label: cd.label.trim(), amount: Number(cd.amount) }));
+
+      await setDoc(adjRef, {
+        staffId: customizeModalStaff.id,
+        staffName: customizeModalStaff.name,
+        dept: customizeModalStaff.dept,
+        month: monthStr,
+        remainingBalance: Number(customizeForm.remainingBalance) || 0,
+        bonus: Number(customizeForm.bonus) || 0,
+        allowance: Number(customizeForm.allowance) || 0,
+        securityFee: Number(customizeForm.securityFee) || 0,
+        previousAdvance: Number(customizeForm.previousAdvance) || 0,
+        customAdditions: parsedAdditions,
+        customDeductions: parsedDeductions,
+        notes: customizeForm.notes.trim(),
+        updatedBy: session?.name || session?.customId || 'Manager',
+        updatedAt: Timestamp.now(),
+      }, { merge: true });
+
+      setCustomizeModalStaff(null);
+      await handleLoad();
+    } catch (err: any) {
+      alert('Failed to save salary customization: ' + err.message);
+    } finally {
+      setSavingCustomization(false);
+    }
+  };
 
   const handleAddFine = async () => {
     if (!fineForm.dept || !fineForm.staffId || !fineForm.amount || !fineForm.reason) {
@@ -573,6 +778,7 @@ export default function ManagerPayrollPage() {
 
   const filteredTotalGross = salaryRows.reduce((s: number, r: any) => s + r.gross, 0);
   const filteredTotalNet = salaryRows.reduce((s: number, r: any) => s + r.netPayable, 0);
+  const filteredTotalAdditions = salaryRows.reduce((s: number, r: any) => s + r.totalCustomAdditions, 0);
   const filteredTotalDeductions = salaryRows.reduce((s: number, r: any) => s + r.deductions, 0);
   const filteredTotalAdvances = salaryRows.reduce((s: number, r: any) => s + r.totalAdvance, 0);
 
@@ -595,7 +801,7 @@ export default function ManagerPayrollPage() {
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
       <div className="text-center space-y-3">
         <Loader2 className="w-8 h-8 animate-spin text-emerald-600 mx-auto" />
-        <p className="text-sm font-bold text-gray-600">Loading All-Department Payroll...</p>
+        <p className="text-sm font-bold text-gray-600">Loading All-Department Payroll & Custom Adjustments...</p>
       </div>
     </div>
   );
@@ -621,9 +827,9 @@ export default function ManagerPayrollPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <UserCog className="w-6 h-6 text-emerald-600" /> All-Department Payroll & Fines
+              <UserCog className="w-6 h-6 text-emerald-600" /> All-Department Payroll & Custom Adjustments
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Monthly salary calculation, advance deductions, fines, and net payout (Unmarked attendance = Absent)</p>
+            <p className="text-sm text-gray-500 mt-1">Customize salary, add remaining arrears, deduct security fee, manage advances, and track fines</p>
           </div>
           {data && (
             <div className="flex gap-2 flex-wrap">
@@ -682,22 +888,26 @@ export default function ManagerPayrollPage() {
             </div>
 
             {/* Grand Summary */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
               <div className="bg-white border border-gray-100 rounded-2xl p-4 text-center shadow-sm">
                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Staff</div>
                 <div className="text-2xl font-black text-gray-900">{data.allSalaryRows.length}</div>
               </div>
               <div className="bg-teal-50 border border-teal-100 p-4 rounded-2xl text-center shadow-sm">
-                <div className="text-[10px] font-bold text-teal-600 uppercase tracking-wider mb-1">Total Gross Salary</div>
-                <div className="text-base font-black text-teal-800">{formatPKR(data.totalGross)}</div>
+                <div className="text-[10px] font-bold text-teal-600 uppercase tracking-wider mb-1">Gross Base</div>
+                <div className="text-sm font-black text-teal-800">{formatPKR(data.totalGross)}</div>
+              </div>
+              <div className="bg-green-50 border border-green-100 p-4 rounded-2xl text-center shadow-sm">
+                <div className="text-[10px] font-bold text-green-700 uppercase tracking-wider mb-1">Additions (Rem/Bonus)</div>
+                <div className="text-sm font-black text-green-800">+{formatPKR(data.totalAdditions)}</div>
               </div>
               <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl text-center shadow-sm">
                 <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Total Advances</div>
-                <div className="text-base font-black text-amber-800">{formatPKR(data.totalAdvancesAmount)}</div>
+                <div className="text-sm font-black text-amber-800">{formatPKR(data.totalAdvancesAmount)}</div>
               </div>
               <div className="bg-red-50 border border-red-100 p-4 rounded-2xl text-center shadow-sm">
                 <div className="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-1">Total Deductions</div>
-                <div className="text-base font-black text-red-700">{formatPKR(data.totalDeductions)}</div>
+                <div className="text-sm font-black text-red-700">{formatPKR(data.totalDeductions)}</div>
               </div>
               <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl text-center shadow-sm col-span-2 sm:col-span-1">
                 <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Net To Pay</div>
@@ -735,16 +945,20 @@ export default function ManagerPayrollPage() {
                     ))}
                   </div>
                   <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5">
-                    <Info className="w-3.5 h-3.5" /> Click any staff member to view date-wise deduction breakdown
+                    <SlidersHorizontal className="w-3.5 h-3.5" /> Click "Edit" on any staff row to add remaining arrears, deduct security fee or custom items
                   </div>
                 </div>
 
                 {/* Filtered summary */}
                 {deptFilter !== 'all' && (
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="grid grid-cols-5 gap-3">
                     <div className="bg-teal-50 border border-teal-100 p-3 rounded-xl text-center">
-                      <div className="text-[10px] font-bold text-teal-600 mb-0.5">Gross Salary</div>
+                      <div className="text-[10px] font-bold text-teal-600 mb-0.5">Gross Base</div>
                       <div className="text-sm font-black text-teal-800">{formatPKR(filteredTotalGross)}</div>
+                    </div>
+                    <div className="bg-green-50 border border-green-100 p-3 rounded-xl text-center">
+                      <div className="text-[10px] font-bold text-green-600 mb-0.5">Total Additions</div>
+                      <div className="text-sm font-black text-green-800">+{formatPKR(filteredTotalAdditions)}</div>
                     </div>
                     <div className="bg-amber-50 border border-amber-100 p-3 rounded-xl text-center">
                       <div className="text-[10px] font-bold text-amber-600 mb-0.5">Total Advances</div>
@@ -762,21 +976,21 @@ export default function ManagerPayrollPage() {
                 )}
 
                 <div className="overflow-x-auto rounded-xl border border-gray-200">
-                  <table className="w-full text-sm border-collapse min-w-[1000px]">
+                  <table className="w-full text-sm border-collapse min-w-[1100px]">
                     <thead className="bg-emerald-50">
                       <tr>
-                        <th className="px-3.5 py-3 text-left font-bold text-emerald-900 border-b border-gray-200">#</th>
-                        <th className="px-3.5 py-3 text-left font-bold text-emerald-900 border-b border-gray-200">Staff Member</th>
-                        <th className="px-3.5 py-3 text-left font-bold text-emerald-900 border-b border-gray-200">Dept</th>
-                        <th className="px-3.5 py-3 text-left font-bold text-emerald-900 border-b border-gray-200">Designation</th>
-                        <th className="px-3.5 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Gross Salary</th>
-                        <th className="px-3.5 py-3 text-center font-bold text-emerald-900 border-b border-gray-200">Earned Days</th>
-                        <th className="px-3.5 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Absent Ded.</th>
-                        <th className="px-3.5 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Fine Ded.</th>
-                        <th className="px-3.5 py-3 text-right font-bold text-amber-800 border-b border-gray-200 bg-amber-50/70">Advance Ded.</th>
-                        <th className="px-3.5 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Total Ded.</th>
-                        <th className="px-3.5 py-3 text-right font-bold text-emerald-900 border-b border-gray-200 bg-emerald-100/70">Net Salary To Pay</th>
-                        <th className="px-2.5 py-3 text-center font-bold text-emerald-900 border-b border-gray-200 no-print">Breakdown</th>
+                        <th className="px-3 py-3 text-left font-bold text-emerald-900 border-b border-gray-200">#</th>
+                        <th className="px-3 py-3 text-left font-bold text-emerald-900 border-b border-gray-200">Staff Member</th>
+                        <th className="px-3 py-3 text-left font-bold text-emerald-900 border-b border-gray-200">Dept</th>
+                        <th className="px-3 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Gross Salary</th>
+                        <th className="px-3 py-3 text-center font-bold text-emerald-900 border-b border-gray-200">Earned Days</th>
+                        <th className="px-3 py-3 text-right font-bold text-green-800 border-b border-gray-200 bg-green-50/80">Additions (+)</th>
+                        <th className="px-3 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Absent Ded.</th>
+                        <th className="px-3 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Fine Ded.</th>
+                        <th className="px-3 py-3 text-right font-bold text-amber-800 border-b border-gray-200 bg-amber-50/70">Advance Ded.</th>
+                        <th className="px-3 py-3 text-right font-bold text-rose-800 border-b border-gray-200 bg-rose-50/70">Security / Custom Ded.</th>
+                        <th className="px-3 py-3 text-right font-bold text-emerald-900 border-b border-gray-200 bg-emerald-100/70">Net Salary To Pay</th>
+                        <th className="px-2.5 py-3 text-center font-bold text-emerald-900 border-b border-gray-200 no-print">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -788,57 +1002,99 @@ export default function ManagerPayrollPage() {
                           onClick={() => setSelectedStaffModal(r)}
                           className="hover:bg-emerald-50/60 transition-colors border-b border-gray-100 cursor-pointer group"
                         >
-                          <td className="px-3.5 py-3.5 text-gray-400 font-mono text-xs">{i + 1}</td>
-                          <td className="px-3.5 py-3.5 font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">
-                            {r.name}
+                          <td className="px-3 py-3.5 text-gray-400 font-mono text-xs">{i + 1}</td>
+                          <td className="px-3 py-3.5 font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">
+                            <div>{r.name}</div>
+                            <div className="text-[10px] text-gray-400 font-normal">{r.designation}</div>
                           </td>
-                          <td className="px-3.5 py-3.5">
+                          <td className="px-3 py-3.5">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${DEPT_COLORS[r.dept] || 'bg-gray-100 text-gray-600'}`}>
                               {DEPT_LABELS[r.dept] || r.dept}
                             </span>
                           </td>
-                          <td className="px-3.5 py-3.5 text-gray-500 text-xs">{r.designation}</td>
-                          <td className="px-3.5 py-3.5 text-right font-medium text-gray-700">{formatPKR(r.gross)}</td>
-                          <td className="px-3.5 py-3.5 text-center">
+                          <td className="px-3 py-3.5 text-right font-medium text-gray-700">{formatPKR(r.gross)}</td>
+                          <td className="px-3 py-3.5 text-center">
                             <span className="font-bold text-xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
                               {r.payableDays} Days ({formatPKR(r.earnings)})
                             </span>
                           </td>
-                          <td className="px-3.5 py-3.5 text-right text-orange-600 font-medium text-xs">
+
+                          {/* Custom Additions Column */}
+                          <td className="px-3 py-3.5 text-right font-bold text-green-700 text-xs bg-green-50/40">
+                            {r.totalCustomAdditions > 0 ? (
+                              <div className="space-y-0.5">
+                                <span className="inline-block bg-green-100 text-green-800 px-2 py-0.5 rounded border border-green-200">
+                                  +{formatPKR(r.totalCustomAdditions)}
+                                </span>
+                                {r.remainingBalance > 0 && (
+                                  <div className="text-[9px] text-green-600">Arrears: {formatPKR(r.remainingBalance)}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-300">—</span>
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3.5 text-right text-orange-600 font-medium text-xs">
                             {r.totalAbsentDeduction > 0 ? `${formatPKR(r.totalAbsentDeduction)} (${r.absentDays}d)` : '—'}
                           </td>
-                          <td className="px-3.5 py-3.5 text-right text-red-600 font-medium text-xs">
+                          <td className="px-3 py-3.5 text-right text-red-600 font-medium text-xs">
                             {r.totalFines > 0 ? formatPKR(r.totalFines) : '—'}
                           </td>
-                          <td className="px-3.5 py-3.5 text-right text-amber-700 font-bold text-xs bg-amber-50/40">
+                          <td className="px-3 py-3.5 text-right text-amber-700 font-bold text-xs bg-amber-50/40">
                             {r.totalAdvance > 0 ? formatPKR(r.totalAdvance) : '—'}
                           </td>
-                          <td className="px-3.5 py-3.5 text-right text-red-700 font-bold text-xs">
-                            {r.deductions > 0 ? formatPKR(r.deductions) : '—'}
+
+                          {/* Security & Custom Deductions Column */}
+                          <td className="px-3 py-3.5 text-right text-rose-700 font-bold text-xs bg-rose-50/40">
+                            {r.totalCustomDeductions > 0 ? (
+                              <div className="space-y-0.5">
+                                <span className="inline-block bg-rose-100 text-rose-800 px-2 py-0.5 rounded border border-rose-200">
+                                  -{formatPKR(r.totalCustomDeductions)}
+                                </span>
+                                {r.securityFee > 0 && (
+                                  <div className="text-[9px] text-rose-600">Security: {formatPKR(r.securityFee)}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-300">—</span>
+                            )}
                           </td>
-                          <td className="px-3.5 py-3.5 text-right font-black text-emerald-900 bg-emerald-50 group-hover:bg-emerald-100/80 transition-colors">
+
+                          <td className="px-3 py-3.5 text-right font-black text-emerald-900 bg-emerald-50 group-hover:bg-emerald-100/80 transition-colors">
                             <span className="inline-block bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg border border-emerald-200">
                               {formatPKR(r.netPayable)}
                             </span>
                           </td>
+
                           <td className="px-2.5 py-3.5 text-center no-print">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setSelectedStaffModal(r); }}
-                              className="p-1.5 bg-gray-100 hover:bg-emerald-600 hover:text-white rounded-lg text-gray-500 transition-colors"
-                              title="Click to view date-wise deduction breakdown"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); openCustomizeModal(r); }}
+                                className="p-1.5 bg-emerald-100 hover:bg-emerald-600 hover:text-white rounded-lg text-emerald-700 transition-colors flex items-center gap-1 text-xs font-bold px-2 py-1"
+                                title="Customize salary (Add remaining balance, security fee, advance, etc.)"
+                              >
+                                <SlidersHorizontal className="w-3.5 h-3.5" /> Edit
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setSelectedStaffModal(r); }}
+                                className="p-1.5 bg-gray-100 hover:bg-gray-700 hover:text-white rounded-lg text-gray-500 transition-colors"
+                                title="Click to view date-wise deduction breakdown"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
                       {salaryRows.length > 0 && (
                         <tr className="bg-emerald-50 font-black text-xs">
-                          <td colSpan={4} className="px-3.5 py-3.5 text-emerald-900 uppercase tracking-wider">
+                          <td colSpan={3} className="px-3.5 py-3.5 text-emerald-900 uppercase tracking-wider">
                             TOTAL ({salaryRows.length} STAFF MEMBERS)
                           </td>
                           <td className="px-3.5 py-3.5 text-right text-emerald-900">{formatPKR(filteredTotalGross)}</td>
                           <td />
+                          <td className="px-3.5 py-3.5 text-right text-green-800 bg-green-100/60">+{formatPKR(filteredTotalAdditions)}</td>
                           <td colSpan={2} />
                           <td className="px-3.5 py-3.5 text-right text-amber-800 bg-amber-100/60">{formatPKR(filteredTotalAdvances)}</td>
                           <td className="px-3.5 py-3.5 text-right text-red-700">{formatPKR(filteredTotalDeductions)}</td>
@@ -1019,6 +1275,266 @@ export default function ManagerPayrollPage() {
         )}
       </div>
 
+      {/* ── SALARY CUSTOMIZATION MODAL ── */}
+      {customizeModalStaff && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto no-print">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border border-gray-100 overflow-hidden my-8 transform transition-all">
+            
+            {/* Modal Header */}
+            <div className="bg-emerald-800 text-white p-6 relative">
+              <button
+                onClick={() => setCustomizeModalStaff(null)}
+                className="absolute top-5 right-5 text-emerald-200 hover:text-white bg-emerald-900/50 p-2 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-2 mb-1">
+                <SlidersHorizontal className="w-4 h-4 text-emerald-300" />
+                <span className="text-xs text-emerald-200 uppercase tracking-wider font-bold">Salary Customization</span>
+              </div>
+              <h2 className="text-2xl font-black tracking-tight">{customizeModalStaff.name}</h2>
+              <p className="text-xs text-emerald-200 mt-0.5">
+                {customizeModalStaff.designation} • Dept: {DEPT_LABELS[customizeModalStaff.dept] || customizeModalStaff.dept} ({data?.monthLabel})
+              </p>
+            </div>
+
+            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+
+              {/* Base Salary Reference Banner */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div>
+                  <span className="text-gray-500 font-bold">Gross Base Salary: </span>
+                  <span className="font-black text-gray-900">{formatPKR(customizeModalStaff.gross)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 font-bold">Base Days Earned: </span>
+                  <span className="font-black text-emerald-800">{customizeModalStaff.payableDays} Days ({formatPKR(customizeModalStaff.earnings)})</span>
+                </div>
+              </div>
+
+              {/* Section 1: Additions (+) */}
+              <div className="space-y-3 bg-green-50/50 border border-green-100 rounded-2xl p-4">
+                <h3 className="font-bold text-green-900 text-sm flex items-center gap-2">
+                  <PlusCircle className="w-4 h-4 text-green-600" /> Custom Salary Additions (+)
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
+                      Remaining Balance / Arrears
+                    </label>
+                    <input
+                      type="number"
+                      value={customizeForm.remainingBalance}
+                      onChange={e => setCustomizeForm(p => ({ ...p, remainingBalance: e.target.value }))}
+                      placeholder="e.g. 2500"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500 font-bold text-black"
+                    />
+                    <span className="text-[10px] text-gray-400 mt-0.5 block">Previous unpaid balance</span>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
+                      Performance Bonus
+                    </label>
+                    <input
+                      type="number"
+                      value={customizeForm.bonus}
+                      onChange={e => setCustomizeForm(p => ({ ...p, bonus: e.target.value }))}
+                      placeholder="e.g. 1000"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500 font-bold text-black"
+                    />
+                    <span className="text-[10px] text-gray-400 mt-0.5 block">Reward / Incentive</span>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
+                      Allowance / Overtime
+                    </label>
+                    <input
+                      type="number"
+                      value={customizeForm.allowance}
+                      onChange={e => setCustomizeForm(p => ({ ...p, allowance: e.target.value }))}
+                      placeholder="e.g. 1500"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500 font-bold text-black"
+                    />
+                    <span className="text-[10px] text-gray-400 mt-0.5 block">Special allowance</span>
+                  </div>
+                </div>
+
+                {/* Additional Custom Addition Items */}
+                {customizeForm.customAdditions.map((item, idx) => (
+                  <div key={item.id} className="flex gap-2 items-center bg-white p-2 rounded-xl border border-gray-200">
+                    <input
+                      type="text"
+                      placeholder="Reason / Label (e.g. Mobile Allowance)"
+                      value={item.label}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setCustomizeForm(p => ({
+                          ...p,
+                          customAdditions: p.customAdditions.map((ca, i) => i === idx ? { ...ca, label: val } : ca)
+                        }));
+                      }}
+                      className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-bold outline-none text-black"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Amount"
+                      value={item.amount}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setCustomizeForm(p => ({
+                          ...p,
+                          customAdditions: p.customAdditions.map((ca, i) => i === idx ? { ...ca, amount: val } : ca)
+                        }));
+                      }}
+                      className="w-28 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-bold outline-none text-black"
+                    />
+                    <button
+                      onClick={() => setCustomizeForm(p => ({
+                        ...p,
+                        customAdditions: p.customAdditions.filter((_, i) => i !== idx)
+                      }))}
+                      className="text-red-400 hover:text-red-600 p-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setCustomizeForm(p => ({
+                    ...p,
+                    customAdditions: [...p.customAdditions, { id: String(Math.random()), label: '', amount: '' }]
+                  }))}
+                  className="text-xs font-bold text-green-700 hover:text-green-900 flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Extra Addition Item
+                </button>
+              </div>
+
+              {/* Section 2: Deductions (-) */}
+              <div className="space-y-3 bg-rose-50/50 border border-rose-100 rounded-2xl p-4">
+                <h3 className="font-bold text-rose-900 text-sm flex items-center gap-2">
+                  <MinusCircle className="w-4 h-4 text-rose-600" /> Custom Salary Deductions (-)
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
+                      Security Fee Deduction
+                    </label>
+                    <input
+                      type="number"
+                      value={customizeForm.securityFee}
+                      onChange={e => setCustomizeForm(p => ({ ...p, securityFee: e.target.value }))}
+                      placeholder="e.g. 1000"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-500 font-bold text-black"
+                    />
+                    <span className="text-[10px] text-gray-400 mt-0.5 block">Staff security deposit fee</span>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
+                      Previous Advance Salary Adjustment
+                    </label>
+                    <input
+                      type="number"
+                      value={customizeForm.previousAdvance}
+                      onChange={e => setCustomizeForm(p => ({ ...p, previousAdvance: e.target.value }))}
+                      placeholder="e.g. 3000"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-500 font-bold text-black"
+                    />
+                    <span className="text-[10px] text-gray-400 mt-0.5 block">Advance salary taken before</span>
+                  </div>
+                </div>
+
+                {/* Additional Custom Deduction Items */}
+                {customizeForm.customDeductions.map((item, idx) => (
+                  <div key={item.id} className="flex gap-2 items-center bg-white p-2 rounded-xl border border-gray-200">
+                    <input
+                      type="text"
+                      placeholder="Reason / Label (e.g. Equipment Damage, Uniform)"
+                      value={item.label}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setCustomizeForm(p => ({
+                          ...p,
+                          customDeductions: p.customDeductions.map((cd, i) => i === idx ? { ...cd, label: val } : cd)
+                        }));
+                      }}
+                      className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-bold outline-none text-black"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Amount"
+                      value={item.amount}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setCustomizeForm(p => ({
+                          ...p,
+                          customDeductions: p.customDeductions.map((cd, i) => i === idx ? { ...cd, amount: val } : cd)
+                        }));
+                      }}
+                      className="w-28 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-bold outline-none text-black"
+                    />
+                    <button
+                      onClick={() => setCustomizeForm(p => ({
+                        ...p,
+                        customDeductions: p.customDeductions.filter((_, i) => i !== idx)
+                      }))}
+                      className="text-red-400 hover:text-red-600 p-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setCustomizeForm(p => ({
+                    ...p,
+                    customDeductions: [...p.customDeductions, { id: String(Math.random()), label: '', amount: '' }]
+                  }))}
+                  className="text-xs font-bold text-rose-700 hover:text-rose-900 flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Extra Deduction Item
+                </button>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                  Customization Notes / Reason
+                </label>
+                <textarea
+                  rows={2}
+                  value={customizeForm.notes}
+                  onChange={e => setCustomizeForm(p => ({ ...p, notes: e.target.value }))}
+                  placeholder="Notes explaining why salary additions/deductions were customized for this staff member..."
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-emerald-500 text-black font-bold"
+                />
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+              <button
+                onClick={() => setCustomizeModalStaff(null)}
+                className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl text-xs transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveCustomization}
+                disabled={savingCustomization}
+                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors disabled:opacity-60"
+              >
+                {savingCustomization ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Save Salary Customization
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* ── STAFF DEDUCTION & PAYOUT BREAKDOWN MODAL ── */}
       {selectedStaffModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto no-print">
@@ -1045,54 +1561,68 @@ export default function ManagerPayrollPage() {
             <div className="p-6 space-y-6">
 
               {/* Salary Summary Cards matching Staff Profile */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                <div className="bg-gray-50 border border-gray-100 p-3 rounded-2xl text-center">
-                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Base Salary</div>
+              <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                <div className="bg-gray-50 border border-gray-100 p-2.5 rounded-2xl text-center">
+                  <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Base Salary</div>
                   <div className="text-xs font-black text-gray-900">{formatPKR(selectedStaffModal.gross)}</div>
                   <div className="text-[9px] text-gray-400 mt-0.5">Daily: {formatPKR(selectedStaffModal.dailyRate)}</div>
                 </div>
 
-                <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-2xl text-center">
-                  <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-0.5">Earned Days</div>
+                <div className="bg-emerald-50 border border-emerald-100 p-2.5 rounded-2xl text-center">
+                  <div className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider mb-0.5">Earned Days</div>
                   <div className="text-xs font-black text-emerald-800">{selectedStaffModal.payableDays} Days</div>
                   <div className="text-[9px] text-emerald-600 mt-0.5">+{formatPKR(selectedStaffModal.earnings)}</div>
                 </div>
 
-                <div className="bg-red-50 border border-red-100 p-3 rounded-2xl text-center">
-                  <div className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-0.5">Fine Ded.</div>
+                <div className="bg-green-50 border border-green-100 p-2.5 rounded-2xl text-center">
+                  <div className="text-[9px] font-bold text-green-700 uppercase tracking-wider mb-0.5">Additions</div>
+                  <div className="text-xs font-black text-green-800">+{formatPKR(selectedStaffModal.totalCustomAdditions)}</div>
+                  <div className="text-[9px] text-green-600 mt-0.5">Rem / Bonus</div>
+                </div>
+
+                <div className="bg-red-50 border border-red-100 p-2.5 rounded-2xl text-center">
+                  <div className="text-[9px] font-bold text-red-600 uppercase tracking-wider mb-0.5">Fines Ded.</div>
                   <div className="text-xs font-black text-red-700">{formatPKR(selectedStaffModal.totalFines)}</div>
                   <div className="text-[9px] text-red-500 mt-0.5">{selectedStaffModal.staffFines?.length || 0} fines</div>
                 </div>
 
-                <div className="bg-amber-50 border border-amber-100 p-3 rounded-2xl text-center">
-                  <div className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-0.5">Advance Ded.</div>
+                <div className="bg-amber-50 border border-amber-100 p-2.5 rounded-2xl text-center">
+                  <div className="text-[9px] font-bold text-amber-700 uppercase tracking-wider mb-0.5">Advance Ded.</div>
                   <div className="text-xs font-black text-amber-800">{formatPKR(selectedStaffModal.totalAdvance)}</div>
                   <div className="text-[9px] text-amber-600 mt-0.5">Salary Advance</div>
                 </div>
 
-                <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl text-center col-span-2 sm:col-span-1">
-                  <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-0.5">Net To Pay</div>
+                <div className="bg-emerald-50 border border-emerald-200 p-2.5 rounded-2xl text-center col-span-2 sm:col-span-1">
+                  <div className="text-[9px] font-bold text-emerald-700 uppercase tracking-wider mb-0.5">Net To Pay</div>
                   <div className="text-xs font-black text-emerald-900">{formatPKR(selectedStaffModal.netPayable)}</div>
                   <div className="text-[9px] text-emerald-600 font-bold mt-0.5">Final Payout</div>
                 </div>
               </div>
 
-              {/* Date-wise Itemized Deduction Log */}
+              {/* Customization Notes if any */}
+              {selectedStaffModal.notes && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
+                  <span className="font-bold">Manager Customization Note: </span>
+                  {selectedStaffModal.notes}
+                </div>
+              )}
+
+              {/* Date-wise Itemized Deduction & Addition Log */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-gray-900 flex items-center gap-2 text-sm">
                     <Calendar className="w-4 h-4 text-emerald-600" />
-                    Date-Wise Deduction & Advance History
+                    Itemized Salary Breakdown & History
                   </h3>
                   <span className="text-xs font-bold text-gray-400">
-                    {selectedStaffModal.deductionItems.length} total items
+                    {selectedStaffModal.breakdownItems.length} total items
                   </span>
                 </div>
 
-                {selectedStaffModal.deductionItems.length === 0 ? (
+                {selectedStaffModal.breakdownItems.length === 0 ? (
                   <div className="bg-green-50 border border-green-100 rounded-2xl p-6 text-center text-emerald-800 space-y-1">
                     <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-600" />
-                    <p className="font-bold text-sm">No Deductions or Advances Recorded!</p>
+                    <p className="font-bold text-sm">Standard Full Payout!</p>
                     <p className="text-xs text-emerald-600">
                       This staff member has zero absences, zero fines, and zero advance salary taken for {data?.monthLabel}. Full base salary of {formatPKR(selectedStaffModal.gross)} will be paid.
                     </p>
@@ -1103,25 +1633,33 @@ export default function ManagerPayrollPage() {
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                           <th className="px-3.5 py-2.5 font-bold text-gray-600">Date</th>
-                          <th className="px-3.5 py-2.5 font-bold text-gray-600">Deduction Type</th>
+                          <th className="px-3.5 py-2.5 font-bold text-gray-600">Item Type</th>
                           <th className="px-3.5 py-2.5 font-bold text-gray-600">Reason / Description</th>
                           <th className="px-3.5 py-2.5 font-bold text-gray-600 text-right">Amount</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {selectedStaffModal.deductionItems.map((item: any) => (
+                        {selectedStaffModal.breakdownItems.map((item: any) => (
                           <tr key={item.id} className="hover:bg-gray-50/80">
                             <td className="px-3.5 py-3 font-mono font-bold text-gray-800 whitespace-nowrap">
                               {item.date}
                             </td>
                             <td className="px-3.5 py-3">
-                              {item.type === 'absent' ? (
+                              {item.category === 'addition' ? (
+                                <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                                  + Addition ({item.type})
+                                </span>
+                              ) : item.type === 'absent' ? (
                                 <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold text-[10px]">
                                   Absent Deduction
                                 </span>
                               ) : item.type === 'fine' ? (
                                 <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold text-[10px]">
                                   Fine Deduction
+                                </span>
+                              ) : item.type === 'security' ? (
+                                <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                                  Security Fee
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold text-[10px]">
@@ -1135,14 +1673,14 @@ export default function ManagerPayrollPage() {
                                 <div className="text-[10px] text-gray-400 mt-0.5">By: {item.recordedBy}</div>
                               )}
                             </td>
-                            <td className="px-3.5 py-3 text-right font-bold text-red-600 whitespace-nowrap">
-                              -{formatPKR(item.amount)}
+                            <td className={`px-3.5 py-3 text-right font-bold whitespace-nowrap ${item.category === 'addition' ? 'text-green-700' : 'text-red-600'}`}>
+                              {item.category === 'addition' ? '+' : '-'}{formatPKR(item.amount)}
                             </td>
                           </tr>
                         ))}
-                        <tr className="bg-red-50/60 font-black">
-                          <td colSpan={3} className="px-3.5 py-2.5 text-red-800">TOTAL DEDUCTIONS (Absents + Fines + Advances)</td>
-                          <td className="px-3.5 py-2.5 text-right text-red-700">-{formatPKR(selectedStaffModal.deductions)}</td>
+                        <tr className="bg-emerald-50/60 font-black">
+                          <td colSpan={3} className="px-3.5 py-2.5 text-emerald-950">NET FINAL PAYOUT AFTER ALL DEDUCTIONS & ADDITIONS</td>
+                          <td className="px-3.5 py-2.5 text-right text-emerald-900">{formatPKR(selectedStaffModal.netPayable)}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1154,7 +1692,7 @@ export default function ManagerPayrollPage() {
               <div className="bg-emerald-900 text-white rounded-2xl p-4 flex items-center justify-between">
                 <div>
                   <div className="text-[11px] text-emerald-200 font-medium">Final Money To Pay Staff</div>
-                  <div className="text-xs text-emerald-300">Base Salary - Total Deductions (Absents + Fines + Advances)</div>
+                  <div className="text-xs text-emerald-300">(Base Earned + Additions) - Total Deductions</div>
                 </div>
                 <div className="text-2xl font-black text-emerald-300">
                   {formatPKR(selectedStaffModal.netPayable)}
@@ -1171,12 +1709,20 @@ export default function ManagerPayrollPage() {
               >
                 Close
               </button>
-              <button
-                onClick={() => window.print()}
-                className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors"
-              >
-                <Printer className="w-3.5 h-3.5" /> Print Statement
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { const s = selectedStaffModal; setSelectedStaffModal(null); openCustomizeModal(s); }}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 font-bold rounded-xl text-xs transition-colors"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" /> Customize Salary
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors"
+                >
+                  <Printer className="w-3.5 h-3.5" /> Print Statement
+                </button>
+              </div>
             </div>
 
           </div>
