@@ -505,9 +505,24 @@ export default function StaffProfilePage() {
       } else if (status === 'late') {
         lateDays++;
         payableDatesList.push({ date: dayStr, status: 'Late' });
-      } else if (status === 'leave' || status === 'paid_leave' || status === 'unpaid_leave') {
+      } else if (status === 'paid_leave') {
         paidLeaves++;
         payableDatesList.push({ date: dayStr, status: 'Paid Leave' });
+      } else if (status === 'unpaid_leave') {
+        unpaidLeaves++;
+        if (dayStr <= todayStr) {
+          deductedDatesList.push({ date: dayStr, status: 'Unpaid Leave', deduction: dailyWage });
+        }
+      } else if (status === 'leave') {
+        if (paidLeaves < 2) {
+          paidLeaves++;
+          payableDatesList.push({ date: dayStr, status: 'Paid Leave' });
+        } else {
+          unpaidLeaves++;
+          if (dayStr <= todayStr) {
+            deductedDatesList.push({ date: dayStr, status: 'Unpaid Leave', deduction: dailyWage });
+          }
+        }
       } else if (status === 'absent') {
         absentDays++;
         if (dayStr <= todayStr) {
@@ -521,10 +536,10 @@ export default function StaffProfilePage() {
       }
     });
 
-    const totalAbsentDays = absentDays + unmarkedDays;
+    const totalAbsentDays = absentDays + unmarkedDays + unpaidLeaves;
     const payableDays = Math.max(0, daysPassed - totalAbsentDays);
 
-    const earnings = payableDays * dailyWage;
+    const earnings = Math.max(0, (staff?.monthlySalary || 0) - (totalAbsentDays * dailyWage));
     const absentDeduction = totalAbsentDays * dailyWage;
 
     // Filter fines for selected month

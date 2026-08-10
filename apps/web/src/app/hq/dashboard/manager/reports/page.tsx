@@ -84,6 +84,24 @@ export default function ManagerReportsPage() {
   // Weekly vs Monthly Toggle State
   const [reportPeriod, setReportPeriod] = useState<'monthly' | 'weekly'>('monthly');
 
+  // Bulk Edit Modal State
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [bulkStaffId, setBulkStaffId] = useState<string>('all');
+  const [bulkStartDate, setBulkStartDate] = useState<string>(`${selectedMonth}-01`);
+  const [bulkEndDate, setBulkEndDate] = useState<string>(`${selectedMonth}-05`);
+  const [bulkAction, setBulkAction] = useState<'auto_leave' | 'paid_leave' | 'unpaid_leave' | 'present' | 'absent' | 'late'>('auto_leave');
+  const [savingBulk, setSavingBulk] = useState(false);
+
+  useEffect(() => {
+    if (selectedMonth) {
+      setBulkStartDate(`${selectedMonth}-01`);
+      const [y, m] = selectedMonth.split('-');
+      const daysInM = new Date(parseInt(y, 10), parseInt(m, 10), 0).getDate();
+      const endDay = Math.min(5, daysInM);
+      setBulkEndDate(`${selectedMonth}-${String(endDay).padStart(2, '0')}`);
+    }
+  }, [selectedMonth]);
+
   // Real-time filters state
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('all');
@@ -352,11 +370,12 @@ export default function ManagerReportsPage() {
     const extraPoints = gpDoc ? Number(gpDoc.extra || 0) : 0;
 
     const daysToProcess = dateRange.days;
-
     let presents = 0;
     let absents = 0;
     let lates = 0;
     let leaves = 0;
+    let paidLeavesCount = 0;
+    let unpaidLeavesCount = 0;
     let unmarked = 0;
 
     let dressCompliantDays = 0;
@@ -390,10 +409,27 @@ export default function ManagerReportsPage() {
         isLate = att.isLate === true || attStatus === 'late';
       }
 
+      let leaveType = '';
+      if (attStatus === 'paid_leave') {
+        paidLeavesCount++;
+        leaveType = 'paid_leave';
+      } else if (attStatus === 'unpaid_leave') {
+        unpaidLeavesCount++;
+        leaveType = 'unpaid_leave';
+      } else if (attStatus === 'leave') {
+        if (paidLeavesCount < 2) {
+          paidLeavesCount++;
+          leaveType = 'paid_leave';
+        } else {
+          unpaidLeavesCount++;
+          leaveType = 'unpaid_leave';
+        }
+      }
+
       let attendanceStatus = 'unmarked';
-      if (attStatus === 'paid_leave' || attStatus === 'unpaid_leave' || attStatus === 'leave') {
+      if (['paid_leave', 'unpaid_leave', 'leave'].includes(attStatus)) {
         attendanceStatus = 'leave';
-      } else if (['present', 'absent', 'late', 'unmarked', 'leave'].includes(attStatus)) {
+      } else if (['present', 'absent', 'late', 'unmarked'].includes(attStatus)) {
         attendanceStatus = attStatus;
       }
       if (isLate && attendanceStatus === 'present') {
@@ -424,18 +460,8 @@ export default function ManagerReportsPage() {
         if (dress) {
           if (dress.status === 'yes' || dress.isCompliant === true) {
             isDressCompliant = true;
-          } else {
-            const config = (member as any).dressCodeConfig || [];
-            const items = dress.items || [];
-            if (config.length === 0) {
-              if (dress.status !== 'no') isDressCompliant = true;
-            } else {
-              const missing = config.filter((c: any) => {
-                const item = items.find((i: any) => i.key === c.key);
-                return !item || item.status === 'no' || item.wearing === false;
-              });
-              if (missing.length === 0) isDressCompliant = true;
-            }
+          } else if (Array.isArray(dress.items) && dress.items.length > 0) {
+            isDressCompliant = dress.items.every((i: any) => i.status === 'yes');
           }
         }
         if (isDressCompliant) {
@@ -460,20 +486,10 @@ export default function ManagerReportsPage() {
         dutyTotalDays++;
         let isDutyCompliant = false;
         if (duty) {
-          if (duty.status === 'yes' || duty.status === 'completed') {
+          if (duty.status === 'yes' || duty.status === 'done' || duty.isCompliant === true) {
             isDutyCompliant = true;
-          } else {
-            const config = (member as any).dutyConfig || [];
-            const items = duty.duties || [];
-            if (config.length === 0) {
-              if (duty.status !== 'no' && duty.status !== 'failed') isDutyCompliant = true;
-            } else {
-              const pending = config.filter((c: any) => {
-                const item = items.find((i: any) => i.key === c.key);
-                return !item || item.status === 'pending' || item.status === 'not_done';
-              });
-              if (pending.length === 0) isDutyCompliant = true;
-            }
+          } else if (Array.isArray(duty.duties) && duty.duties.length > 0) {
+            isDutyCompliant = duty.duties.every((i: any) => i.status === 'done' || i.status === 'yes');
           }
         }
         if (isDutyCompliant) {
@@ -485,14 +501,12 @@ export default function ManagerReportsPage() {
       }
 
       // Exact points rules
-      // Attendance: 1 point if present and NOT late
-      const attPoint = (attendanceStatus === 'present') ? 1 : 0;
-      const uniformPoint = (!onLeave && uniformStatus === 'yes') ? 1 : 0;
-      const dutyPoint = (!onLeave && dutyStatus === 'yes') ? 1 : 0;
-
-      const dailyPoints = attPoint + uniformPoint + dutyPoint;
-
-      if (!onLeave && attendanceStatus !== 'unmarked') {
+      let dailyPoints = 0;
+      if (!onLeave) {
+        const attPoint = (attendanceStatus === 'present' || attendanceStatus === 'late') ? 1 : 0;
+        const uniformPoint = uniformStatus === 'yes' ? 1 : 0;
+        const dutyPoint = dutyStatus === 'yes' ? 1 : 0;
+        dailyPoints = attPoint + uniformPoint + dutyPoint;
         totalDailyPointsSum += dailyPoints;
       }
 
@@ -502,6 +516,8 @@ export default function ManagerReportsPage() {
         date,
         day: dayNum,
         attendance: attendanceStatus,
+        rawAttendance: attStatus,
+        leaveType,
         uniform: uniformStatus,
         duty: dutyStatus,
         score: dailyPoints,
@@ -549,6 +565,8 @@ export default function ManagerReportsPage() {
       absents,
       lates,
       leaves,
+      paidLeaves: paidLeavesCount,
+      unpaidLeaves: unpaidLeavesCount,
       unmarked,
       finesTotal,
       maxPoints: 100,
@@ -683,36 +701,82 @@ export default function ManagerReportsPage() {
       const prefix = getDeptPrefix(dept);
       const date = selectedDay.date;
       const simpleSid = getSimpleId(activeViewingStaff.id);
+      const monthStr = date.substring(0, 7);
+
+      let targetStatus = editForm.attendance;
+
+      // Enforce Max 2 Paid Leaves Policy per month
+      if (targetStatus === 'paid_leave' || targetStatus === 'leave') {
+        let existingPaidCount = 0;
+        logs?.attMap?.forEach((att: any, key: string) => {
+          if (key.startsWith(`${simpleSid}_${monthStr}-`)) {
+            const recDate = key.replace(`${simpleSid}_`, '');
+            if (recDate !== date) {
+              if (att.status === 'paid_leave' || att.status === 'leave') {
+                existingPaidCount++;
+              }
+            }
+          }
+        });
+
+        if (existingPaidCount >= 2) {
+          targetStatus = 'unpaid_leave';
+          toast.error(`Staff already has ${existingPaidCount} Paid Leaves in ${monthStr}. Saved as Unpaid Leave.`, { duration: 4000 });
+        } else {
+          targetStatus = 'paid_leave';
+        }
+      }
 
       // 1. Attendance update
       const attRef = doc(db, `${prefix}_attendance`, `${simpleSid}_${date}`);
       await setDoc(attRef, {
         staffId: simpleSid,
         date,
-        status: editForm.attendance,
-        isLate: editForm.attendance === 'late',
+        status: targetStatus,
+        isLate: targetStatus === 'late',
         updatedAt: serverTimestamp()
       }, { merge: true });
 
-      // 2. Dress Log update
-      const dressRef = doc(db, `${prefix}_dress_logs`, `${simpleSid}_${date}`);
-      await setDoc(dressRef, {
-        staffId: simpleSid,
-        date,
-        status: editForm.uniform,
-        items: editForm.uniformItems || [],
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+      // If leave, set uniform & duty logs to 'na'
+      if (['paid_leave', 'unpaid_leave', 'leave'].includes(targetStatus)) {
+        const dressRef = doc(db, `${prefix}_dress_logs`, `${simpleSid}_${date}`);
+        await setDoc(dressRef, {
+          staffId: simpleSid,
+          date,
+          status: 'na',
+          items: [],
+          updatedAt: serverTimestamp()
+        }, { merge: true });
 
-      // 3. Duty Log update
-      const dutyRef = doc(db, `${prefix}_duty_logs`, `${simpleSid}_${date}`);
-      await setDoc(dutyRef, {
-        staffId: simpleSid,
-        date,
-        status: editForm.duty,
-        duties: editForm.dutyItems || [],
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+        const dutyRef = doc(db, `${prefix}_duty_logs`, `${simpleSid}_${date}`);
+        await setDoc(dutyRef, {
+          staffId: simpleSid,
+          date,
+          status: 'na',
+          duties: [],
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      } else {
+        // 2. Dress Log update
+        const dressRef = doc(db, `${prefix}_dress_logs`, `${simpleSid}_${date}`);
+        await setDoc(dressRef, {
+          staffId: simpleSid,
+          date,
+          status: editForm.uniform,
+          items: editForm.uniformItems || [],
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        // 3. Duty Log update
+        const dutyRef = doc(db, `${prefix}_duty_logs`, `${simpleSid}_${date}`);
+        await setDoc(dutyRef, {
+          staffId: simpleSid,
+          date,
+          status: editForm.duty,
+          duties: editForm.dutyItems || [],
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      }
 
       // 4. Fines update
       const fineRef = doc(db, `${prefix}_fines`, `${simpleSid}_${date}`);
@@ -733,7 +797,6 @@ export default function ManagerReportsPage() {
 
       toast.success(`Audit record for ${date} saved successfully!`);
       
-      // Reload logs and recalculate scores across all components
       await fetchData();
       setIsEditingDay(false);
     } catch (err: any) {
@@ -741,6 +804,122 @@ export default function ManagerReportsPage() {
       toast.error("Failed to save audit: " + (err.message || 'Unknown error'));
     } finally {
       setSavingAudit(false);
+    }
+  };
+
+  const handleSaveBulkAudit = async () => {
+    if (!bulkStartDate || !bulkEndDate) {
+      toast.error("Please select valid start and end dates.");
+      return;
+    }
+    if (bulkStartDate > bulkEndDate) {
+      toast.error("Start date cannot be after end date.");
+      return;
+    }
+
+    setSavingBulk(true);
+    try {
+      const dates: string[] = [];
+      let curr = new Date(bulkStartDate);
+      const end = new Date(bulkEndDate);
+      while (curr <= end) {
+        dates.push(curr.toISOString().slice(0, 10));
+        curr.setDate(curr.getDate() + 1);
+      }
+
+      const targetStaffList = bulkStaffId === 'all'
+        ? staff
+        : staff.filter(s => getSimpleId(s.id) === getSimpleId(bulkStaffId) || s.id === bulkStaffId);
+
+      if (targetStaffList.length === 0) {
+        toast.error("No target staff selected.");
+        setSavingBulk(false);
+        return;
+      }
+
+      let totalUpdated = 0;
+      let paidAssigned = 0;
+      let unpaidAssigned = 0;
+
+      for (const member of targetStaffList) {
+        const simpleSid = getSimpleId(member.id);
+        const prefix = getDeptPrefix(member.department as StaffDept);
+        const monthStr = bulkStartDate.substring(0, 7);
+
+        let existingPaidCount = 0;
+        logs?.attMap?.forEach((att: any, key: string) => {
+          if (key.startsWith(`${simpleSid}_${monthStr}-`)) {
+            const recDate = key.replace(`${simpleSid}_`, '');
+            if (!dates.includes(recDate)) {
+              if (att.status === 'paid_leave' || att.status === 'leave') {
+                existingPaidCount++;
+              }
+            }
+          }
+        });
+
+        for (const date of dates) {
+          let targetStatus = bulkAction;
+
+          if (bulkAction === 'auto_leave' || bulkAction === 'paid_leave') {
+            if (existingPaidCount < 2) {
+              targetStatus = 'paid_leave';
+              existingPaidCount++;
+              paidAssigned++;
+            } else {
+              targetStatus = 'unpaid_leave';
+              unpaidAssigned++;
+            }
+          } else if (bulkAction === 'unpaid_leave') {
+            targetStatus = 'unpaid_leave';
+            unpaidAssigned++;
+          }
+
+          const attRef = doc(db, `${prefix}_attendance`, `${simpleSid}_${date}`);
+          await setDoc(attRef, {
+            staffId: simpleSid,
+            date,
+            status: targetStatus,
+            isLate: targetStatus === 'late',
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+
+          if (['paid_leave', 'unpaid_leave', 'leave'].includes(targetStatus)) {
+            const dressRef = doc(db, `${prefix}_dress_logs`, `${simpleSid}_${date}`);
+            await setDoc(dressRef, {
+              staffId: simpleSid,
+              date,
+              status: 'na',
+              items: [],
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+
+            const dutyRef = doc(db, `${prefix}_duty_logs`, `${simpleSid}_${date}`);
+            await setDoc(dutyRef, {
+              staffId: simpleSid,
+              date,
+              status: 'na',
+              duties: [],
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+          }
+
+          totalUpdated++;
+        }
+      }
+
+      toast.success(
+        `Bulk update completed! ${totalUpdated} logs updated.` +
+        (paidAssigned > 0 || unpaidAssigned > 0 ? ` (${paidAssigned} Paid, ${unpaidAssigned} Unpaid leaves)` : '')
+      );
+
+      await fetchData();
+      setIsBulkModalOpen(false);
+    } catch (err: any) {
+      console.error("Error saving bulk audit:", err);
+      toast.error("Failed to save bulk changes.");
+    } finally {
+      setSavingBulk(false);
     }
   };
 
@@ -862,6 +1041,13 @@ export default function ManagerReportsPage() {
                 className="w-full bg-white border border-slate-100 rounded-2xl pl-11 pr-5 py-3 text-slate-800 text-xs font-bold outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm cursor-pointer" 
               />
             </div>
+            <button 
+              type="button"
+              onClick={() => setIsBulkModalOpen(true)} 
+              className="w-1/2 md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-5 py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-95 duration-200"
+            >
+              <Edit3 size={16} /> Bulk Leaves / Edit
+            </button>
             <button 
               onClick={() => window.print()} 
               className="w-1/2 md:w-auto bg-white hover:bg-slate-50 border border-slate-100 text-slate-700 font-bold text-xs px-5 py-3 rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2 hover:shadow-md active:scale-95 duration-200"
@@ -1587,13 +1773,19 @@ export default function ManagerReportsPage() {
                         
                         {/* Attendance Selector */}
                         <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2.5 shadow-sm">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">1. Attendance Status</p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">1. Attendance Status</p>
+                            <span className="text-[9px] font-black bg-purple-50 border border-purple-100 text-purple-700 px-2 py-0.5 rounded-lg">
+                              Paid Leaves: {activeViewingStaff?.stats?.paidLeaves ?? 0} / 2
+                            </span>
+                          </div>
                           <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold">
                             {[
                               { id: 'present', label: 'Present (+1 pt)', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
                               { id: 'late', label: 'Late (0 pt)', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
                               { id: 'absent', label: 'Absent (0 pt)', cls: 'bg-rose-50 text-rose-700 border-rose-200' },
-                              { id: 'leave', label: 'Leave (N/A)', cls: 'bg-purple-50 text-purple-700 border-purple-200' },
+                              { id: 'paid_leave', label: 'Paid Leave', cls: 'bg-purple-50 text-purple-700 border-purple-200' },
+                              { id: 'unpaid_leave', label: 'Unpaid Leave', cls: 'bg-amber-50 text-amber-800 border-amber-300' },
                               { id: 'unmarked', label: 'Unmarked', cls: 'bg-slate-100 text-slate-600 border-slate-200' },
                             ].map(opt => (
                               <button
@@ -1602,8 +1794,8 @@ export default function ManagerReportsPage() {
                                 onClick={() => setEditForm((prev: any) => ({
                                   ...prev,
                                   attendance: opt.id,
-                                  uniform: opt.id === 'leave' ? 'na' : prev.uniform,
-                                  duty: opt.id === 'leave' ? 'na' : prev.duty
+                                  uniform: (opt.id === 'paid_leave' || opt.id === 'unpaid_leave' || opt.id === 'leave') ? 'na' : prev.uniform,
+                                  duty: (opt.id === 'paid_leave' || opt.id === 'unpaid_leave' || opt.id === 'leave') ? 'na' : prev.duty
                                 }))}
                                 className={`px-2 py-2 rounded-xl border text-center transition-all ${
                                   editForm.attendance === opt.id
@@ -1615,6 +1807,11 @@ export default function ManagerReportsPage() {
                               </button>
                             ))}
                           </div>
+                          {(editForm.attendance === 'paid_leave' || editForm.attendance === 'leave') && (activeViewingStaff?.stats?.paidLeaves ?? 0) >= 2 && selectedDay?.attendance !== 'paid_leave' && (
+                            <p className="text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 p-2 rounded-xl">
+                              ⚠️ Max 2 paid leaves reached for this month. This leave will be saved as Unpaid Leave.
+                            </p>
+                          )}
                         </div>
 
                         {/* Dress Compliance Selector */}
@@ -1900,6 +2097,142 @@ export default function ManagerReportsPage() {
 
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* ==================== BULK EDIT & LEAVE MODAL ==================== */}
+      {isBulkModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200 print:hidden">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-xl p-6 shadow-2xl space-y-5 my-8">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-2xl">
+                  <Edit3 size={20} />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-lg">Bulk Leave & Attendance Edit</h3>
+                  <p className="text-slate-500 text-xs font-medium">Apply bulk leave or status changes across date ranges</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsBulkModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Capping Policy Alert Banner */}
+            <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 flex items-start gap-3 text-amber-900">
+              <Shield className="text-amber-600 shrink-0 mt-0.5" size={18} />
+              <div className="text-xs space-y-1">
+                <p className="font-extrabold uppercase tracking-wider text-[10px] text-amber-700">Monthly Paid Leave Policy (Max 2 Days)</p>
+                <p className="font-medium leading-relaxed">
+                  Each staff member receives a maximum of <strong>2 Paid Leaves</strong> per calendar month. Any additional leaves assigned within the month will be automatically saved as <strong>Unpaid Leave</strong> (wage deducted).
+                </p>
+              </div>
+            </div>
+
+            {/* Form Controls */}
+            <div className="space-y-4 text-xs font-bold">
+              {/* Target Staff Selection */}
+              <div>
+                <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
+                  Select Staff Member
+                </label>
+                <select
+                  value={bulkStaffId}
+                  onChange={(e) => setBulkStaffId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                >
+                  <option value="all">👥 All Active Staff ({staff.length} Members)</option>
+                  {staff.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({getDeptLabel(s.department)} — {formatDesignation(s.designation)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Date Range Selection */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={bulkStartDate}
+                    onChange={(e) => setBulkStartDate(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={bulkEndDate}
+                    onChange={(e) => setBulkEndDate(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Attendance Action Selection */}
+              <div>
+                <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
+                  Select Attendance Action
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {[
+                    { id: 'auto_leave', label: 'Apply Leave (Auto Max 2 Paid)', desc: 'First 2 = Paid, 3rd+ = Unpaid', cls: 'bg-purple-50 border-purple-200 text-purple-800' },
+                    { id: 'paid_leave', label: 'Paid Leave', desc: 'Max 2 per month', cls: 'bg-indigo-50 border-indigo-200 text-indigo-800' },
+                    { id: 'unpaid_leave', label: 'Unpaid Leave', desc: 'Deducted from salary', cls: 'bg-amber-50 border-amber-200 text-amber-800' },
+                    { id: 'present', label: 'Mark Present', desc: '+1 Point', cls: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
+                    { id: 'absent', label: 'Mark Absent', desc: '0 Point (Deducted)', cls: 'bg-rose-50 border-rose-200 text-rose-800' },
+                    { id: 'late', label: 'Mark Late', desc: '0 Point', cls: 'bg-amber-50 border-amber-200 text-amber-800' },
+                  ].map(opt => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setBulkAction(opt.id as any)}
+                      className={`p-3 rounded-2xl border text-left transition-all ${
+                        bulkAction === opt.id
+                          ? `${opt.cls} ring-2 ring-indigo-500 font-extrabold shadow-sm scale-[1.02]`
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="text-xs font-black">{opt.label}</div>
+                      <div className="text-[9px] opacity-75 font-semibold mt-0.5">{opt.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsBulkModalOpen(false)}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-xs transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={savingBulk}
+                onClick={handleSaveBulkAudit}
+                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-extrabold text-xs shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+              >
+                {savingBulk ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                Apply Bulk Changes
+              </button>
+            </div>
           </div>
         </div>
       )}

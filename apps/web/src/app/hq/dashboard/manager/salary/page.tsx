@@ -149,24 +149,36 @@ export default function SalarySlipsPage() {
     const todayStr = new Date().toISOString().slice(0, 10);
     
     let absentCount = 0;
+    let unpaidLeaveDays = 0;
+    let paidLeaveDays = 0;
+    let legacyPaidCount = 0;
+
     daysInMonthList.forEach(dayStr => {
       const att = monthAttendance.find((a: any) => a.date === dayStr);
       const status = att ? att.status : 'unmarked';
       const isPast = dayStr < todayStr;
       if (status === 'absent' || (status === 'unmarked' && isPast)) {
         absentCount++;
+      } else if (status === 'unpaid_leave') {
+        unpaidLeaveDays++;
+      } else if (status === 'paid_leave') {
+        paidLeaveDays++;
+      } else if (status === 'leave') {
+        if (legacyPaidCount < 2) {
+          legacyPaidCount++;
+          paidLeaveDays++;
+        } else {
+          unpaidLeaveDays++;
+        }
       }
     });
 
     const presentDays = monthAttendance.filter((a: any) => a.status === 'present').length;
-    const paidLeaveDays = monthAttendance.filter((a: any) => a.status === 'paid_leave').length;
-    const unpaidLeaveDays = monthAttendance.filter((a: any) => a.status === 'unpaid_leave').length;
-    const legacyLeaveDays = monthAttendance.filter((a: any) => a.status === 'leave').length;
-
+    const totalDeductedDays = absentCount + unpaidLeaveDays;
     const workingDays = 30;
 
     const dailyWage = Math.floor((member.monthlySalary || 0) / 30);
-    const absentDeduction = Math.round(absentCount * dailyWage);
+    const absentDeduction = Math.round(totalDeductedDays * dailyWage);
     
     const currentBonus = existingSlip ? (existingSlip.bonus || 0) : 0;
     const currentDeductions = existingSlip ? (existingSlip.otherDeductions || 0) : 0;
@@ -184,7 +196,7 @@ export default function SalarySlipsPage() {
       workingDays,
       presentDays,
       absentDays: absentCount,
-      leaveDays: paidLeaveDays + unpaidLeaveDays + legacyLeaveDays,
+      leaveDays: paidLeaveDays + unpaidLeaveDays,
       paidLeaveDays,
       unpaidLeaveDays,
       absentDeduction,
