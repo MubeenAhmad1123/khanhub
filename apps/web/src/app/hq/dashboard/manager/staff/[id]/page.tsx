@@ -546,7 +546,9 @@ export default function StaffProfilePage() {
     const monthlyFinesList = fines.filter(isFineInSelectedMonth);
     const totalFines = monthlyFinesList.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
-    const actualAdvance = Math.max(Number(slip?.advance || 0), approvedAdvancesForMonth);
+    const actualAdvance = (slip && slip.advance !== undefined && slip.advance !== null)
+      ? Number(slip.advance)
+      : approvedAdvancesForMonth;
 
     if (slip) {
       const net = Math.floor(slip.basicSalary - (slip.absentDeduction || 0) - (slip.fine || slip.otherDeductions || 0) - actualAdvance + (slip.bonus || 0));

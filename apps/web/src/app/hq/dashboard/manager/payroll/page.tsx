@@ -166,7 +166,7 @@ export default function ManagerPayrollPage() {
     const txDate = tx.transactionDate || tx.date || tx.createdAt;
     if (!txDate) {
       if (tx.month) return String(tx.month) === targetMonthStr;
-      return true;
+      return false;
     }
     const parsedStr = formatDateString(txDate);
     if (parsedStr && parsedStr.startsWith(targetMonthStr)) {
@@ -194,9 +194,6 @@ export default function ManagerPayrollPage() {
       const outstandingDebt = staffRow.netPayable < 0 ? Math.abs(staffRow.netPayable) : staffRow.totalAdvance;
 
       await updateDoc(staffDocRef, {
-        advance: outstandingDebt,
-        advanceSalary: outstandingDebt,
-        monthlyAdvance: outstandingDebt,
         salaryBalance: staffRow.netPayable,
         outstandingBalance: staffRow.netPayable < 0 ? Math.abs(staffRow.netPayable) : 0,
         lastPayrollMonth: monthStr,
@@ -347,7 +344,9 @@ export default function ManagerPayrollPage() {
             });
 
             const customAdvanceVal = Number(customAdj?.previousAdvance || 0);
-            const actualAdvance = Math.max(Number(slip?.advance || 0), approvedAdvancesForMonth, staffDocAdvance, customAdvanceVal);
+            const actualAdvance = (slip && slip.advance !== undefined && slip.advance !== null)
+              ? Number(slip.advance)
+              : (approvedAdvancesForMonth > 0 ? approvedAdvancesForMonth : customAdvanceVal);
 
             // Additional Custom Additions (Remaining balance/arrears, bonus, allowance, custom items)
             const remainingBalance = Number(customAdj?.remainingBalance || 0);

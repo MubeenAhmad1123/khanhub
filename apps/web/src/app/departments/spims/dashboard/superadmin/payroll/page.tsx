@@ -130,7 +130,7 @@ export default function SpimsPayrollPage() {
     const txDate = tx.transactionDate || tx.date || tx.createdAt;
     if (!txDate) {
       if (tx.month) return String(tx.month) === targetMonthStr;
-      return true;
+      return false;
     }
     const parsedStr = formatDateString(txDate);
     if (parsedStr && parsedStr.startsWith(targetMonthStr)) {
@@ -237,7 +237,9 @@ export default function SpimsPayrollPage() {
           return false;
         });
 
-        const actualAdvance = Math.max(Number(slip?.advance || 0), approvedAdvancesForMonth, staffDocAdvance);
+        const actualAdvance = (slip && slip.advance !== undefined && slip.advance !== null)
+          ? Number(slip.advance)
+          : approvedAdvancesForMonth;
 
         // Filter attendance docs
         const staffAtt = allAttDocs.filter((a: any) => {
