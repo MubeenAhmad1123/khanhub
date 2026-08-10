@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, addDoc, deleteDoc, doc, Timestamp, setDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, addDoc, deleteDoc, doc, Timestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 import { toDate, downloadElementAsPng } from '@/lib/utils';
@@ -11,7 +11,7 @@ import {
   UserCog, Printer, Calendar, DollarSign, Loader2, Download,
   Plus, X, Receipt, Trash2, Building2, Eye, CheckCircle2,
   Info, CreditCard, SlidersHorizontal, PlusCircle, MinusCircle,
-  Save
+  Save, AlertTriangle, RefreshCw
 } from 'lucide-react';
 
 const MONTHS = [
@@ -41,7 +41,11 @@ const DEPT_COLORS: Record<string, string> = {
 };
 
 function formatPKR(n: number) {
-  return `Rs. ${Math.round(n).toLocaleString('en-PK')}`;
+  const rounded = Math.round(n);
+  if (rounded < 0) {
+    return `-Rs. ${Math.abs(rounded).toLocaleString('en-PK')}`;
+  }
+  return `Rs. ${rounded.toLocaleString('en-PK')}`;
 }
 
 function formatDateString(val: any): string {
@@ -104,6 +108,7 @@ export default function ManagerPayrollPage() {
     customDeductions: [] as Array<{ id: string; label: string; amount: string }>,
   });
   const [savingCustomization, setSavingCustomization] = useState(false);
+  const [syncingProfileId, setSyncingProfileId] = useState<string | null>(null);
 
   // Fine form
   const [showFineForm, setShowFineForm] = useState(false);
@@ -171,6 +176,40 @@ export default function ManagerPayrollPage() {
       return String(tx.month) === targetMonthStr;
     }
     return false;
+  };
+
+  const syncStaffProfileBalance = async (staffRow: any) => {
+    try {
+      setSyncingProfileId(staffRow.id);
+      const prefix = getDeptPrefix(staffRow.dept as StaffDept);
+      const dept = staffRow.dept as StaffDept;
+      const staffCol = dept === 'hq' ? 'hq_users'
+        : dept === 'job-center' ? 'jobcenter_users'
+        : dept === 'social-media' ? 'media_users'
+        : `${prefix}_users`;
+
+      const staffDocRef = doc(db, staffCol, staffRow.id);
+
+      // If net salary is negative, advance / debt balance is the positive magnitude
+      const outstandingDebt = staffRow.netPayable < 0 ? Math.abs(staffRow.netPayable) : staffRow.totalAdvance;
+
+      await updateDoc(staffDocRef, {
+        advance: outstandingDebt,
+        advanceSalary: outstandingDebt,
+        monthlyAdvance: outstandingDebt,
+        salaryBalance: staffRow.netPayable,
+        outstandingBalance: staffRow.netPayable < 0 ? Math.abs(staffRow.netPayable) : 0,
+        lastPayrollMonth: monthStr,
+        updatedAt: Timestamp.now(),
+      });
+
+      alert(`Successfully saved balance (${formatPKR(staffRow.netPayable)}) to ${staffRow.name}'s profile!`);
+      await handleLoad();
+    } catch (err: any) {
+      alert('Failed to sync balance to profile: ' + err.message);
+    } finally {
+      setSyncingProfileId(null);
+    }
   };
 
   const handleLoad = useCallback(async () => {
@@ -433,10 +472,12 @@ export default function ManagerPayrollPage() {
 
             const totalFines = staffFines.reduce((s: number, f: any) => s + (Number(f.amount) || 0), 0);
 
-            // Total Gross & Total Net formula with Additions & Deductions
+            // Total Gross & Net formula: CAN GO IN MINUS IF ADVANCE/DEDUCTIONS > EARNINGS!
             const totalEarningsWithAdditions = baseEarnedSalary + totalCustomAdditions;
             const totalDeductions = Math.round(totalAbsentDeduction + totalFines + actualAdvance + totalCustomDeductions);
-            const netPayable = Math.floor(Math.max(0, totalEarningsWithAdditions - totalDeductions));
+            
+            // Allow negative net payable (e.g. -10,000 PKR if advance exceeds salary)
+            const netPayable = Math.floor(totalEarningsWithAdditions - totalDeductions);
 
             // Itemized date-wise deduction & addition breakdown
             const breakdownItems: Array<{
@@ -696,22 +737,59 @@ export default function ManagerPayrollPage() {
         .filter(cd => cd.label.trim() && Number(cd.amount) > 0)
         .map(cd => ({ id: cd.id, label: cd.label.trim(), amount: Number(cd.amount) }));
 
+      const remainingBalNum = Number(customizeForm.remainingBalance) || 0;
+      const bonusNum = Number(customizeForm.bonus) || 0;
+      const allowanceNum = Number(customizeForm.allowance) || 0;
+      const secFeeNum = Number(customizeForm.securityFee) || 0;
+      const prevAdvNum = Number(customizeForm.previousAdvance) || 0;
+
+      // 1. Save salary adjustment doc
       await setDoc(adjRef, {
         staffId: customizeModalStaff.id,
         staffName: customizeModalStaff.name,
         dept: customizeModalStaff.dept,
         month: monthStr,
-        remainingBalance: Number(customizeForm.remainingBalance) || 0,
-        bonus: Number(customizeForm.bonus) || 0,
-        allowance: Number(customizeForm.allowance) || 0,
-        securityFee: Number(customizeForm.securityFee) || 0,
-        previousAdvance: Number(customizeForm.previousAdvance) || 0,
+        remainingBalance: remainingBalNum,
+        bonus: bonusNum,
+        allowance: allowanceNum,
+        securityFee: secFeeNum,
+        previousAdvance: prevAdvNum,
         customAdditions: parsedAdditions,
         customDeductions: parsedDeductions,
         notes: customizeForm.notes.trim(),
         updatedBy: session?.name || session?.customId || 'Manager',
         updatedAt: Timestamp.now(),
       }, { merge: true });
+
+      // 2. ALSO save & sync to staff member's profile document in Firestore
+      const dept = customizeModalStaff.dept as StaffDept;
+      const staffCol = dept === 'hq' ? 'hq_users'
+        : dept === 'job-center' ? 'jobcenter_users'
+        : dept === 'social-media' ? 'media_users'
+        : `${prefix}_users`;
+
+      const staffDocRef = doc(db, staffCol, customizeModalStaff.id);
+      
+      // Calculate net salary for this customization
+      const baseEarned = customizeModalStaff.earnings || 0;
+      const totalCustomAdd = remainingBalNum + bonusNum + allowanceNum + parsedAdditions.reduce((s, a) => s + a.amount, 0);
+      const totalCustomDed = secFeeNum + parsedDeductions.reduce((s, d) => s + d.amount, 0);
+      const totalDed = (customizeModalStaff.totalAbsentDeduction || 0) + (customizeModalStaff.totalFines || 0) + Math.max(customizeModalStaff.totalAdvance || 0, prevAdvNum) + totalCustomDed;
+      const calcNetPayable = Math.floor((baseEarned + totalCustomAdd) - totalDed);
+
+      const outstandingDebt = calcNetPayable < 0 ? Math.abs(calcNetPayable) : (prevAdvNum > 0 ? prevAdvNum : (customizeModalStaff.totalAdvance || 0));
+
+      await updateDoc(staffDocRef, {
+        advance: outstandingDebt,
+        advanceSalary: outstandingDebt,
+        monthlyAdvance: outstandingDebt,
+        salaryBalance: calcNetPayable,
+        outstandingBalance: calcNetPayable < 0 ? Math.abs(calcNetPayable) : 0,
+        remainingBalance: remainingBalNum,
+        securityFeeDeduction: secFeeNum,
+        lastPayrollMonth: monthStr,
+        updatedAt: Timestamp.now(),
+      }).catch(e => console.error('Failed updating staff profile doc:', e));
 
       setCustomizeModalStaff(null);
       await handleLoad();
@@ -829,7 +907,7 @@ export default function ManagerPayrollPage() {
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <UserCog className="w-6 h-6 text-emerald-600" /> All-Department Payroll & Custom Adjustments
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Customize salary, add remaining arrears, deduct security fee, manage advances, and track fines</p>
+            <p className="text-sm text-gray-500 mt-1">Customize salary, add remaining arrears, deduct security fee, manage negative salary balances, and track staff advances</p>
           </div>
           {data && (
             <div className="flex gap-2 flex-wrap">
@@ -909,9 +987,9 @@ export default function ManagerPayrollPage() {
                 <div className="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-1">Total Deductions</div>
                 <div className="text-sm font-black text-red-700">{formatPKR(data.totalDeductions)}</div>
               </div>
-              <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl text-center shadow-sm col-span-2 sm:col-span-1">
-                <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">Total Net To Pay</div>
-                <div className="text-base font-black text-emerald-900">{formatPKR(data.totalNet)}</div>
+              <div className={`p-4 rounded-2xl text-center shadow-sm col-span-2 sm:col-span-1 border ${data.totalNet < 0 ? 'bg-rose-100 border-rose-300' : 'bg-emerald-50 border-emerald-200'}`}>
+                <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${data.totalNet < 0 ? 'text-rose-800' : 'text-emerald-700'}`}>Total Net Payout</div>
+                <div className={`text-base font-black ${data.totalNet < 0 ? 'text-rose-900 font-extrabold' : 'text-emerald-900'}`}>{formatPKR(data.totalNet)}</div>
               </div>
             </div>
 
@@ -945,7 +1023,7 @@ export default function ManagerPayrollPage() {
                     ))}
                   </div>
                   <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5">
-                    <SlidersHorizontal className="w-3.5 h-3.5" /> Click "Edit" on any staff row to add remaining arrears, deduct security fee or custom items
+                    <SlidersHorizontal className="w-3.5 h-3.5" /> Negative Net Salary (e.g. -Rs. 5,000) shows in red and syncs to staff profile!
                   </div>
                 </div>
 
@@ -968,9 +1046,9 @@ export default function ManagerPayrollPage() {
                       <div className="text-[10px] font-bold text-red-500 mb-0.5">Total Deductions</div>
                       <div className="text-sm font-black text-red-700">{formatPKR(filteredTotalDeductions)}</div>
                     </div>
-                    <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl text-center">
-                      <div className="text-[10px] font-bold text-emerald-700 mb-0.5">Net Salary to Pay</div>
-                      <div className="text-sm font-black text-emerald-900">{formatPKR(filteredTotalNet)}</div>
+                    <div className={`p-3 rounded-xl text-center border ${filteredTotalNet < 0 ? 'bg-rose-100 border-rose-300' : 'bg-emerald-50 border-emerald-200'}`}>
+                      <div className={`text-[10px] font-bold mb-0.5 ${filteredTotalNet < 0 ? 'text-rose-800' : 'text-emerald-700'}`}>Net Salary to Pay</div>
+                      <div className={`text-sm font-black ${filteredTotalNet < 0 ? 'text-rose-900' : 'text-emerald-900'}`}>{formatPKR(filteredTotalNet)}</div>
                     </div>
                   </div>
                 )}
@@ -1061,10 +1139,18 @@ export default function ManagerPayrollPage() {
                             )}
                           </td>
 
-                          <td className="px-3 py-3.5 text-right font-black text-emerald-900 bg-emerald-50 group-hover:bg-emerald-100/80 transition-colors">
-                            <span className="inline-block bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg border border-emerald-200">
+                          {/* Net Salary To Pay Column (Shows Negative in Red/Rose!) */}
+                          <td className="px-3 py-3.5 text-right font-black transition-colors">
+                            <span className={`inline-block px-2.5 py-1 rounded-lg border ${
+                              r.netPayable < 0
+                                ? 'bg-rose-100 text-rose-900 border-rose-300 font-black animate-pulse'
+                                : 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                            }`}>
                               {formatPKR(r.netPayable)}
                             </span>
+                            {r.netPayable < 0 && (
+                              <div className="text-[9px] text-rose-600 font-bold mt-0.5">Advance Debt</div>
+                            )}
                           </td>
 
                           <td className="px-2.5 py-3.5 text-center no-print">
@@ -1076,6 +1162,19 @@ export default function ManagerPayrollPage() {
                               >
                                 <SlidersHorizontal className="w-3.5 h-3.5" /> Edit
                               </button>
+
+                              {r.netPayable < 0 && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); syncStaffProfileBalance(r); }}
+                                  disabled={syncingProfileId === r.id}
+                                  className="p-1.5 bg-rose-100 hover:bg-rose-600 hover:text-white rounded-lg text-rose-700 transition-colors flex items-center gap-1 text-xs font-bold px-2 py-1 disabled:opacity-50"
+                                  title="Sync negative advance debt to staff profile document in Firestore"
+                                >
+                                  {syncingProfileId === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                                  Sync Profile
+                                </button>
+                              )}
+
                               <button
                                 onClick={(e) => { e.stopPropagation(); setSelectedStaffModal(r); }}
                                 className="p-1.5 bg-gray-100 hover:bg-gray-700 hover:text-white rounded-lg text-gray-500 transition-colors"
@@ -1098,7 +1197,7 @@ export default function ManagerPayrollPage() {
                           <td colSpan={2} />
                           <td className="px-3.5 py-3.5 text-right text-amber-800 bg-amber-100/60">{formatPKR(filteredTotalAdvances)}</td>
                           <td className="px-3.5 py-3.5 text-right text-red-700">{formatPKR(filteredTotalDeductions)}</td>
-                          <td className="px-3.5 py-3.5 text-right text-emerald-950 font-black text-sm bg-emerald-100/90">{formatPKR(filteredTotalNet)}</td>
+                          <td className={`px-3.5 py-3.5 text-right font-black text-sm ${filteredTotalNet < 0 ? 'text-rose-900 bg-rose-100' : 'text-emerald-950 bg-emerald-100/90'}`}>{formatPKR(filteredTotalNet)}</td>
                           <td className="no-print" />
                         </tr>
                       )}
@@ -1527,7 +1626,7 @@ export default function ManagerPayrollPage() {
                 className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors disabled:opacity-60"
               >
                 {savingCustomization ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Save Salary Customization
+                Save & Sync to Profile
               </button>
             </div>
 
@@ -1541,24 +1640,45 @@ export default function ManagerPayrollPage() {
           <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border border-gray-100 overflow-hidden my-8 transform transition-all">
             
             {/* Modal Header */}
-            <div className="bg-emerald-800 text-white p-6 relative">
+            <div className={`p-6 relative text-white ${selectedStaffModal.netPayable < 0 ? 'bg-rose-900' : 'bg-emerald-800'}`}>
               <button
                 onClick={() => setSelectedStaffModal(null)}
-                className="absolute top-5 right-5 text-emerald-200 hover:text-white bg-emerald-900/50 p-2 rounded-full transition-colors"
+                className="absolute top-5 right-5 text-emerald-200 hover:text-white bg-black/30 p-2 rounded-full transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-3 mb-1">
-                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border bg-white/10 text-emerald-100 border-emerald-600`}>
+                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border bg-white/10 text-white border-white/20`}>
                   {DEPT_LABELS[selectedStaffModal.dept] || selectedStaffModal.dept}
                 </span>
-                <span className="text-xs text-emerald-200">{data?.monthLabel}</span>
+                <span className="text-xs text-white/80">{data?.monthLabel}</span>
               </div>
               <h2 className="text-2xl font-black tracking-tight">{selectedStaffModal.name}</h2>
-              <p className="text-xs text-emerald-200 mt-0.5">{selectedStaffModal.designation}</p>
+              <p className="text-xs text-white/80 mt-0.5">{selectedStaffModal.designation}</p>
             </div>
 
             <div className="p-6 space-y-6">
+
+              {/* Negative Salary Warning Alert Banner if netPayable < 0 */}
+              {selectedStaffModal.netPayable < 0 && (
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center justify-between gap-3 text-rose-900">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="w-6 h-6 text-rose-600 shrink-0" />
+                    <div>
+                      <div className="font-extrabold text-sm">Negative Net Salary ({formatPKR(selectedStaffModal.netPayable)})</div>
+                      <div className="text-xs text-rose-700">Total advances and deductions exceed earned salary by {formatPKR(Math.abs(selectedStaffModal.netPayable))}.</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => syncStaffProfileBalance(selectedStaffModal)}
+                    disabled={syncingProfileId === selectedStaffModal.id}
+                    className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors shrink-0 flex items-center gap-1.5"
+                  >
+                    {syncingProfileId === selectedStaffModal.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                    Sync Debt to Profile
+                  </button>
+                </div>
+              )}
 
               {/* Salary Summary Cards matching Staff Profile */}
               <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
@@ -1592,10 +1712,10 @@ export default function ManagerPayrollPage() {
                   <div className="text-[9px] text-amber-600 mt-0.5">Salary Advance</div>
                 </div>
 
-                <div className="bg-emerald-50 border border-emerald-200 p-2.5 rounded-2xl text-center col-span-2 sm:col-span-1">
-                  <div className="text-[9px] font-bold text-emerald-700 uppercase tracking-wider mb-0.5">Net To Pay</div>
-                  <div className="text-xs font-black text-emerald-900">{formatPKR(selectedStaffModal.netPayable)}</div>
-                  <div className="text-[9px] text-emerald-600 font-bold mt-0.5">Final Payout</div>
+                <div className={`p-2.5 rounded-2xl text-center col-span-2 sm:col-span-1 border ${selectedStaffModal.netPayable < 0 ? 'bg-rose-100 border-rose-300' : 'bg-emerald-50 border-emerald-200'}`}>
+                  <div className={`text-[9px] font-bold uppercase tracking-wider mb-0.5 ${selectedStaffModal.netPayable < 0 ? 'text-rose-800' : 'text-emerald-700'}`}>Net To Pay</div>
+                  <div className={`text-xs font-black ${selectedStaffModal.netPayable < 0 ? 'text-rose-900 font-extrabold' : 'text-emerald-900'}`}>{formatPKR(selectedStaffModal.netPayable)}</div>
+                  <div className={`text-[9px] font-bold mt-0.5 ${selectedStaffModal.netPayable < 0 ? 'text-rose-700' : 'text-emerald-600'}`}>{selectedStaffModal.netPayable < 0 ? 'Advance Debt' : 'Final Payout'}</div>
                 </div>
               </div>
 
@@ -1678,9 +1798,9 @@ export default function ManagerPayrollPage() {
                             </td>
                           </tr>
                         ))}
-                        <tr className="bg-emerald-50/60 font-black">
-                          <td colSpan={3} className="px-3.5 py-2.5 text-emerald-950">NET FINAL PAYOUT AFTER ALL DEDUCTIONS & ADDITIONS</td>
-                          <td className="px-3.5 py-2.5 text-right text-emerald-900">{formatPKR(selectedStaffModal.netPayable)}</td>
+                        <tr className={`font-black ${selectedStaffModal.netPayable < 0 ? 'bg-rose-50' : 'bg-emerald-50/60'}`}>
+                          <td colSpan={3} className={`px-3.5 py-2.5 ${selectedStaffModal.netPayable < 0 ? 'text-rose-900' : 'text-emerald-950'}`}>NET PAYOUT AFTER ALL DEDUCTIONS & ADDITIONS</td>
+                          <td className={`px-3.5 py-2.5 text-right ${selectedStaffModal.netPayable < 0 ? 'text-rose-900 font-black' : 'text-emerald-900'}`}>{formatPKR(selectedStaffModal.netPayable)}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1689,12 +1809,14 @@ export default function ManagerPayrollPage() {
               </div>
 
               {/* Net Payout Summary Banner in Modal */}
-              <div className="bg-emerald-900 text-white rounded-2xl p-4 flex items-center justify-between">
+              <div className={`rounded-2xl p-4 flex items-center justify-between text-white ${selectedStaffModal.netPayable < 0 ? 'bg-rose-900' : 'bg-emerald-900'}`}>
                 <div>
-                  <div className="text-[11px] text-emerald-200 font-medium">Final Money To Pay Staff</div>
-                  <div className="text-xs text-emerald-300">(Base Earned + Additions) - Total Deductions</div>
+                  <div className="text-[11px] font-medium text-white/80">
+                    {selectedStaffModal.netPayable < 0 ? 'Outstanding Advance Balance (Staff Owes Hub)' : 'Final Money To Pay Staff'}
+                  </div>
+                  <div className="text-xs text-white/70">(Base Earned + Additions) - Total Deductions</div>
                 </div>
-                <div className="text-2xl font-black text-emerald-300">
+                <div className="text-2xl font-black text-white">
                   {formatPKR(selectedStaffModal.netPayable)}
                 </div>
               </div>
