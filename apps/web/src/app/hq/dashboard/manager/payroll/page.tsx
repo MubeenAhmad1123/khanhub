@@ -887,19 +887,23 @@ export default function ManagerPayrollPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 text-black">
       <style>{`
+        @page {
+          size: landscape;
+          margin: 5mm;
+        }
         @media print {
-          aside, header, nav, .no-print, .pointer-events-none { display: none !important; }
+          aside, header, nav, .no-print, .pointer-events-none, .no-print-col { display: none !important; }
           html, body, div[class*="min-h-screen"], div[class*="lg:ml-"], main, div[class*="max-w-"] {
             margin: 0 !important; padding: 0 !important; min-height: 0 !important;
             height: auto !important; background: white !important; box-shadow: none !important;
             width: 100% !important; max-width: 100% !important;
           }
           * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .overflow-x-auto { overflow: visible !important; }
-          #hq-payroll-print { position: relative !important; left: 0 !important; top: 0 !important; width: 100% !important; padding: 20px !important; }
-          table { width: 100% !important; page-break-inside: auto; border-collapse: collapse !important; }
+          .overflow-x-auto { overflow: visible !important; min-width: 0 !important; width: 100% !important; }
+          #hq-payroll-print { position: relative !important; left: 0 !important; top: 0 !important; width: 100% !important; padding: 5px !important; margin: 0 !important; }
+          table { width: 100% !important; min-width: 0 !important; max-width: 100% !important; page-break-inside: auto; border-collapse: collapse !important; font-size: 8.5px !important; table-layout: fixed !important; }
           tr { page-break-inside: avoid; page-break-after: auto; }
-          th, td { border: 1px solid #cbd5e1 !important; }
+          th, td { border: 1px solid #cbd5e1 !important; padding: 3px 2px !important; word-wrap: break-word !important; overflow-wrap: break-word !important; }
         }
       `}</style>
 
@@ -1077,22 +1081,36 @@ export default function ManagerPayrollPage() {
                   </div>
                 )}
 
-                <div className="overflow-x-auto rounded-xl border border-gray-200">
-                  <table className="w-full text-sm border-collapse min-w-[1100px]">
+                <div className="overflow-x-auto rounded-xl border border-gray-200 print:border-none">
+                  <table className="w-full text-sm border-collapse min-w-[1100px] print:min-w-0 print:table-fixed">
+                    <colgroup>
+                      <col className="w-[3%]" />
+                      <col className="w-[16%]" />
+                      <col className="w-[6%]" />
+                      <col className="w-[9%]" />
+                      <col className="w-[11%]" />
+                      <col className="w-[7%]" />
+                      <col className="w-[8%]" />
+                      <col className="w-[7%]" />
+                      <col className="w-[9%]" />
+                      <col className="w-[11%]" />
+                      <col className="w-[13%]" />
+                      <col className="w-[0%] no-print no-print-col" />
+                    </colgroup>
                     <thead className="bg-emerald-50">
                       <tr>
-                        <th className="px-3 py-3 text-left font-bold text-emerald-900 border-b border-gray-200">#</th>
-                        <th className="px-3 py-3 text-left font-bold text-emerald-900 border-b border-gray-200">Staff Member</th>
-                        <th className="px-3 py-3 text-left font-bold text-emerald-900 border-b border-gray-200">Dept</th>
-                        <th className="px-3 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Gross Salary</th>
-                        <th className="px-3 py-3 text-center font-bold text-emerald-900 border-b border-gray-200">Earned Days</th>
-                        <th className="px-3 py-3 text-right font-bold text-green-800 border-b border-gray-200 bg-green-50/80">Additions (+)</th>
-                        <th className="px-3 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Absent Ded.</th>
-                        <th className="px-3 py-3 text-right font-bold text-emerald-900 border-b border-gray-200">Fine Ded.</th>
-                        <th className="px-3 py-3 text-right font-bold text-amber-800 border-b border-gray-200 bg-amber-50/70">Advance Ded.</th>
-                        <th className="px-3 py-3 text-right font-bold text-rose-800 border-b border-gray-200 bg-rose-50/70">Security / Custom Ded.</th>
-                        <th className="px-3 py-3 text-right font-bold text-emerald-900 border-b border-gray-200 bg-emerald-100/70">Net Salary To Pay</th>
-                        <th className="px-2.5 py-3 text-center font-bold text-emerald-900 border-b border-gray-200 no-print">Actions</th>
+                        <th className="px-2 py-2.5 text-left font-bold text-emerald-900 border-b border-gray-200">#</th>
+                        <th className="px-2 py-2.5 text-left font-bold text-emerald-900 border-b border-gray-200">Staff Member</th>
+                        <th className="px-2 py-2.5 text-left font-bold text-emerald-900 border-b border-gray-200">Dept</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200">Gross Salary</th>
+                        <th className="px-2 py-2.5 text-center font-bold text-emerald-900 border-b border-gray-200">Earned Days</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-green-800 border-b border-gray-200 bg-green-50/80">Additions (+)</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200">Absent Ded.</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200">Fine Ded.</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-amber-800 border-b border-gray-200 bg-amber-50/70">Advance Ded.</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-rose-800 border-b border-gray-200 bg-rose-50/70">Security / Custom Ded.</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200 bg-emerald-100/70">Net Salary To Pay</th>
+                        <th className="px-2 py-2.5 text-center font-bold text-emerald-900 border-b border-gray-200 no-print no-print-col">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1177,7 +1195,7 @@ export default function ManagerPayrollPage() {
                             )}
                           </td>
 
-                          <td className="px-2.5 py-3.5 text-center no-print">
+                          <td className="px-2 py-2 text-center no-print no-print-col">
                             <div className="flex items-center justify-center gap-1">
                               <button
                                 onClick={(e) => { e.stopPropagation(); openCustomizeModal(r); }}
@@ -1222,7 +1240,7 @@ export default function ManagerPayrollPage() {
                           <td className="px-3.5 py-3.5 text-right text-amber-800 bg-amber-100/60">{formatPKR(filteredTotalAdvances)}</td>
                           <td className="px-3.5 py-3.5 text-right text-red-700">{formatPKR(filteredTotalDeductions)}</td>
                           <td className={`px-3.5 py-3.5 text-right font-black text-sm ${filteredTotalNet < 0 ? 'text-rose-900 bg-rose-100' : 'text-emerald-950 bg-emerald-100/90'}`}>{formatPKR(filteredTotalNet)}</td>
-                          <td className="no-print" />
+                          <td className="no-print no-print-col" />
                         </tr>
                       )}
                     </tbody>
