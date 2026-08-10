@@ -341,6 +341,11 @@ service cloud.firestore {
       allow write: if isRehabAdminOrAbove() || isHqTier1();
       allow delete: if isRehabAdminOrAbove() || isHqSuperOrManager();
     }
+    match /rehab_salary_adjustments/{docId} {
+      allow read: if isRehabAdminOrAbove() || isHqTier1();
+      allow write: if isRehabAdminOrAbove() || isHqTier1();
+      allow delete: if isRehabAdminOrAbove() || isHqSuperOrManager();
+    }
 
     // ── Transactions ───────────────────────────────────
     // Cashier creates. Superadmin approves/rejects (update).
@@ -699,6 +704,11 @@ service cloud.firestore {
       allow write: if isHospitalAdminOrAbove() || isHqTier1();
       allow delete: if isHospitalAdminOrAbove() || isHqSuperOrManager();
     }
+    match /hospital_salary_adjustments/{docId} {
+      allow read: if isHospitalAdminOrAbove() || isHqTier1();
+      allow write: if isHospitalAdminOrAbove() || isHqTier1();
+      allow delete: if isHospitalAdminOrAbove() || isHqSuperOrManager();
+    }
 
     // ── Transactions ───────────────────────────────────
     match /hospital_transactions/{docId} {
@@ -984,6 +994,12 @@ service cloud.firestore {
       allow update: if isSpimsAdminOrAbove() || isHqTier1();
       allow delete: if false;
     }
+    match /spims_salary_adjustments/{docId} {
+      allow read: if isSpimsAdminOrAbove() || isSpimsRole('cashier') || isHqTier1();
+      allow create: if isSpimsAdminOrAbove() || isHqTier1();
+      allow update: if isSpimsAdminOrAbove() || isHqTier1();
+      allow delete: if isSpimsAdminOrAbove() || isHqSuperOrManager();
+    }
 
     // ═══════════════════════════════════════════════════════════ 
     //  HQ PORTAL HELPERS 
@@ -1110,6 +1126,13 @@ service cloud.firestore {
 
     // hq_salary_records — staff salary payment records 
     match /hq_salary_records/{docId} { 
+      allow read: if isHqTier1() 
+        || (request.auth != null && resource.data.staffId == request.auth.uid); 
+      allow create: if isHqTier1(); 
+      allow update: if isHqTier1(); 
+      allow delete: if isHqSuperAdmin(); 
+    } 
+    match /hq_salary_adjustments/{docId} { 
       allow read: if isHqTier1() 
         || (request.auth != null && resource.data.staffId == request.auth.uid); 
       allow create: if isHqTier1(); 
@@ -1311,6 +1334,7 @@ service cloud.firestore {
           || collectionId.matches('^[a-z0-9_-]+_audit$')
           || collectionId.matches('^[a-z0-9_-]+_contributions$')
           || collectionId.matches('^[a-z0-9_-]+_salary_records$')
+          || collectionId.matches('^[a-z0-9_-]+_salary_adjustments$')
           || collectionId.matches('^[a-z0-9_-]+_special_tasks$')
           || collectionId.matches('^[a-z0-9_-]+_meta$')
           || collectionId.matches('^[a-z0-9_-]+_notifications$')
@@ -1342,6 +1366,7 @@ service cloud.firestore {
         || collectionId.matches('^[a-z0-9_-]+_audit$')
         || collectionId.matches('^[a-z0-9_-]+_contributions$')
         || collectionId.matches('^[a-z0-9_-]+_salary_records$')
+        || collectionId.matches('^[a-z0-9_-]+_salary_adjustments$')
         || collectionId.matches('^[a-z0-9_-]+_special_tasks$')
         || collectionId.matches('^[a-z0-9_-]+_meta$')
         || collectionId.matches('^[a-z0-9_-]+_notifications$')
@@ -1551,6 +1576,11 @@ service cloud.firestore {
       allow write: if isSukoonAdminOrAbove() || isHqTier1();
       allow delete: if isSukoonAdminOrAbove() || isHqSuperOrManager();
     }
+    match /sukoon_salary_adjustments/{docId} {
+      allow read: if isSukoonAdminOrAbove() || isHqTier1();
+      allow write: if isSukoonAdminOrAbove() || isHqTier1();
+      allow delete: if isSukoonAdminOrAbove() || isHqSuperOrManager();
+    }
 
 
     // ═══════════════════════════════════════════════════════════
@@ -1714,6 +1744,11 @@ service cloud.firestore {
     }
 
     match /welfare_salary_records/{docId} {
+      allow read: if isWelfareAdminOrAbove() || isHqTier1();
+      allow write: if isWelfareAdminOrAbove() || isHqTier1();
+      allow delete: if isWelfareAdminOrAbove() || isHqSuperOrManager();
+    }
+    match /welfare_salary_adjustments/{docId} {
       allow read: if isWelfareAdminOrAbove() || isHqTier1();
       allow write: if isWelfareAdminOrAbove() || isHqTier1();
       allow delete: if isWelfareAdminOrAbove() || isHqSuperOrManager();
@@ -2029,7 +2064,17 @@ service cloud.firestore {
       allow write: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
       allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
     }
+    match /jobcenter_salary_adjustments/{docId} {
+      allow read: if isJobCenterAdminOrAbove() || isHqTier1();
+      allow write: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
+      allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
+    }
     match /job_center_salary_records/{docId} {
+      allow read: if isJobCenterAdminOrAbove() || isHqTier1();
+      allow write: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
+      allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
+    }
+    match /job_center_salary_adjustments/{docId} {
       allow read: if isJobCenterAdminOrAbove() || isHqTier1();
       allow write: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
       allow delete: if isJobCenterAdminOrAbove() || isHqSuperOrManager();
