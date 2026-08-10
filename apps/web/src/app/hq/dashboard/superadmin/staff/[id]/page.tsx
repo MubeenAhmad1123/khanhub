@@ -467,7 +467,7 @@ export default function SuperadminStaffProfilePage({ params }: { params: { id: s
                       </span>
                     </div>
                     <p className={`text-3xl font-black ${theme.text}`}>
-                      ₨{Math.floor(Math.max(0, (Math.floor((Number(staff.monthlySalary) || 0) / 30) * (staff.presentCount || 0)) - (staff.totalFines || 0))).toLocaleString()}
+                      ₨{Math.floor((Math.floor((Number(staff.monthlySalary) || 0) / 30) * (staff.presentCount || 0)) - (staff.totalFines || 0)).toLocaleString()}
                     </p>
                     <p className="text-[9px] text-black font-bold uppercase tracking-widest mt-1">
                       Formula: (Daily Rate × Present Days) - Unpaid Fines (₨{staff.totalFines || 0})

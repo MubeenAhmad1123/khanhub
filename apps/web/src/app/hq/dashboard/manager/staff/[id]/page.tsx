@@ -549,7 +549,7 @@ export default function StaffProfilePage() {
     const actualAdvance = Math.max(Number(slip?.advance || 0), approvedAdvancesForMonth);
 
     if (slip) {
-      const net = Math.floor(Math.max(0, slip.basicSalary - (slip.absentDeduction || 0) - (slip.fine || slip.otherDeductions || 0) - actualAdvance + (slip.bonus || 0)));
+      const net = Math.floor(slip.basicSalary - (slip.absentDeduction || 0) - (slip.fine || slip.otherDeductions || 0) - actualAdvance + (slip.bonus || 0));
       return {
         dailyWage: slip.dailyWage || dailyWage,
         presentDays: slip.presentDays || 0,
@@ -574,7 +574,7 @@ export default function StaffProfilePage() {
       };
     }
 
-    const estimatedSalary = Math.floor(Math.max(0, earnings - totalFines - actualAdvance));
+    const estimatedSalary = Math.floor(earnings - totalFines - actualAdvance);
 
     return {
       dailyWage,
@@ -2050,7 +2050,7 @@ export default function StaffProfilePage() {
             bonus: 0,
             otherDeductions: 0,
             advance: Number(advanceForm.amount),
-            netSalary: Math.max(0, Number(staff.monthlySalary || 0) - Number(advanceForm.amount)),
+            netSalary: Number(staff.monthlySalary || 0) - Number(advanceForm.amount),
             status: 'draft',
             createdAt: Timestamp.now(),
             createdBy: session?.uid,

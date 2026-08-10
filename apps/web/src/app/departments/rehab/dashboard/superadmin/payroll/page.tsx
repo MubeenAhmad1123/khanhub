@@ -343,7 +343,7 @@ export default function RehabPayrollPage() {
         const totalFines = staffFines.reduce((s: number, f: any) => s + (Number(f.amount) || 0), 0);
 
         // Net payable formula matching staff detail page
-        const netPayable = Math.floor(Math.max(0, earnings - totalFines - actualAdvance));
+        const netPayable = Math.floor(earnings - totalFines - actualAdvance);
         const totalDeductions = Math.round(totalAbsentDeduction + totalFines + actualAdvance);
 
         // Deduction breakdown items

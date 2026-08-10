@@ -484,7 +484,7 @@ export default function SuperAdminReportsPage() {
           absentDays,
           fines,
           deductions: Math.round(deductions),
-          netPayable: Math.round(Math.max(0, gross - deductions)),
+          netPayable: Math.round(gross - deductions),
         };
       });
 

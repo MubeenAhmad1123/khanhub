@@ -1715,7 +1715,7 @@ export default function CashierStationPage() {
                 bonus: 0,
                 otherDeductions: 0,
                 advance: Number(amount),
-                netSalary: Math.max(0, Number(selectedEntity.monthlySalary || 0) - Number(amount)),
+                netSalary: Number(selectedEntity.monthlySalary || 0) - Number(amount),
                 status: 'draft',
                 createdAt: Timestamp.now(),
                 createdBy: session?.uid,
