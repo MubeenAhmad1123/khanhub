@@ -11,8 +11,9 @@ import {
   UserCog, Printer, Calendar, DollarSign, Loader2, Download,
   Plus, X, Receipt, Trash2, Building2, Eye, CheckCircle2,
   Info, CreditCard, SlidersHorizontal, PlusCircle, MinusCircle,
-  Save, AlertTriangle, RefreshCw
+  Save, AlertTriangle, RefreshCw, FileText
 } from 'lucide-react';
+import { SalarySlipPrintable } from '@/components/hq/SalarySlipPrintable';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -84,6 +85,10 @@ export default function ManagerPayrollPage() {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
+  const today = new Date();
+  const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
   const [tab, setTab] = useState<'salary' | 'fines'>('salary');
   const [deptFilter, setDeptFilter] = useState<string>('all');
   const [fineStaffFilter, setFineStaffFilter] = useState<string>('all');
@@ -94,6 +99,10 @@ export default function ManagerPayrollPage() {
 
   // Staff breakdown modal state
   const [selectedStaffModal, setSelectedStaffModal] = useState<any | null>(null);
+
+  // Single staff printable slip modal state
+  const [slipStaffModal, setSlipStaffModal] = useState<any | null>(null);
+  const [slipPaidDate, setSlipPaidDate] = useState<string>(todayStr);
 
   // Staff customization modal state
   const [customizeModalStaff, setCustomizeModalStaff] = useState<any | null>(null);
@@ -120,10 +129,6 @@ export default function ManagerPayrollPage() {
 
   const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
   const monthDays = getDaysInMonth(selectedYear, selectedMonth);
-
-  const today = new Date();
-  const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
   const fetchGlobalTransactionsForMonth = async () => {
     const txMap = new Map<string, any>();
@@ -670,6 +675,8 @@ export default function ManagerPayrollPage() {
               id: staff.id,
               name: staff.name || staff.displayName || '—',
               designation: staff.designation || staff.role || '—',
+              employeeCode: staff.employeeId || staff.customId || staff.id,
+              joiningDate: joiningDateStr,
               dept,
               gross,
               dailyRate: Math.round(dailyRate),
@@ -900,6 +907,40 @@ export default function ManagerPayrollPage() {
     await downloadElementAsPng(printRef.current, `hq-payroll-all-depts-${monthStr}.png`, {
       scale: 2, backgroundColor: '#ffffff', style: { width: '1400px', maxWidth: 'none' }
     });
+  };
+
+  const handlePrintSingleSlip = () => {
+    const style = document.createElement('style');
+    style.id = 'single-slip-print-style';
+    style.innerHTML = `
+      @media print {
+        @page { size: auto; margin: 10mm; }
+        body * { display: none !important; }
+        #salary-slip-modal-print-container, #salary-slip-modal-print-container * { display: block !important; }
+        #salary-slip-modal-print-container { position: fixed !important; left: 0 !important; top: 0 !important; width: 100% !important; margin: 0 !important; padding: 0 !important; background: white !important; }
+        #salary-slip-modal-print-container .no-print-modal { display: none !important; }
+      }
+    `;
+    document.head.appendChild(style);
+    document.body.classList.add('printing-single-slip');
+
+    const cleanup = () => {
+      document.body.classList.remove('printing-single-slip');
+      const el = document.getElementById('single-slip-print-style');
+      if (el) el.remove();
+      window.removeEventListener('afterprint', cleanup);
+    };
+
+    window.addEventListener('afterprint', cleanup);
+    window.print();
+  };
+
+  const handleDownloadSingleSlip = async () => {
+    if (!slipStaffModal) return;
+    const el = document.getElementById('salary-slip-print-root');
+    if (!el) return;
+    const safeName = (slipStaffModal.name || 'employee').replace(/\s+/g, '-');
+    await downloadElementAsPng(el, `salary-slip-${safeName}-${monthStr}.png`, { scale: 2, backgroundColor: '#ffffff' });
   };
 
   // Filtered salary rows
@@ -1269,6 +1310,14 @@ export default function ManagerPayrollPage() {
                                   Sync Profile
                                 </button>
                               )}
+
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setSlipPaidDate(todayStr); setSlipStaffModal(r); }}
+                                className="p-1.5 bg-indigo-100 hover:bg-indigo-600 hover:text-white rounded-lg text-indigo-700 transition-colors flex items-center gap-1 text-xs font-bold px-2 py-1"
+                                title="View / Print Official SECP Letterhead Salary Slip"
+                              >
+                                <FileText className="w-3.5 h-3.5" /> Slip
+                              </button>
 
                               <button
                                 onClick={(e) => { e.stopPropagation(); setSelectedStaffModal(r); }}
@@ -1957,6 +2006,70 @@ export default function ManagerPayrollPage() {
                   <Printer className="w-3.5 h-3.5" /> Print Statement
                 </button>
               </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ── INDIVIDUAL PRINTABLE SALARY SLIP MODAL ── */}
+      {slipStaffModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto no-print">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full border border-gray-100 overflow-hidden my-8 transform transition-all">
+            
+            {/* Modal Control Header */}
+            <div className="bg-slate-900 text-white p-5 flex flex-col sm:flex-row items-center justify-between gap-4 no-print-modal">
+              <div className="flex items-center gap-3">
+                <FileText className="w-6 h-6 text-emerald-400" />
+                <div>
+                  <h3 className="font-bold text-lg text-white">Official Letterhead Salary Slip</h3>
+                  <p className="text-xs text-gray-400 font-medium">{slipStaffModal.name} — {data?.monthLabel}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700">
+                  <label className="text-xs font-bold text-gray-300">Paid Date:</label>
+                  <input
+                    type="date"
+                    value={slipPaidDate}
+                    onChange={(e) => setSlipPaidDate(e.target.value)}
+                    className="bg-slate-900 text-white border border-slate-600 rounded-lg px-2.5 py-1 text-xs font-bold outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+                
+                <button
+                  onClick={handleDownloadSingleSlip}
+                  className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+                >
+                  <Download className="w-4 h-4" /> Download PNG
+                </button>
+                
+                <button
+                  onClick={handlePrintSingleSlip}
+                  className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+                >
+                  <Printer className="w-4 h-4" /> Print Slip
+                </button>
+                
+                <button
+                  onClick={() => setSlipStaffModal(null)}
+                  className="text-gray-400 hover:text-white bg-slate-800 p-2 rounded-full transition-colors ml-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Printable Content */}
+            <div id="salary-slip-modal-print-container" className="p-6 overflow-y-auto max-h-[80vh] bg-slate-100 flex justify-center">
+              <SalarySlipPrintable
+                row={slipStaffModal}
+                monthLabel={data?.monthLabel}
+                selectedMonth={monthStr}
+                selectedYear={selectedYear}
+                paidDate={slipPaidDate}
+              />
             </div>
 
           </div>
