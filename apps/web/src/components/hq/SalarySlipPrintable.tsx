@@ -277,11 +277,14 @@ export function SalarySlipPrintable({
           {/* Left Logo Cell */}
           <div className="w-[22%] flex items-center justify-center p-1 border-r border-black">
             <img
-              src="/logo.webp"
+              src="/icons/favicon.webp"
               alt="Khan Hub Logo"
               className="max-h-20 w-auto object-contain"
               onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                const img = e.currentTarget as HTMLImageElement;
+                if (!img.src.includes('logo.webp')) {
+                  img.src = '/logo.webp';
+                }
               }}
             />
           </div>
@@ -296,12 +299,16 @@ export function SalarySlipPrintable({
           {/* Right SECP Logo Cell */}
           <div className="w-[22%] flex items-center justify-center p-1 border-l border-black">
             <img
-              src="/secplogo.webp"
+              src="/secplog.webp"
               alt="SECP Emblem"
               className="max-h-20 w-auto object-contain"
               onError={(e) => {
-                // Fallback to PHC registration certificate image if secplogo fails
-                (e.currentTarget as HTMLImageElement).src = '/images/certificats/PHC_RegistrationCertificate.webp';
+                const img = e.currentTarget as HTMLImageElement;
+                if (!img.src.includes('secplogo.webp')) {
+                  img.src = '/secplogo.webp';
+                } else {
+                  img.src = '/images/certificats/PHC_RegistrationCertificate.webp';
+                }
               }}
             />
           </div>
