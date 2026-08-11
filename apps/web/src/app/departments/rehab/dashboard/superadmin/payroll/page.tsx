@@ -172,13 +172,24 @@ export default function RehabPayrollPage() {
       const finesSnap = await getDocs(collection(db, 'rehab_fines')).catch(() => ({ docs: [] } as any));
       const allFines = finesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
 
-      // Attendance for selected month
-      const attSnap = await getDocs(query(
-        collection(db, 'rehab_attendance'),
-        where('date', '>=', `${monthStr}-01`),
-        where('date', '<=', `${monthStr}-31`)
-      )).catch(() => ({ docs: [] } as any));
-      const allAttDocs = attSnap.docs.map((d: any) => d.data());
+      // Attendance for selected month across all department prefix collections
+      const attMapDocs = new Map<string, any>();
+      await Promise.all(ALL_PREFIXES.map(async (p) => {
+        const attColName = p ? `${p}_attendance` : 'attendance';
+        try {
+          const attSnap = await getDocs(query(
+            collection(db, attColName),
+            where('date', '>=', `${monthStr}-01`),
+            where('date', '<=', `${monthStr}-31`)
+          )).catch(() => ({ docs: [] } as any));
+          attSnap.docs.forEach((d: any) => {
+            if (d && d.id) {
+              attMapDocs.set(`${attColName}-${d.id}`, { id: d.id, _collection: attColName, ...d.data() });
+            }
+          });
+        } catch (e) {}
+      }));
+      const allAttDocs = Array.from(attMapDocs.values());
 
       // Salary Slips
       const salarySnap = await getDocs(collection(db, 'rehab_salary_records')).catch(() => ({ docs: [] } as any));
@@ -241,17 +252,35 @@ export default function RehabPayrollPage() {
           ? Number(slip.advance)
           : approvedAdvancesForMonth;
 
-        // Filter attendance docs
+        // Filter attendance docs for this staff member
         const staffAtt = allAttDocs.filter((a: any) => {
-          if (candidateIds.has(String(a.staffId)) || candidateIds.has(String(a.userId))) return true;
-          if (a.staffName && String(a.staffName).toLowerCase() === staffNameLower) return true;
+          const aStaffId = String(a.staffId || a.userId || a.customId || a.employeeId || '');
+          if (aStaffId && candidateIds.has(aStaffId)) return true;
+          if (staffNameLower && a.staffName && String(a.staffName).toLowerCase() === staffNameLower) return true;
           return false;
         });
+
+        const getAttPriority = (statusVal?: string) => {
+          if (!statusVal) return 0;
+          const s = String(statusVal).toLowerCase();
+          if (s === 'present') return 4;
+          if (s === 'late') return 3;
+          if (s === 'leave' || s === 'paid_leave' || s === 'unpaid_leave') return 2;
+          if (s === 'absent') return 1;
+          return 0;
+        };
 
         const attMapByDate: Record<string, any> = {};
         staffAtt.forEach((a: any) => {
           const dStr = formatDateString(a.date);
-          if (dStr) attMapByDate[dStr] = a;
+          if (dStr) {
+            const existing = attMapByDate[dStr];
+            const existingPriority = getAttPriority(existing?.status || existing?.state);
+            const currentPriority = getAttPriority(a.status || a.state);
+            if (!existing || currentPriority >= existingPriority) {
+              attMapByDate[dStr] = a;
+            }
+          }
         });
 
         // Joining Date calculation
@@ -294,6 +323,8 @@ export default function RehabPayrollPage() {
         const absences: Array<{ date: string; reason: string; isUnmarked: boolean }> = [];
         let absentDaysCount = 0;
         let unmarkedDaysCount = 0;
+        let paidLeaveCount = 0;
+        let unpaidLeaveCount = 0;
 
         monthDays.forEach(dayStr => {
           // Ignore dates before staff joining date
@@ -314,6 +345,30 @@ export default function RehabPayrollPage() {
                 isUnmarked: false,
               });
             }
+          } else if (status === 'unpaid_leave') {
+            unpaidLeaveCount++;
+            if (dayStr <= todayStr) {
+              absences.push({
+                date: dayStr,
+                reason: att?.reason || `Unpaid Leave (Daily rate: ${formatPKR(dailyRate)})`,
+                isUnmarked: false,
+              });
+            }
+          } else if (status === 'leave') {
+            if (paidLeaveCount < 2) {
+              paidLeaveCount++;
+            } else {
+              unpaidLeaveCount++;
+              if (dayStr <= todayStr) {
+                absences.push({
+                  date: dayStr,
+                  reason: att?.reason || `Unpaid Leave (Daily rate: ${formatPKR(dailyRate)})`,
+                  isUnmarked: false,
+                });
+              }
+            }
+          } else if (status === 'paid_leave') {
+            paidLeaveCount++;
           } else if (status === 'unmarked') {
             if (isPast) {
               unmarkedDaysCount++;
@@ -326,7 +381,7 @@ export default function RehabPayrollPage() {
           }
         });
 
-        const totalAbsentDays = absentDaysCount + unmarkedDaysCount;
+        const totalAbsentDays = absentDaysCount + unmarkedDaysCount + unpaidLeaveCount;
         const payableDays = Math.max(0, daysPassed - totalAbsentDays);
 
         const earnings = payableDays * dailyRate;
