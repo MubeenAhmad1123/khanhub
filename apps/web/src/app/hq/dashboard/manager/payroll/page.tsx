@@ -472,7 +472,7 @@ export default function ManagerPayrollPage() {
             const totalFines = staffFines.reduce((s: number, f: any) => s + (Number(f.amount) || 0), 0);
 
             // Total Gross & Net formula: CAN GO IN MINUS IF ADVANCE/DEDUCTIONS > EARNINGS!
-            const totalEarningsWithAdditions = baseEarnedSalary + totalCustomAdditions;
+            const totalEarningsWithAdditions = gross + totalCustomAdditions;
             const totalDeductions = Math.round(totalAbsentDeduction + totalFines + actualAdvance + totalCustomDeductions);
             
             // Allow negative net payable (e.g. -10,000 PKR if advance exceeds salary)
@@ -770,11 +770,11 @@ export default function ManagerPayrollPage() {
       const staffDocRef = doc(db, staffCol, customizeModalStaff.id);
       
       // Calculate net salary for this customization
-      const baseEarned = customizeModalStaff.earnings || 0;
+      const grossSalary = customizeModalStaff.gross || 0;
       const totalCustomAdd = remainingBalNum + bonusNum + allowanceNum + parsedAdditions.reduce((s, a) => s + a.amount, 0);
       const totalCustomDed = secFeeNum + parsedDeductions.reduce((s, d) => s + d.amount, 0);
       const totalDed = (customizeModalStaff.totalAbsentDeduction || 0) + (customizeModalStaff.totalFines || 0) + Math.max(customizeModalStaff.totalAdvance || 0, prevAdvNum) + totalCustomDed;
-      const calcNetPayable = Math.floor((baseEarned + totalCustomAdd) - totalDed);
+      const calcNetPayable = Math.floor((grossSalary + totalCustomAdd) - totalDed);
 
       const outstandingDebt = calcNetPayable < 0 ? Math.abs(calcNetPayable) : (prevAdvNum > 0 ? prevAdvNum : (customizeModalStaff.totalAdvance || 0));
 
@@ -1872,7 +1872,7 @@ export default function ManagerPayrollPage() {
                   <div className="text-[11px] font-medium text-white/80">
                     {selectedStaffModal.netPayable < 0 ? 'Outstanding Advance Balance (Staff Owes Hub)' : 'Final Money To Pay Staff'}
                   </div>
-                  <div className="text-xs text-white/70">(Base Earned + Additions) - Total Deductions</div>
+                  <div className="text-xs text-white/70">(Gross Salary + Additions) - Total Deductions</div>
                 </div>
                 <div className="text-2xl font-black text-white">
                   {formatPKR(selectedStaffModal.netPayable)}
