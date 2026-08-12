@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { SalarySlip } from '@/types/hq';
-import { Printer, Download } from 'lucide-react';
+import { Printer, Download, Edit3, Check, RotateCcw } from 'lucide-react';
 import { toDate, downloadElementAsPng } from '@/lib/utils';
 
 export const OFFICIAL_DEPT_LEGAL_NAMES: Record<string, string> = {
@@ -77,30 +77,31 @@ export function SalarySlipPrintable({
   selectedYear: propSelectedYear,
   paidDate: propPaidDate,
 }: Props) {
+  const [isEditing, setIsEditing] = useState(false);
 
-  let empName = '—';
-  let designation = '—';
-  let empCode = '—';
-  let deptName = '—';
-  let joiningDateStr = '—';
+  // Initial values computation
+  let initialEmpName = '—';
+  let initialDesignation = '—';
+  let initialEmpCode = '—';
+  let initialDeptName = '—';
+  let initialJoiningDateStr = '—';
   let monthStr = propSelectedMonth || slip?.month || '';
   let computedMonthLabel = propMonthLabel || '—';
 
-  let grossPay = 0;
-  let incentive = 0;
-  let otherPay = 0;
-  let absentee = 0;
-  let fines = 0;
-  let advancePay = 0;
-  let otherDed = 0;
-  let netPay = 0;
+  let initialGrossPay = 0;
+  let initialIncentive = 0;
+  let initialOtherPay = 0;
+  let initialAbsentee = 0;
+  let initialFines = 0;
+  let initialAdvancePay = 0;
+  let initialOtherDed = 0;
 
   if (row) {
-    empName = row.name || '—';
-    designation = row.designation || '—';
-    empCode = row.employeeCode || row.id || '—';
+    initialEmpName = row.name || '—';
+    initialDesignation = row.designation || '—';
+    initialEmpCode = row.employeeCode || row.id || '—';
     const deptKey = String(row.dept || '').toLowerCase();
-    deptName = OFFICIAL_DEPT_LEGAL_NAMES[deptKey] || row.dept || 'KhanHub Platform';
+    initialDeptName = OFFICIAL_DEPT_LEGAL_NAMES[deptKey] || row.dept || 'KhanHub Platform';
 
     if (row.joiningDate) {
       try {
@@ -109,40 +110,36 @@ export function SalarySlipPrintable({
           const y = dObj.getFullYear();
           const m = String(dObj.getMonth() + 1).padStart(2, '0');
           const d = String(dObj.getDate()).padStart(2, '0');
-          joiningDateStr = `${d}/${m}/${y}`;
+          initialJoiningDateStr = `${d}/${m}/${y}`;
         } else {
-          joiningDateStr = String(row.joiningDate);
+          initialJoiningDateStr = String(row.joiningDate);
         }
       } catch (e) {
-        joiningDateStr = String(row.joiningDate);
+        initialJoiningDateStr = String(row.joiningDate);
       }
     }
 
-    grossPay = Number(row.gross) || 0;
-    incentive = Number(row.bonus) || 0;
+    initialGrossPay = Number(row.gross) || 0;
+    initialIncentive = Number(row.bonus) || 0;
     const addTotal = Number(row.totalCustomAdditions) || 0;
-    otherPay = Math.max(0, addTotal - incentive);
+    initialOtherPay = Math.max(0, addTotal - initialIncentive);
 
-    absentee = Number(row.totalAbsentDeduction) || 0;
-    fines = Number(row.totalFines) || 0;
-    advancePay = Number(row.totalAdvance) || 0;
-    otherDed = Number(row.totalCustomDeductions) || 0;
-
-    const calcTotalPay = grossPay + incentive + otherPay;
-    const calcTotalDed = absentee + fines + advancePay + otherDed;
-    netPay = calcTotalPay - calcTotalDed;
+    initialAbsentee = Number(row.totalAbsentDeduction) || 0;
+    initialFines = Number(row.totalFines) || 0;
+    initialAdvancePay = Number(row.totalAdvance) || 0;
+    initialOtherDed = Number(row.totalCustomDeductions) || 0;
   } else if (slip) {
-    empName = slip.staffName || '—';
-    designation = staff?.designation || slip.department || '—';
-    empCode = staff?.employeeId || slip.employeeId || slip.staffId || '—';
+    initialEmpName = slip.staffName || '—';
+    initialDesignation = staff?.designation || slip.department || '—';
+    initialEmpCode = staff?.employeeId || slip.employeeId || slip.staffId || '—';
     const deptKey = String(slip.department || '').toLowerCase();
-    deptName = OFFICIAL_DEPT_LEGAL_NAMES[deptKey] || slip.department || 'KhanHub Platform';
+    initialDeptName = OFFICIAL_DEPT_LEGAL_NAMES[deptKey] || slip.department || 'KhanHub Platform';
 
     if (staff?.joiningDate) {
       try {
         const dateObj = toDate(staff.joiningDate);
         if (dateObj && !isNaN(dateObj.getTime())) {
-          joiningDateStr = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+          initialJoiningDateStr = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
       } catch (e) {}
     }
@@ -150,28 +147,24 @@ export function SalarySlipPrintable({
     const hasFullSlip = typeof slip.netSalary === 'number' && slip.netSalary !== 0;
 
     if (hasFullSlip) {
-      grossPay = slip.basicSalary || 0;
-      incentive = slip.incentive || slip.bonus || 0;
-      otherPay = slip.otherEarnings || 0;
-      absentee = slip.absentDeduction || 0;
-      fines = slip.fine || 0;
-      advancePay = slip.advance || 0;
-      otherDed = slip.otherDeductions || 0;
-      netPay = slip.netSalary || 0;
+      initialGrossPay = slip.basicSalary || 0;
+      initialIncentive = slip.incentive || slip.bonus || 0;
+      initialOtherPay = slip.otherEarnings || 0;
+      initialAbsentee = slip.absentDeduction || 0;
+      initialFines = slip.fine || 0;
+      initialAdvancePay = slip.advance || 0;
+      initialOtherDed = slip.otherDeductions || 0;
     } else {
-      netPay = (slip as any).amount || 0;
-      const baseWage = staff?.monthlySalary || netPay;
-      grossPay = baseWage;
-      if (netPay > baseWage) {
-        incentive = netPay - baseWage;
-      } else if (netPay < baseWage) {
-        otherDed = baseWage - netPay;
+      const net = (slip as any).amount || 0;
+      const baseWage = staff?.monthlySalary || net;
+      initialGrossPay = baseWage;
+      if (net > baseWage) {
+        initialIncentive = net - baseWage;
+      } else if (net < baseWage) {
+        initialOtherDed = baseWage - net;
       }
     }
   }
-
-  const totalPay = grossPay + incentive + otherPay;
-  const totalDed = absentee + fines + advancePay + otherDed;
 
   // Month Label Format: "August 2026"
   if (!computedMonthLabel || computedMonthLabel === '—') {
@@ -183,7 +176,7 @@ export function SalarySlipPrintable({
   }
 
   // Salary Period: "01/MM/YYYY To DD/MM/YYYY"
-  const salaryPeriod = (() => {
+  const initialSalaryPeriod = (() => {
     if (!monthStr || !monthStr.includes('-')) return '—';
     const [yyyy, mm] = monthStr.split('-').map(Number);
     if (!yyyy || !mm) return '—';
@@ -191,17 +184,17 @@ export function SalarySlipPrintable({
     const mmStr = String(mm).padStart(2, '0');
 
     let startDayStr = `01/${mmStr}/${yyyy}`;
-    if (joiningDateStr && joiningDateStr !== '—' && joiningDateStr.endsWith(`/${yyyy}`)) {
-      const parts = joiningDateStr.split('/');
+    if (initialJoiningDateStr && initialJoiningDateStr !== '—' && initialJoiningDateStr.endsWith(`/${yyyy}`)) {
+      const parts = initialJoiningDateStr.split('/');
       if (parts.length === 3 && parts[1] === mmStr) {
-        startDayStr = joiningDateStr;
+        startDayStr = initialJoiningDateStr;
       }
     }
     return `${startDayStr} To ${String(daysInMonth).padStart(2, '0')}/${mmStr}/${yyyy}`;
   })();
 
   // Paid Date string
-  const paidDateStr = (() => {
+  const initialPaidDateStr = (() => {
     if (propPaidDate) {
       try {
         const dObj = toDate(propPaidDate);
@@ -227,6 +220,88 @@ export function SalarySlipPrintable({
     }
   })();
 
+  // Editable Form State
+  const [fields, setFields] = useState({
+    companyTitle: 'KHAN HUB (PVT.) LTD.',
+    companySubtitle: 'Group of Companies',
+    secpReg: '(SECP REGD. No. 0209901)',
+    monthLabel: computedMonthLabel,
+    empName: initialEmpName,
+    designation: initialDesignation,
+    empCode: initialEmpCode,
+    deptName: initialDeptName,
+    joiningDateStr: initialJoiningDateStr,
+    salaryPeriod: initialSalaryPeriod,
+    grossPay: initialGrossPay,
+    incentive: initialIncentive,
+    otherPay: initialOtherPay,
+    absentee: initialAbsentee,
+    fines: initialFines,
+    advancePay: initialAdvancePay,
+    otherDed: initialOtherDed,
+    paidDateStr: initialPaidDateStr,
+    queryPhone: '067-3364220',
+  });
+
+  // Keep state updated if props change
+  useEffect(() => {
+    setFields({
+      companyTitle: 'KHAN HUB (PVT.) LTD.',
+      companySubtitle: 'Group of Companies',
+      secpReg: '(SECP REGD. No. 0209901)',
+      monthLabel: computedMonthLabel,
+      empName: initialEmpName,
+      designation: initialDesignation,
+      empCode: initialEmpCode,
+      deptName: initialDeptName,
+      joiningDateStr: initialJoiningDateStr,
+      salaryPeriod: initialSalaryPeriod,
+      grossPay: initialGrossPay,
+      incentive: initialIncentive,
+      otherPay: initialOtherPay,
+      absentee: initialAbsentee,
+      fines: initialFines,
+      advancePay: initialAdvancePay,
+      otherDed: initialOtherDed,
+      paidDateStr: initialPaidDateStr,
+      queryPhone: '067-3364220',
+    });
+  }, [
+    row, slip, propMonthLabel, propSelectedMonth, propPaidDate,
+    initialEmpName, initialDesignation, initialEmpCode, initialDeptName,
+    initialJoiningDateStr, initialSalaryPeriod, initialGrossPay, initialIncentive,
+    initialOtherPay, initialAbsentee, initialFines, initialAdvancePay, initialOtherDed,
+    initialPaidDateStr, computedMonthLabel
+  ]);
+
+  const handleReset = () => {
+    setFields({
+      companyTitle: 'KHAN HUB (PVT.) LTD.',
+      companySubtitle: 'Group of Companies',
+      secpReg: '(SECP REGD. No. 0209901)',
+      monthLabel: computedMonthLabel,
+      empName: initialEmpName,
+      designation: initialDesignation,
+      empCode: initialEmpCode,
+      deptName: initialDeptName,
+      joiningDateStr: initialJoiningDateStr,
+      salaryPeriod: initialSalaryPeriod,
+      grossPay: initialGrossPay,
+      incentive: initialIncentive,
+      otherPay: initialOtherPay,
+      absentee: initialAbsentee,
+      fines: initialFines,
+      advancePay: initialAdvancePay,
+      otherDed: initialOtherDed,
+      paidDateStr: initialPaidDateStr,
+      queryPhone: '067-3364220',
+    });
+  };
+
+  const totalPay = (Number(fields.grossPay) || 0) + (Number(fields.incentive) || 0) + (Number(fields.otherPay) || 0);
+  const totalDed = (Number(fields.absentee) || 0) + (Number(fields.fines) || 0) + (Number(fields.advancePay) || 0) + (Number(fields.otherDed) || 0);
+  const netPay = totalPay - totalDed;
+
   // Format to 2 decimal places
   const fmt = (n: number) => (Number(n) || 0).toFixed(2);
 
@@ -237,20 +312,49 @@ export function SalarySlipPrintable({
   const handleDownload = async () => {
     const el = document.getElementById('salary-slip-print-root') || document.getElementById('salary-slip-root');
     if (!el) return;
-    const safeName = (empName || 'employee').replace(/\s+/g, '-');
+    const safeName = (fields.empName || 'employee').replace(/\s+/g, '-');
     const safeMonth = monthStr || 'payroll';
     await downloadElementAsPng(el, `salary-slip-${safeName}-${safeMonth}.png`, { scale: 2, backgroundColor: '#ffffff' });
   };
 
   return (
     <div className="w-full max-w-[780px] mx-auto bg-white text-black font-sans">
-      {/* ACTION CONTROLS */}
-      {showActionControls && (
-        <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-xl mb-6 print:hidden">
-          <span className="text-xs font-black uppercase tracking-wider text-gray-500">
-            Salary Slip Controls
-          </span>
-          <div className="flex items-center gap-3">
+      {/* ACTION CONTROLS & EDIT MODE TOGGLE */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-gray-50 border border-gray-200 rounded-xl mb-4 no-print print:hidden">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsEditing(!isEditing)}
+            className={`px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer border ${
+              isEditing
+                ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-600 shadow'
+                : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'
+            }`}
+          >
+            {isEditing ? <Check size={14} /> : <Edit3 size={14} />}
+            {isEditing ? 'Done Editing' : 'Customize Slip Text'}
+          </button>
+
+          {isEditing && (
+            <button
+              type="button"
+              onClick={handleReset}
+              className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+              title="Reset to calculated values"
+            >
+              <RotateCcw size={13} /> Reset Defaults
+            </button>
+          )}
+
+          {isEditing && (
+            <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md">
+              ✏️ Click any field directly on slip to edit!
+            </span>
+          )}
+        </div>
+
+        {showActionControls && (
+          <div className="flex items-center gap-2">
             <button
               onClick={handleDownload}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
@@ -264,13 +368,13 @@ export function SalarySlipPrintable({
               <Printer size={14} /> Print
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ROOT ELEMENT (OFFICIAL LETTERHEAD SLIP) */}
       <div
         id="salary-slip-print-root"
-        className="bg-white text-black font-sans w-full max-w-[780px] mx-auto p-6 text-sm border border-slate-300"
+        className="bg-white text-black font-sans w-full max-w-[780px] mx-auto p-6 text-sm border border-slate-300 relative"
       >
         {/* ROW 1 — LETTERHEAD HEADER */}
         <div className="flex items-center justify-between border border-black p-3">
@@ -291,21 +395,46 @@ export function SalarySlipPrintable({
 
           {/* Center Brand Text */}
           <div className="w-[56%] text-center px-2">
-            <h1 className="text-xl font-black leading-tight uppercase tracking-tight">KHAN HUB (PVT.) LTD.</h1>
-            <p className="text-sm font-extrabold uppercase tracking-wide">Group of Companies</p>
-            <p className="text-xs font-bold text-gray-700 mt-0.5">(SECP REGD. No. 0209901)</p>
+            {isEditing ? (
+              <div className="space-y-1">
+                <input
+                  type="text"
+                  value={fields.companyTitle}
+                  onChange={(e) => setFields({ ...fields, companyTitle: e.target.value })}
+                  className="w-full text-center text-xl font-black uppercase border border-amber-400 bg-amber-50 rounded px-1"
+                />
+                <input
+                  type="text"
+                  value={fields.companySubtitle}
+                  onChange={(e) => setFields({ ...fields, companySubtitle: e.target.value })}
+                  className="w-full text-center text-sm font-extrabold uppercase border border-amber-400 bg-amber-50 rounded px-1"
+                />
+                <input
+                  type="text"
+                  value={fields.secpReg}
+                  onChange={(e) => setFields({ ...fields, secpReg: e.target.value })}
+                  className="w-full text-center text-xs font-bold border border-amber-400 bg-amber-50 rounded px-1"
+                />
+              </div>
+            ) : (
+              <>
+                <h1 className="text-xl font-black leading-tight uppercase tracking-tight">{fields.companyTitle}</h1>
+                <p className="text-sm font-extrabold uppercase tracking-wide">{fields.companySubtitle}</p>
+                <p className="text-xs font-bold text-gray-700 mt-0.5">{fields.secpReg}</p>
+              </>
+            )}
           </div>
 
           {/* Right SECP Logo Cell */}
           <div className="w-[22%] flex items-center justify-center p-1 border-l border-black">
             <img
-              src="/secplog.webp"
+              src="/secplogo.webp"
               alt="SECP Emblem"
               className="max-h-20 w-auto object-contain"
               onError={(e) => {
                 const img = e.currentTarget as HTMLImageElement;
-                if (!img.src.includes('secplogo.webp')) {
-                  img.src = '/secplogo.webp';
+                if (!img.src.includes('secplog.webp')) {
+                  img.src = '/secplog.webp';
                 } else {
                   img.src = '/images/certificats/PHC_RegistrationCertificate.webp';
                 }
@@ -316,7 +445,20 @@ export function SalarySlipPrintable({
 
         {/* ROW 2 — TITLE BAR */}
         <div className="w-full border-x border-b border-black text-center font-black text-base py-2 bg-gray-50 uppercase tracking-wide">
-          Salary Slips For The Month Of ({computedMonthLabel})
+          {isEditing ? (
+            <div className="flex items-center justify-center gap-1">
+              <span>Salary Slips For The Month Of (</span>
+              <input
+                type="text"
+                value={fields.monthLabel}
+                onChange={(e) => setFields({ ...fields, monthLabel: e.target.value })}
+                className="text-center font-black border border-amber-400 bg-amber-50 rounded px-2 text-base"
+              />
+              <span>)</span>
+            </div>
+          ) : (
+            `Salary Slips For The Month Of (${fields.monthLabel})`
+          )}
         </div>
 
         {/* ROWS 3 — EMPLOYEE INFO TABLE */}
@@ -324,24 +466,90 @@ export function SalarySlipPrintable({
           <tbody>
             <tr>
               <td className="font-bold border border-black px-3 py-1.5 w-[22%] bg-gray-50">Employe Name :</td>
-              <td className="border border-black px-3 py-1.5 w-[28%] font-semibold">{empName}</td>
+              <td className="border border-black px-3 py-1.5 w-[28%] font-semibold">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={fields.empName}
+                    onChange={(e) => setFields({ ...fields, empName: e.target.value })}
+                    className="w-full font-semibold border border-amber-400 bg-amber-50 rounded px-1.5 py-0.5"
+                  />
+                ) : (
+                  fields.empName
+                )}
+              </td>
               <td className="border border-black w-[2%] bg-gray-100"></td>
               <td className="font-bold border border-black px-3 py-1.5 w-[22%] bg-gray-50">Designation :</td>
-              <td className="border border-black px-3 py-1.5 w-[26%] font-semibold">{designation}</td>
+              <td className="border border-black px-3 py-1.5 w-[26%] font-semibold">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={fields.designation}
+                    onChange={(e) => setFields({ ...fields, designation: e.target.value })}
+                    className="w-full font-semibold border border-amber-400 bg-amber-50 rounded px-1.5 py-0.5"
+                  />
+                ) : (
+                  fields.designation
+                )}
+              </td>
             </tr>
             <tr>
               <td className="font-bold border border-black px-3 py-1.5 bg-gray-50">Employe Code :</td>
-              <td className="border border-black px-3 py-1.5 font-semibold font-mono">{empCode}</td>
+              <td className="border border-black px-3 py-1.5 font-semibold font-mono">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={fields.empCode}
+                    onChange={(e) => setFields({ ...fields, empCode: e.target.value })}
+                    className="w-full font-semibold font-mono border border-amber-400 bg-amber-50 rounded px-1.5 py-0.5"
+                  />
+                ) : (
+                  fields.empCode
+                )}
+              </td>
               <td className="border border-black bg-gray-100"></td>
               <td className="font-bold border border-black px-3 py-1.5 bg-gray-50">Department :</td>
-              <td className="border border-black px-3 py-1.5 font-semibold">{deptName}</td>
+              <td className="border border-black px-3 py-1.5 font-semibold">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={fields.deptName}
+                    onChange={(e) => setFields({ ...fields, deptName: e.target.value })}
+                    className="w-full font-semibold border border-amber-400 bg-amber-50 rounded px-1.5 py-0.5"
+                  />
+                ) : (
+                  fields.deptName
+                )}
+              </td>
             </tr>
             <tr>
               <td className="font-bold border border-black px-3 py-1.5 bg-gray-50">Joing Date :</td>
-              <td className="border border-black px-3 py-1.5 font-semibold">{joiningDateStr}</td>
+              <td className="border border-black px-3 py-1.5 font-semibold">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={fields.joiningDateStr}
+                    onChange={(e) => setFields({ ...fields, joiningDateStr: e.target.value })}
+                    className="w-full font-semibold border border-amber-400 bg-amber-50 rounded px-1.5 py-0.5"
+                  />
+                ) : (
+                  fields.joiningDateStr
+                )}
+              </td>
               <td className="border border-black bg-gray-100"></td>
               <td className="font-bold border border-black px-3 py-1.5 bg-gray-50">Salary Period :</td>
-              <td className="border border-black px-3 py-1.5 font-semibold">{salaryPeriod}</td>
+              <td className="border border-black px-3 py-1.5 font-semibold">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={fields.salaryPeriod}
+                    onChange={(e) => setFields({ ...fields, salaryPeriod: e.target.value })}
+                    className="w-full font-semibold border border-amber-400 bg-amber-50 rounded px-1.5 py-0.5"
+                  />
+                ) : (
+                  fields.salaryPeriod
+                )}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -362,31 +570,108 @@ export function SalarySlipPrintable({
           <tbody>
             <tr>
               <td className="font-bold border border-black px-3 py-2 w-[27%]">Gross Pay :</td>
-              <td className="border border-black px-3 py-2 text-right w-[22%] font-mono font-semibold">{fmt(grossPay)}</td>
+              <td className="border border-black px-3 py-2 text-right w-[22%] font-mono font-semibold">
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={fields.grossPay}
+                    onChange={(e) => setFields({ ...fields, grossPay: Number(e.target.value) || 0 })}
+                    className="w-full text-right font-mono font-semibold border border-amber-400 bg-amber-50 rounded px-1 py-0.5"
+                  />
+                ) : (
+                  fmt(fields.grossPay)
+                )}
+              </td>
               <td className="border border-black bg-gray-100"></td>
               <td className="font-bold border border-black px-3 py-2 w-[27%]">Absentee :</td>
-              <td className="border border-black px-3 py-2 text-right w-[22%] font-mono font-semibold">{fmt(absentee)}</td>
+              <td className="border border-black px-3 py-2 text-right w-[22%] font-mono font-semibold">
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={fields.absentee}
+                    onChange={(e) => setFields({ ...fields, absentee: Number(e.target.value) || 0 })}
+                    className="w-full text-right font-mono font-semibold border border-amber-400 bg-amber-50 rounded px-1 py-0.5"
+                  />
+                ) : (
+                  fmt(fields.absentee)
+                )}
+              </td>
             </tr>
             <tr>
               <td className="font-bold border border-black px-3 py-2">Incentiv :</td>
-              <td className="border border-black px-3 py-2 text-right font-mono font-semibold">{fmt(incentive)}</td>
+              <td className="border border-black px-3 py-2 text-right font-mono font-semibold">
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={fields.incentive}
+                    onChange={(e) => setFields({ ...fields, incentive: Number(e.target.value) || 0 })}
+                    className="w-full text-right font-mono font-semibold border border-amber-400 bg-amber-50 rounded px-1 py-0.5"
+                  />
+                ) : (
+                  fmt(fields.incentive)
+                )}
+              </td>
               <td className="border border-black bg-gray-100"></td>
               <td className="font-bold border border-black px-3 py-2">Fines :</td>
-              <td className="border border-black px-3 py-2 text-right font-mono font-semibold">{fmt(fines)}</td>
+              <td className="border border-black px-3 py-2 text-right font-mono font-semibold">
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={fields.fines}
+                    onChange={(e) => setFields({ ...fields, fines: Number(e.target.value) || 0 })}
+                    className="w-full text-right font-mono font-semibold border border-amber-400 bg-amber-50 rounded px-1 py-0.5"
+                  />
+                ) : (
+                  fmt(fields.fines)
+                )}
+              </td>
             </tr>
             <tr>
               <td className="font-bold border border-black px-3 py-2">Others :</td>
-              <td className="border border-black px-3 py-2 text-right font-mono font-semibold">{fmt(otherPay)}</td>
+              <td className="border border-black px-3 py-2 text-right font-mono font-semibold">
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={fields.otherPay}
+                    onChange={(e) => setFields({ ...fields, otherPay: Number(e.target.value) || 0 })}
+                    className="w-full text-right font-mono font-semibold border border-amber-400 bg-amber-50 rounded px-1 py-0.5"
+                  />
+                ) : (
+                  fmt(fields.otherPay)
+                )}
+              </td>
               <td className="border border-black bg-gray-100"></td>
               <td className="font-bold border border-black px-3 py-2">Advance Taken :</td>
-              <td className="border border-black px-3 py-2 text-right font-mono font-semibold">{fmt(advancePay)}</td>
+              <td className="border border-black px-3 py-2 text-right font-mono font-semibold">
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={fields.advancePay}
+                    onChange={(e) => setFields({ ...fields, advancePay: Number(e.target.value) || 0 })}
+                    className="w-full text-right font-mono font-semibold border border-amber-400 bg-amber-50 rounded px-1 py-0.5"
+                  />
+                ) : (
+                  fmt(fields.advancePay)
+                )}
+              </td>
             </tr>
             <tr>
               <td className="font-bold border border-black px-3 py-2 bg-gray-50"></td>
               <td className="border border-black px-3 py-2 text-right bg-gray-50"></td>
               <td className="border border-black bg-gray-100"></td>
               <td className="font-bold border border-black px-3 py-2">Other Deductions :</td>
-              <td className="border border-black px-3 py-2 text-right font-mono font-semibold">{fmt(otherDed)}</td>
+              <td className="border border-black px-3 py-2 text-right font-mono font-semibold">
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={fields.otherDed}
+                    onChange={(e) => setFields({ ...fields, otherDed: Number(e.target.value) || 0 })}
+                    className="w-full text-right font-mono font-semibold border border-amber-400 bg-amber-50 rounded px-1 py-0.5"
+                  />
+                ) : (
+                  fmt(fields.otherDed)
+                )}
+              </td>
             </tr>
             <tr className="font-black bg-gray-50">
               <td className="border border-black px-3 py-2 uppercase">Total Pay & Allowance(s) :</td>
@@ -404,17 +689,38 @@ export function SalarySlipPrintable({
               </td>
               <td className="border border-black bg-gray-300"></td>
               <td className="border border-black px-3 py-2.5 uppercase">Paid Date :</td>
-              <td className="border border-black px-3 py-2.5 text-right font-mono">{paidDateStr}</td>
+              <td className="border border-black px-3 py-2.5 text-right font-mono">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={fields.paidDateStr}
+                    onChange={(e) => setFields({ ...fields, paidDateStr: e.target.value })}
+                    className="w-full text-right font-mono font-semibold border border-amber-400 bg-amber-50 rounded px-1 py-0.5"
+                  />
+                ) : (
+                  fields.paidDateStr
+                )}
+              </td>
             </tr>
           </tbody>
         </table>
 
         {/* CONFIDENTIALITY FOOTER TEXT */}
-        <div className="flex justify-between items-center mt-3 pt-1 border-t border-gray-300">
-          <p className="italic text-[11px] font-semibold text-gray-700">Salary Slip is Private & Confidential</p>
-          <p className="italic text-[11px] font-semibold text-right text-gray-700">
-            For Any Query, Please feel free to contact at : 067-3364220
-          </p>
+        <div className="flex justify-between items-center mt-3 pt-1 border-t border-gray-300 text-[11px] font-semibold text-gray-700 italic">
+          <p>Salary Slip is Private & Confidential</p>
+          <div className="flex items-center gap-1">
+            <span>For Any Query, Please feel free to contact at :</span>
+            {isEditing ? (
+              <input
+                type="text"
+                value={fields.queryPhone}
+                onChange={(e) => setFields({ ...fields, queryPhone: e.target.value })}
+                className="font-semibold border border-amber-400 bg-amber-50 rounded px-1 not-italic"
+              />
+            ) : (
+              <span>{fields.queryPhone}</span>
+            )}
+          </div>
         </div>
 
         {/* SIGNATURE LINES */}
