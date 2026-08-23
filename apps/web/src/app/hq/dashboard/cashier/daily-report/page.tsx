@@ -574,26 +574,26 @@ export default function DailyReportPage() {
 
   return (
     <div className="min-h-screen bg-[#FCFBF8] pb-20 print:bg-white print:pb-0 print:text-black font-sans selection:bg-indigo-100 selection:text-indigo-900">
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           @page {
             margin: 10mm;
           }
           * {
-            -webkit-print-color-adjust: economy !important;
-            print-color-adjust: economy !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           div, p, span, h1, h2, h3, h4, h5, h6, td, th, table, tr, label, strong, b {
             color: #000000 !important;
           }
-          .bg-indigo-600 {
+          .bg-indigo-600, div[class*="bg-indigo-600"] {
             background-color: #ffffff !important;
             background: #ffffff !important;
-            border: 1px solid #e5e7eb !important;
+            border: 1px solid #d1d5db !important;
             color: #000000 !important;
             box-shadow: none !important;
           }
-          .bg-indigo-600 *, .bg-indigo-600 p, .bg-indigo-600 span, .bg-indigo-600 h3 {
+          .bg-indigo-600 *, div[class*="bg-indigo-600"] * {
             color: #000000 !important;
           }
           .text-zinc-400, .text-zinc-500, .text-zinc-600, .text-zinc-700, .text-zinc-800,
@@ -607,7 +607,7 @@ export default function DailyReportPage() {
             border-color: #e5e7eb !important;
           }
         }
-      `}</style>
+      ` }} />
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-zinc-100 px-4 py-4 md:px-8 print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-center gap-5">
@@ -767,21 +767,21 @@ export default function DailyReportPage() {
                 </div>
               </div>
 
-              <div className="bg-indigo-600 print:bg-white print:border print:border-zinc-200 p-7 rounded-[2.5rem] shadow-2xl shadow-indigo-200/50 print:shadow-none relative overflow-hidden group col-span-1 md:col-span-2">
+              <div className="bg-indigo-600 print:!bg-white print:!border print:!border-zinc-300 p-7 rounded-[2.5rem] shadow-2xl shadow-indigo-200/50 print:!shadow-none relative overflow-hidden group col-span-1 md:col-span-2">
                 <div className="absolute top-0 right-0 p-4 opacity-20 print:hidden">
                     <Wallet className="w-20 h-20 text-white" />
                 </div>
-                <h3 className="text-sm font-black text-indigo-200 print:text-zinc-600 uppercase tracking-widest mb-1">Net Balance</h3>
-                <p className="text-4xl font-black text-white print:text-black tracking-tighter">PKR {stats.netTotal.toLocaleString()}</p>
-                <div className="mt-6 flex items-center gap-3 sm:gap-6 border-t border-white/10 print:border-zinc-200 pt-6">
+                <h3 className="text-sm font-black text-indigo-200 print:!text-zinc-600 uppercase tracking-widest mb-1">Net Balance</h3>
+                <p className="text-4xl font-black text-white print:!text-black tracking-tighter">PKR {stats.netTotal.toLocaleString()}</p>
+                <div className="mt-6 flex items-center gap-3 sm:gap-6 border-t border-white/10 print:!border-zinc-300 pt-6">
                   <div className="flex-1 min-w-0">
-                    <span className="text-[9px] sm:text-[10px] font-black text-indigo-200/60 print:text-zinc-600 uppercase tracking-widest block truncate">Cash Expected</span>
-                    <span className="text-white print:text-black text-sm sm:text-base font-black truncate block">PKR {stats.cashExpected.toLocaleString()}</span>
+                    <span className="text-[9px] sm:text-[10px] font-black text-indigo-200/60 print:!text-zinc-600 uppercase tracking-widest block truncate">Cash Expected</span>
+                    <span className="text-white print:!text-black text-sm sm:text-base font-black truncate block">PKR {stats.cashExpected.toLocaleString()}</span>
                   </div>
-                  <div className="w-[1px] h-8 bg-white/20 print:bg-zinc-200 shrink-0" />
+                  <div className="w-[1px] h-8 bg-white/20 print:!bg-zinc-300 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <span className="text-[9px] sm:text-[10px] font-black text-indigo-200/60 print:text-zinc-600 uppercase tracking-widest block truncate">Digital / Bank</span>
-                    <span className="text-white print:text-black text-sm sm:text-base font-black truncate block">PKR {(stats.netTotal - stats.cashExpected).toLocaleString()}</span>
+                    <span className="text-[9px] sm:text-[10px] font-black text-indigo-200/60 print:!text-zinc-600 uppercase tracking-widest block truncate">Digital / Bank</span>
+                    <span className="text-white print:!text-black text-sm sm:text-base font-black truncate block">PKR {(stats.netTotal - stats.cashExpected).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
