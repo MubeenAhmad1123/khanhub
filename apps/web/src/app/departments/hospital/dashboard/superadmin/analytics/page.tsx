@@ -73,16 +73,21 @@ export default function HospitalAnalyticsPage() {
           if (!txStatsByDate[dateStr]) {
             txStatsByDate[dateStr] = { checkupCount: 0, usgCount: 0, labTestsCount: 0, operationsCount: 0 };
           }
-          const feeType = d.hospitalPatientDetails?.feeType;
-          const cat = d.category;
+          const type = String(d.hospitalPatientDetails?.type || '').toLowerCase();
+          const feeType = String(d.hospitalPatientDetails?.feeType || '').toLowerCase();
+          const cat = String(d.category || '').toLowerCase();
+          const catName = String(d.categoryName || '').toLowerCase();
 
-          if (feeType === 'usg' || cat === 'usg') {
-            txStatsByDate[dateStr].usgCount++;
-          } else if (feeType === 'operation' || feeType === 'opration' || cat === 'operation' || cat === 'operation_theater') {
+          const isOp = type === 'oprate' || type === 'operation' || feeType === 'operation' || feeType === 'opration' || cat === 'operation' || cat === 'oprate' || cat === 'operation_theater' || catName.includes('operation') || catName.includes('oprate');
+          const isUsg = feeType === 'usg' || cat === 'usg' || catName.includes('usg');
+
+          if (isOp) {
             txStatsByDate[dateStr].operationsCount++;
+          } else if (isUsg) {
+            txStatsByDate[dateStr].usgCount++;
           } else if (cat === 'lab_test') {
             txStatsByDate[dateStr].labTestsCount++;
-          } else if (feeType === 'checkup' || cat === 'opd_reception' || feeType === 'none' || !feeType) {
+          } else {
             txStatsByDate[dateStr].checkupCount++;
           }
         }

@@ -495,19 +495,38 @@ export default function DailyReportPage() {
       // Hospital specific stats
       if (tx.departmentCode === 'hospital') {
         const details = tx.hospitalPatientDetails;
+        const catStr = String(tx.category || '').toLowerCase();
+        const catNameStr = String(tx.categoryName || '').toLowerCase();
+        const descStr = String(tx.description || '').toLowerCase();
+        const feeTypeStr = String(details?.feeType || '').toLowerCase();
+        const typeStr = String(details?.type || '').toLowerCase();
+
+        const isOperation = 
+          typeStr === 'oprate' || 
+          typeStr === 'operation' || 
+          feeTypeStr === 'operation' || 
+          feeTypeStr === 'opration' || 
+          catStr === 'operation' || 
+          catStr === 'oprate' || 
+          catNameStr.includes('operation') || 
+          catNameStr.includes('oprate') || 
+          descStr.startsWith('operation');
+
+        const isUSG = 
+          feeTypeStr === 'usg' || 
+          catStr === 'usg' || 
+          catNameStr.includes('usg');
+
+        if (isOperation) {
+          summary.operationsCount += 1;
+        } else if (isUSG) {
+          summary.usgCount += 1;
+        } else if (!isExp && (typeStr === 'fee' || catStr === 'fee' || catNameStr.includes('checkup') || catNameStr.includes('check-up') || feeTypeStr === 'checkup' || feeTypeStr === 'none' || !details)) {
+          summary.checkupCount += 1;
+        }
+
         if (details) {
-          if (details.type === 'oprate' || details.type === 'operation') {
-            summary.operationsCount += 1;
-          } else if (details.type === 'fee') {
-            if (details.feeType === 'usg') {
-              summary.usgCount += 1;
-            } else if (details.feeType === 'operation' || details.feeType === 'opration' || tx.category === 'operation') {
-              summary.operationsCount += 1;
-            } else if (details.feeType === 'checkup' || details.feeType === 'none' || !details.feeType) {
-              summary.checkupCount += 1;
-            }
-          }
-          if (details.type === 'fee' || details.type === 'medicine' || details.type === 'oprate' || details.type === 'operation') {
+          if (details.type === 'fee' || details.type === 'medicine' || details.type === 'oprate' || details.type === 'operation' || isOperation) {
             const pName = details.patientName || tx.patientName;
             if (pName && pName !== '—' && pName !== 'Inline Patient' && pName !== 'Day Close Transaction') {
               summary.uniquePatients.add(pName.trim().toLowerCase());
