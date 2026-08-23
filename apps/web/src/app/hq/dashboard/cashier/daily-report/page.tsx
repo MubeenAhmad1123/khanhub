@@ -579,28 +579,32 @@ export default function DailyReportPage() {
           @page {
             margin: 10mm;
           }
-          *, body, html, div, p, span, h1, h2, h3, h4, h5, h6, td, th, table, tr, label, strong, b, svg {
+          * {
+            -webkit-print-color-adjust: economy !important;
+            print-color-adjust: economy !important;
+          }
+          div, p, span, h1, h2, h3, h4, h5, h6, td, th, table, tr, label, strong, b {
             color: #000000 !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+          }
+          .bg-indigo-600 {
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+            border: 1px solid #e5e7eb !important;
+            color: #000000 !important;
+            box-shadow: none !important;
+          }
+          .bg-indigo-600 *, .bg-indigo-600 p, .bg-indigo-600 span, .bg-indigo-600 h3 {
+            color: #000000 !important;
           }
           .text-zinc-400, .text-zinc-500, .text-zinc-600, .text-zinc-700, .text-zinc-800,
           .text-gray-400, .text-gray-500, .text-gray-600, .text-gray-700, .text-gray-800,
           .text-slate-400, .text-slate-500, .text-slate-600, .text-slate-700,
           .text-indigo-200, .text-indigo-200\\/60, .text-indigo-400, .text-indigo-600,
-          .text-emerald-500, .text-emerald-600, .text-rose-500, .text-rose-600, .text-amber-600 {
-            color: #000000 !important;
-          }
-          .bg-indigo-600 {
-            background-color: #ffffff !important;
-            border: 2px solid #000000 !important;
-            color: #000000 !important;
-          }
-          .bg-indigo-600 * {
+          .text-emerald-500, .text-emerald-600, .text-rose-500, .text-rose-600, .text-amber-600, .text-white {
             color: #000000 !important;
           }
           .border, .border-zinc-100, .border-zinc-200, .border-zinc-300 {
-            border-color: #d1d5db !important;
+            border-color: #e5e7eb !important;
           }
         }
       `}</style>
@@ -763,21 +767,21 @@ export default function DailyReportPage() {
                 </div>
               </div>
 
-              <div className="bg-indigo-600 p-7 rounded-[2.5rem] shadow-2xl shadow-indigo-200/50 relative overflow-hidden group col-span-1 md:col-span-2">
-                <div className="absolute top-0 right-0 p-4 opacity-20">
+              <div className="bg-indigo-600 print:bg-white print:border print:border-zinc-200 p-7 rounded-[2.5rem] shadow-2xl shadow-indigo-200/50 print:shadow-none relative overflow-hidden group col-span-1 md:col-span-2">
+                <div className="absolute top-0 right-0 p-4 opacity-20 print:hidden">
                     <Wallet className="w-20 h-20 text-white" />
                 </div>
-                <h3 className="text-sm font-black text-indigo-200 uppercase tracking-widest mb-1">Net Balance</h3>
-                <p className="text-4xl font-black text-white tracking-tighter">PKR {stats.netTotal.toLocaleString()}</p>
-                <div className="mt-6 flex items-center gap-3 sm:gap-6 border-t border-white/10 pt-6">
+                <h3 className="text-sm font-black text-indigo-200 print:text-zinc-600 uppercase tracking-widest mb-1">Net Balance</h3>
+                <p className="text-4xl font-black text-white print:text-black tracking-tighter">PKR {stats.netTotal.toLocaleString()}</p>
+                <div className="mt-6 flex items-center gap-3 sm:gap-6 border-t border-white/10 print:border-zinc-200 pt-6">
                   <div className="flex-1 min-w-0">
-                    <span className="text-[9px] sm:text-[10px] font-black text-indigo-200/60 uppercase tracking-widest block truncate">Cash Expected</span>
-                    <span className="text-white text-sm sm:text-base font-black truncate block">PKR {stats.cashExpected.toLocaleString()}</span>
+                    <span className="text-[9px] sm:text-[10px] font-black text-indigo-200/60 print:text-zinc-600 uppercase tracking-widest block truncate">Cash Expected</span>
+                    <span className="text-white print:text-black text-sm sm:text-base font-black truncate block">PKR {stats.cashExpected.toLocaleString()}</span>
                   </div>
-                  <div className="w-[1px] h-8 bg-white/20 shrink-0" />
+                  <div className="w-[1px] h-8 bg-white/20 print:bg-zinc-200 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <span className="text-[9px] sm:text-[10px] font-black text-indigo-200/60 uppercase tracking-widest block truncate">Digital / Bank</span>
-                    <span className="text-white text-sm sm:text-base font-black truncate block">PKR {(stats.netTotal - stats.cashExpected).toLocaleString()}</span>
+                    <span className="text-[9px] sm:text-[10px] font-black text-indigo-200/60 print:text-zinc-600 uppercase tracking-widest block truncate">Digital / Bank</span>
+                    <span className="text-white print:text-black text-sm sm:text-base font-black truncate block">PKR {(stats.netTotal - stats.cashExpected).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
