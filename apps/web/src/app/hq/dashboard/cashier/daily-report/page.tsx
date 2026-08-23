@@ -114,6 +114,9 @@ const getTxDisplayDescription = (tx: any): string => {
       const itemsList = details.items?.map((it: any) => `${it.name} (Rs ${it.amount || it.price})`).join(', ') || '';
       return `Medicine: ${itemsList || tx.description || 'Prescription items'}`;
     }
+    if (details.type === 'oprate' || details.type === 'operation') {
+      return `Operation: ${details.operationName || details.feeType || 'Operation'}${details.doctorName ? ` (Dr. ${details.doctorName})` : ''}${tx.description ? ` (${tx.description})` : ''}`;
+    }
     // Standard hospital patient form fallback
     const category = details.category || '';
     const reason = details.reason || '';
@@ -493,7 +496,9 @@ export default function DailyReportPage() {
       if (tx.departmentCode === 'hospital') {
         const details = tx.hospitalPatientDetails;
         if (details) {
-          if (details.type === 'fee') {
+          if (details.type === 'oprate' || details.type === 'operation') {
+            summary.operationsCount += 1;
+          } else if (details.type === 'fee') {
             if (details.feeType === 'usg') {
               summary.usgCount += 1;
             } else if (details.feeType === 'operation' || details.feeType === 'opration' || tx.category === 'operation') {
@@ -502,7 +507,7 @@ export default function DailyReportPage() {
               summary.checkupCount += 1;
             }
           }
-          if (details.type === 'fee' || details.type === 'medicine') {
+          if (details.type === 'fee' || details.type === 'medicine' || details.type === 'oprate' || details.type === 'operation') {
             const pName = details.patientName || tx.patientName;
             if (pName && pName !== '—' && pName !== 'Inline Patient' && pName !== 'Day Close Transaction') {
               summary.uniquePatients.add(pName.trim().toLowerCase());

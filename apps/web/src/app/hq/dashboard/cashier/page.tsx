@@ -175,7 +175,7 @@ export default function CashierStationPage() {
   const [hospitalExpenseAmount, setHospitalExpenseAmount] = useState('');
 
   // Refined Hospital Cashier States for Common Hospital
-  const [hospitalIncomeType, setHospitalIncomeType] = useState<'fee' | 'medicine' | 'none'>('none');
+  const [hospitalIncomeType, setHospitalIncomeType] = useState<'fee' | 'medicine' | 'oprate' | 'none'>('none');
   const [hospitalFeeType, setHospitalFeeType] = useState<'checkup' | 'usg' | 'operation' | 'bsr' | 'hb_test' | 'custom' | 'none'>('none');
   const [hospitalCustomFeeName, setHospitalCustomFeeName] = useState('');
   const [hospitalExpenseReceiver, setHospitalExpenseReceiver] = useState('');
@@ -188,6 +188,12 @@ export default function CashierStationPage() {
   const [hospitalMedicineItems, setHospitalMedicineItems] = useState<{ id: string; name: string; price: number }[]>([]);
   const [newMedItemName, setNewMedItemName] = useState('');
   const [newMedItemPrice, setNewMedItemPrice] = useState('');
+
+  // Oprate Income States
+  const [hospitalOperateName, setHospitalOperateName] = useState('');
+  const [hospitalOperatePatientName, setHospitalOperatePatientName] = useState('');
+  const [hospitalOperateDoctorName, setHospitalOperateDoctorName] = useState('');
+  const [hospitalOperateTime, setHospitalOperateTime] = useState('');
 
   // General Transaction States
   const [itemizedList, setItemizedList] = useState<{ id: string; name: string; price: number }[]>([]);
@@ -274,7 +280,9 @@ export default function CashierStationPage() {
     hospitalTime: '',
     hospitalFeeType: 'none' as 'none' | 'checkup' | 'usg' | 'operation' | 'bsr' | 'hb_test' | 'custom',
     hospitalCustomFeeName: '',
-    hospitalIncomeType: 'none' as 'none' | 'fee' | 'medicine',
+    hospitalIncomeType: 'none' as 'none' | 'fee' | 'medicine' | 'oprate',
+    hospitalOperateName: '',
+    hospitalOperateDoctorName: '',
   });
   const [updatingDetail, setUpdatingDetail] = useState(false);
   const [forwardModalTx, setForwardModalTx] = useState<any | null>(null);
@@ -1183,7 +1191,7 @@ export default function CashierStationPage() {
           }
         } else {
           if (hospitalIncomeType === 'none') {
-            const txt = 'Please select Fee or Medicine.';
+            const txt = 'Please select Fee, Medicine, or Oprate.';
             toast.error(txt);
             return setMessage({ type: 'error', text: txt });
           }
@@ -1215,6 +1223,22 @@ export default function CashierStationPage() {
               return setMessage({ type: 'error', text: txt });
             }
             if (!hospitalMedicineTime.trim()) {
+              const txt = 'Please enter the time.';
+              toast.error(txt);
+              return setMessage({ type: 'error', text: txt });
+            }
+          } else if (hospitalIncomeType === 'oprate') {
+            if (!hospitalOperateName.trim()) {
+              const txt = 'Please enter the operation name.';
+              toast.error(txt);
+              return setMessage({ type: 'error', text: txt });
+            }
+            if (!hospitalOperatePatientName.trim()) {
+              const txt = "Please enter the patient's name.";
+              toast.error(txt);
+              return setMessage({ type: 'error', text: txt });
+            }
+            if (!hospitalOperateTime.trim()) {
               const txt = 'Please enter the time.';
               toast.error(txt);
               return setMessage({ type: 'error', text: txt });
@@ -1489,6 +1513,8 @@ export default function CashierStationPage() {
           resolvedCategory = { id: catId, name: feeName, appliesTo: 'income' } as any;
         } else if (hospitalIncomeType === 'medicine') {
           resolvedCategory = { id: 'medicine_charge', name: 'Medicine / Treatment', appliesTo: 'income' } as any;
+        } else if (hospitalIncomeType === 'oprate') {
+          resolvedCategory = { id: 'operation', name: `Operation — ${hospitalOperateName.trim()}`, appliesTo: 'income' } as any;
         }
       }
 
@@ -1508,6 +1534,8 @@ export default function CashierStationPage() {
           finalDescription = `${feeName} for ${hospitalFeePatientName} | Time: ${hospitalFeeTime}${description ? ` | Note: ${description}` : ''}`;
         } else if (hospitalIncomeType === 'medicine') {
           finalDescription = `Medicine/Treatment for ${hospitalMedicinePatientName} | Time: ${hospitalMedicineTime} | Items: ${hospitalMedicineItems.map(i => `${i.name} (Rs ${i.price})`).join(', ')}${description ? ` | Note: ${description}` : ''}`;
+        } else if (hospitalIncomeType === 'oprate') {
+          finalDescription = `Operation (${hospitalOperateName.trim()}) for ${hospitalOperatePatientName.trim()}${hospitalOperateDoctorName.trim() ? ` | Doctor: ${hospitalOperateDoctorName.trim()}` : ''} | Time: ${hospitalOperateTime}${description ? ` | Note: ${description}` : ''}`;
         }
       } else if (!selectedEntity && itemizedList.length > 0) {
         finalDescription = `Items: ${itemizedList.map(i => `${i.name} (Rs ${i.price})`).join(', ')}${description ? ` | Note: ${description}` : ''}`;
@@ -1555,7 +1583,9 @@ export default function CashierStationPage() {
                          ? hospitalExpenseReceiver.trim() 
                          : hospitalIncomeType === 'fee' 
                            ? hospitalFeePatientName.trim() 
-                           : hospitalMedicinePatientName.trim()) || 'Inline Patient') 
+                           : hospitalIncomeType === 'oprate'
+                             ? hospitalOperatePatientName.trim()
+                             : hospitalMedicinePatientName.trim()) || 'Inline Patient') 
                     : 'Day Close Transaction',
                   hospitalPatientDetails: hospitalMode === 'all_transactions' 
                     ? (isHospitalCommonAllTx 
@@ -1576,13 +1606,22 @@ export default function CashierStationPage() {
                               time: hospitalFeeTime,
                               date: txDate
                             }
-                          : {
-                              type: 'medicine',
-                              patientName: hospitalMedicinePatientName,
-                              time: hospitalMedicineTime,
-                              items: hospitalMedicineItems,
-                              date: txDate
-                            }
+                          : hospitalIncomeType === 'oprate'
+                            ? {
+                                type: 'oprate',
+                                operationName: hospitalOperateName.trim(),
+                                patientName: hospitalOperatePatientName.trim(),
+                                doctorName: hospitalOperateDoctorName.trim(),
+                                time: hospitalOperateTime,
+                                date: txDate
+                              }
+                            : {
+                                type: 'medicine',
+                                patientName: hospitalMedicinePatientName,
+                                time: hospitalMedicineTime,
+                                items: hospitalMedicineItems,
+                                date: txDate
+                              }
                       )
                       : {
                           serialNumber: hospitalTxForm.serialNumber,
@@ -1853,6 +1892,10 @@ export default function CashierStationPage() {
       setHospitalMedicineItems([]);
       setNewMedItemName('');
       setNewMedItemPrice('');
+      setHospitalOperateName('');
+      setHospitalOperatePatientName('');
+      setHospitalOperateDoctorName('');
+      setHospitalOperateTime('');
 
       setProofUploading(false);
       setIsHold(false);
@@ -1928,12 +1971,29 @@ export default function CashierStationPage() {
           } else if (editDetailForm.hospitalIncomeType === 'medicine') {
             finalHospitalDetails = {
               ...details,
+              type: 'medicine',
               patientName: editDetailForm.hospitalPatientName.trim(),
               time: editDetailForm.hospitalTime.trim(),
               date: editDetailForm.date,
             };
             const itemsStr = details.items?.map((i: any) => `${i.name} (Rs ${i.price || i.amount})`).join(', ') || '';
             finalDescription = `Medicine/Treatment for ${editDetailForm.hospitalPatientName.trim()} | Time: ${editDetailForm.hospitalTime.trim()}${itemsStr ? ` | Items: ${itemsStr}` : ''}${editDetailForm.description ? ` | Note: ${editDetailForm.description}` : ''}`;
+          } else if (editDetailForm.hospitalIncomeType === 'oprate') {
+            if (!editDetailForm.hospitalOperateName.trim()) {
+              toast.error('Please enter the operation name');
+              setUpdatingDetail(false);
+              return;
+            }
+            finalHospitalDetails = {
+              ...details,
+              type: 'oprate',
+              operationName: editDetailForm.hospitalOperateName.trim(),
+              patientName: editDetailForm.hospitalPatientName.trim(),
+              doctorName: (editDetailForm.hospitalOperateDoctorName || '').trim(),
+              time: editDetailForm.hospitalTime.trim(),
+              date: editDetailForm.date,
+            };
+            finalDescription = `Operation (${editDetailForm.hospitalOperateName.trim()}) for ${editDetailForm.hospitalPatientName.trim()}${editDetailForm.hospitalOperateDoctorName?.trim() ? ` | Doctor: ${editDetailForm.hospitalOperateDoctorName.trim()}` : ''} | Time: ${editDetailForm.hospitalTime.trim()}${editDetailForm.description ? ` | Note: ${editDetailForm.description}` : ''}`;
           }
         } else {
           finalHospitalDetails = {
@@ -1947,14 +2007,18 @@ export default function CashierStationPage() {
       }
 
       let feeCategoryName = editDetailForm.categoryName;
-      if (deptCode === 'hospital' && editDetailForm.hospitalIncomeType === 'fee') {
-        let feeName = 'Check-up Fee';
-        if (editDetailForm.hospitalFeeType === 'usg') feeName = 'USG Fee';
-        else if (editDetailForm.hospitalFeeType === 'operation') feeName = 'Operation Fee';
-        else if (editDetailForm.hospitalFeeType === 'bsr') feeName = 'BSR Fee';
-        else if (editDetailForm.hospitalFeeType === 'hb_test') feeName = 'HB Test Fee';
-        else if (editDetailForm.hospitalFeeType === 'custom') feeName = editDetailForm.hospitalCustomFeeName.trim();
-        feeCategoryName = feeName;
+      if (deptCode === 'hospital') {
+        if (editDetailForm.hospitalIncomeType === 'fee') {
+          let feeName = 'Check-up Fee';
+          if (editDetailForm.hospitalFeeType === 'usg') feeName = 'USG Fee';
+          else if (editDetailForm.hospitalFeeType === 'operation') feeName = 'Operation Fee';
+          else if (editDetailForm.hospitalFeeType === 'bsr') feeName = 'BSR Fee';
+          else if (editDetailForm.hospitalFeeType === 'hb_test') feeName = 'HB Test Fee';
+          else if (editDetailForm.hospitalFeeType === 'custom') feeName = editDetailForm.hospitalCustomFeeName.trim();
+          feeCategoryName = feeName;
+        } else if (editDetailForm.hospitalIncomeType === 'oprate') {
+          feeCategoryName = `Operation — ${editDetailForm.hospitalOperateName.trim()}`;
+        }
       }
 
       if (isApproved) {
@@ -2849,7 +2913,7 @@ export default function CashierStationPage() {
                           <div className="space-y-6 pt-4 border-t border-zinc-200/60 animate-in fade-in duration-300">
                             <div className="space-y-4">
                               <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Income Classification</label>
-                              <div className="grid grid-cols-2 gap-3">
+                              <div className="grid grid-cols-3 gap-3">
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -2878,6 +2942,20 @@ export default function CashierStationPage() {
                                   )}
                                 >
                                   Medicine
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setHospitalIncomeType('oprate');
+                                    setHospitalFeeType('none');
+                                    setAmount('');
+                                  }}
+                                  className={cn(
+                                    "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                                    hospitalIncomeType === 'oprate' ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white border-zinc-200 text-zinc-400 hover:border-indigo-200"
+                                  )}
+                                >
+                                  Oprate
                                 </button>
                               </div>
                             </div>
@@ -3035,6 +3113,49 @@ export default function CashierStationPage() {
                                       ))}
                                     </div>
                                   )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Income Subcategory: Oprate */}
+                            {hospitalIncomeType === 'oprate' && (
+                              <div className="space-y-4 pt-4 border-t border-zinc-200/60 animate-in fade-in duration-300">
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Operation / Procedure Name</label>
+                                  <input
+                                    type="text"
+                                    value={hospitalOperateName}
+                                    onChange={(e) => setHospitalOperateName(e.target.value)}
+                                    placeholder="e.g. Appendix, C-Section, Eye Surgery..."
+                                    className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Patient Name</label>
+                                  <input
+                                    value={hospitalOperatePatientName}
+                                    onChange={(e) => setHospitalOperatePatientName(e.target.value)}
+                                    placeholder="e.g. Patient Name..."
+                                    className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Doctor / Surgeon Name (Optional)</label>
+                                  <input
+                                    value={hospitalOperateDoctorName}
+                                    onChange={(e) => setHospitalOperateDoctorName(e.target.value)}
+                                    placeholder="e.g. Dr. Ahmad..."
+                                    className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Time</label>
+                                  <input
+                                    type="time"
+                                    value={hospitalOperateTime}
+                                    onChange={(e) => setHospitalOperateTime(e.target.value)}
+                                    className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                  />
                                 </div>
                               </div>
                             )}
@@ -4198,6 +4319,32 @@ export default function CashierStationPage() {
                                  )}
                                </div>
                              )}
+
+                             {/* Oprate fields if oprate */}
+                             {editDetailForm.hospitalIncomeType === 'oprate' && (
+                               <div className="space-y-4">
+                                 <div className="space-y-2">
+                                   <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Operation / Procedure Name</label>
+                                   <input
+                                     type="text"
+                                     value={editDetailForm.hospitalOperateName}
+                                     onChange={(e) => setEditDetailForm({ ...editDetailForm, hospitalOperateName: e.target.value })}
+                                     className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20"
+                                     placeholder="e.g. Appendix, C-Section, Eye Surgery..."
+                                   />
+                                 </div>
+                                 <div className="space-y-2">
+                                   <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Doctor / Surgeon Name (Optional)</label>
+                                   <input
+                                     type="text"
+                                     value={editDetailForm.hospitalOperateDoctorName}
+                                     onChange={(e) => setEditDetailForm({ ...editDetailForm, hospitalOperateDoctorName: e.target.value })}
+                                     className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold text-zinc-900 outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20"
+                                     placeholder="e.g. Dr. Ahmad..."
+                                   />
+                                 </div>
+                               </div>
+                             )}
                           </>
                         )}
 
@@ -4370,7 +4517,9 @@ export default function CashierStationPage() {
                               hospitalTime: details.time || '',
                               hospitalFeeType: details.feeType || 'none',
                               hospitalCustomFeeName: details.customFeeName || '',
-                              hospitalIncomeType: details.type || 'none',
+                              hospitalIncomeType: details.type || (details.feeType === 'operation' ? 'oprate' : 'none'),
+                              hospitalOperateName: details.operationName || (details.feeType === 'operation' ? (details.customFeeName || 'Operation') : ''),
+                              hospitalOperateDoctorName: details.doctorName || '',
                             });
                           }}
                           className="h-16 bg-indigo-50 text-indigo-600 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-indigo-600 hover:text-white transition-all shadow-xl shadow-indigo-600/5"
