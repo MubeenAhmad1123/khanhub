@@ -554,7 +554,37 @@ export default function DailyReportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FCFBF8] pb-20 print:bg-white print:pb-0 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-[#FCFBF8] pb-20 print:bg-white print:pb-0 print:text-black font-sans selection:bg-indigo-100 selection:text-indigo-900">
+      <style>{`
+        @media print {
+          @page {
+            margin: 10mm;
+          }
+          *, body, html, div, p, span, h1, h2, h3, h4, h5, h6, td, th, table, tr, label, strong, b, svg {
+            color: #000000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .text-zinc-400, .text-zinc-500, .text-zinc-600, .text-zinc-700, .text-zinc-800,
+          .text-gray-400, .text-gray-500, .text-gray-600, .text-gray-700, .text-gray-800,
+          .text-slate-400, .text-slate-500, .text-slate-600, .text-slate-700,
+          .text-indigo-200, .text-indigo-200\\/60, .text-indigo-400, .text-indigo-600,
+          .text-emerald-500, .text-emerald-600, .text-rose-500, .text-rose-600, .text-amber-600 {
+            color: #000000 !important;
+          }
+          .bg-indigo-600 {
+            background-color: #ffffff !important;
+            border: 2px solid #000000 !important;
+            color: #000000 !important;
+          }
+          .bg-indigo-600 * {
+            color: #000000 !important;
+          }
+          .border, .border-zinc-100, .border-zinc-200, .border-zinc-300 {
+            border-color: #d1d5db !important;
+          }
+        }
+      `}</style>
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-zinc-100 px-4 py-4 md:px-8 print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-center gap-5">
