@@ -337,11 +337,18 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          .bg-zinc-900 {
+          /* Force dark background cards to retain dark background and white/light text */
+          .bg-zinc-900, .bg-zinc-900 * {
             background-color: #111827 !important;
             color: #ffffff !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+          }
+          .bg-zinc-900 .text-zinc-400, .bg-zinc-900 .text-zinc-300, .bg-zinc-900 .text-zinc-450 {
+            color: #e5e7eb !important;
+          }
+          .bg-zinc-900 .text-white, .bg-zinc-900 span.text-white {
+            color: #ffffff !important;
           }
           .text-indigo-600 {
             color: #4f46e5 !important;
@@ -454,7 +461,7 @@ export function DailyFinanceReportPrintable({ date, transactions, onClose, gener
               </div>
               <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900 text-white flex justify-between items-center">
                 <div>
-                  <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Net Balance</span>
+                  <span className="text-[8px] font-black text-zinc-300 uppercase tracking-widest block mb-1">Net Balance</span>
                   <span className="text-lg font-black text-white">Rs {stats.netBalance.toLocaleString()}</span>
                 </div>
                 <div className="bg-white/10 p-1.5 rounded-lg text-white">

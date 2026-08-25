@@ -583,9 +583,6 @@ export default function DailyReportPage() {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          div, p, span, h1, h2, h3, h4, h5, h6, td, th, table, tr, label, strong, b {
-            color: #000000 !important;
-          }
           .bg-indigo-600, div[class*="bg-indigo-600"] {
             background-color: #ffffff !important;
             background: #ffffff !important;
@@ -596,11 +593,20 @@ export default function DailyReportPage() {
           .bg-indigo-600 *, div[class*="bg-indigo-600"] * {
             color: #000000 !important;
           }
+          .bg-zinc-900, .bg-zinc-900 * {
+            background-color: #111827 !important;
+            color: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .bg-zinc-900 .text-zinc-400, .bg-zinc-900 .text-zinc-300, .bg-zinc-900 .text-zinc-450 {
+            color: #e5e7eb !important;
+          }
           .text-zinc-400, .text-zinc-500, .text-zinc-600, .text-zinc-700, .text-zinc-800,
           .text-gray-400, .text-gray-500, .text-gray-600, .text-gray-700, .text-gray-800,
           .text-slate-400, .text-slate-500, .text-slate-600, .text-slate-700,
           .text-indigo-200, .text-indigo-200\\/60, .text-indigo-400, .text-indigo-600,
-          .text-emerald-500, .text-emerald-600, .text-rose-500, .text-rose-600, .text-amber-600, .text-white {
+          .text-emerald-500, .text-emerald-600, .text-rose-500, .text-rose-600, .text-amber-600 {
             color: #000000 !important;
           }
           .border, .border-zinc-100, .border-zinc-200, .border-zinc-300 {
