@@ -2,14 +2,15 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, query, where, orderBy, Timestamp, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, Timestamp, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
 import {
   ArrowLeft, Loader2, Search,
   Calendar, CheckCircle, XCircle, Download,
-  TrendingUp, Shield, AlertTriangle, Award
+  TrendingUp, Shield, AlertTriangle, Award,
+  Zap, CheckCheck, ChevronDown, CheckSquare, Square, X
 } from 'lucide-react';
 import { getDeptPrefix, getDeptCollection, type StaffDept, listStaffCards } from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
@@ -142,6 +143,26 @@ export default function DailyReportPage() {
   const [selectedDesignation, setSelectedDesignation] = useState<string>('all');
   const [sortBySeniority, setSortBySeniority] = useState<boolean>(false);
 
+  // Bulk Selection State
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [saving, setSaving] = useState(false);
+  const [newCustomItemText, setNewCustomItemText] = useState('');
+
+  const [activeChecklist, setActiveChecklist] = useState<{
+    id: string;
+    type: 'uniform' | 'duty';
+    items: { key: string; label: string }[];
+    checkedKeys: string[];
+  } | null>(null);
+
+  const [latePicker, setLatePicker] = useState<{
+    id: string;
+    dutyStartTime: string;
+    arrivalTime: string;
+    lateMinutes: number;
+  } | null>(null);
+
   useEffect(() => {
     if (sessionLoading) return;
     
@@ -195,7 +216,7 @@ export default function DailyReportPage() {
 
       const depts: StaffDept[] = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'job-center', 'social-media', 'it'];
 
-      // 1. Fetch all data in parallel to eliminate database query waterfalls (70% load time reduction)
+      // Parallel fetching of all departments data
       const [
         unifiedStaffCards,
         staffSnaps,
@@ -255,13 +276,11 @@ export default function DailyReportPage() {
           return false;
         }
 
-        // Validate name exists and is not blank/placeholder
         const nameVal = (s.name || s.displayName || '').trim();
         if (!nameVal || nameVal === '—' || nameVal === '-') {
           return false;
         }
 
-        // Check Joining Date: staff should only appear on or after their joining date
         const joiningRaw = s.joiningDate || s.startDate || s.dateJoined || s.createdAt;
         if (joiningRaw) {
           let joiningStr = '';
@@ -279,11 +298,10 @@ export default function DailyReportPage() {
             } catch (e) {}
           }
           if (joiningStr && reportDate < joiningStr) {
-            return false; // Joined after reportDate -> do not show
+            return false;
           }
         }
 
-        // Exclude patients, students, families, clients, seekers, and superadmins
         const EXCLUDED_ROLES = ['patient', 'family', 'student', 'client', 'seeker', 'user', 'superadmin', 'donor', 'child', 'oldage', 'beneficiary', 'orphan'];
         if (EXCLUDED_ROLES.some(ex => r.includes(ex) || desig.includes(ex))) {
           return false;
@@ -294,7 +312,6 @@ export default function DailyReportPage() {
         return isActive;
       };
 
-      // First add from unifiedStaffCards
       if (Array.isArray(unifiedStaffCards)) {
         unifiedStaffCards.forEach((s: any) => {
           if (isEligibleStaff(s)) {
@@ -308,7 +325,6 @@ export default function DailyReportPage() {
         });
       }
 
-      // Supplement with manual fetch to make sure NO active staff is missed
       if (Array.isArray(staffSnaps)) {
         staffSnaps.forEach((snap: any, i: number) => {
           if (snap && Array.isArray(snap.docs)) {
@@ -386,7 +402,7 @@ export default function DailyReportPage() {
         }
       }));
 
-      // 3. Process Report Rows
+      // Process Report Rows
       const rows: DailyReportRow[] = allStaff.map(s => {
         const timeToMinutes = (timeStr?: string) => {
           if (!timeStr) return null;
@@ -525,6 +541,7 @@ export default function DailyReportPage() {
       });
 
       setReportData(rows.sort((a, b) => b.dailyScore - a.dailyScore));
+      setSelectedIds([]);
     } catch (err) {
       console.error(err);
       toast.error("Failed to generate daily report");
@@ -561,7 +578,7 @@ export default function DailyReportPage() {
         if (d.includes('trial')) return 3;
         if (d.includes('internee') || d.includes('intern') || s.includes('internee') || s.includes('fresher')) return 2;
         if (d.includes('volunteer') || s.includes('volunteer')) return 1;
-        return 5; // Default to 5 so standard staff is ranked above interns/volunteers/trial/contract
+        return 5;
       };
       result = [...result].sort((a, b) => {
         const rankA = getSeniorityRank(a.seniority || '', a.designation);
@@ -574,51 +591,27 @@ export default function DailyReportPage() {
     return result;
   }, [reportData, search, deptFilter, selectedDesignation, sortBySeniority]);
 
-  const handleDownloadImage = async () => {
-    const captureContainer = document.getElementById('daily-report-table-capture-export');
-    if (!captureContainer) {
-      toast.error("Export template not found");
-      return;
-    }
+  const currentVisibleRows = useMemo(() => {
+    return filteredData.filter(r => activeFilter === 'all' || r.attendance === activeFilter);
+  }, [filteredData, activeFilter]);
 
-    try {
-      setDownloading(true);
-      toast.loading("Preparing high-quality report...", { id: 'download-image' });
+  const isAllVisibleSelected = currentVisibleRows.length > 0 && currentVisibleRows.every(r => selectedIds.includes(r.id));
+  const dirtyCount = reportData.filter(r => r.isDirty).length;
+  const unmarkedCount = currentVisibleRows.filter(r => r.attendance === 'unmarked').length;
 
-      await new Promise(resolve => setTimeout(resolve, 150));
-
-      await downloadElementAsPng(captureContainer, `HQ_Daily_Report_${reportDate}.png`, {
-        scale: 3,
-        backgroundColor: '#FFFFFF'
-      });
-
-      toast.success("Report downloaded successfully!", { id: 'download-image' });
-    } catch (err) {
-      console.error('Download error:', err);
-      toast.error("Failed to generate image", { id: 'download-image' });
-    } finally {
-      setDownloading(false);
+  const handleToggleSelectAllVisible = () => {
+    if (isAllVisibleSelected) {
+      const visibleIdSet = new Set(currentVisibleRows.map(r => r.id));
+      setSelectedIds(prev => prev.filter(id => !visibleIdSet.has(id)));
+    } else {
+      const visibleIds = currentVisibleRows.map(r => r.id);
+      setSelectedIds(prev => Array.from(new Set([...prev, ...visibleIds])));
     }
   };
 
-
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [saving, setSaving] = useState(false);
-  const [newCustomItemText, setNewCustomItemText] = useState('');
-
-  const [activeChecklist, setActiveChecklist] = useState<{
-    id: string;
-    type: 'uniform' | 'duty';
-    items: { key: string; label: string }[];
-    checkedKeys: string[];
-  } | null>(null);
-
-  const [latePicker, setLatePicker] = useState<{
-    id: string;
-    dutyStartTime: string;
-    arrivalTime: string;
-    lateMinutes: number;
-  } | null>(null);
+  const handleToggleSelectRow = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
 
   const calculateLateMinutes = (startTime: string, arrivalTime: string) => {
     if (!startTime || !arrivalTime) return 0;
@@ -742,6 +735,229 @@ export default function DailyReportPage() {
     }));
   };
 
+  // BULK ACTION 1: 100% Full Score (Present, Uniform Yes, Duty Done)
+  const handleBulkFullScore = (targetIds?: string[]) => {
+    const idsToUpdate = targetIds && targetIds.length > 0 
+      ? targetIds 
+      : (selectedIds.length > 0 ? selectedIds : currentVisibleRows.map(r => r.id));
+      
+    if (idsToUpdate.length === 0) {
+      toast.error("No staff members to mark");
+      return;
+    }
+
+    const idSet = new Set(idsToUpdate);
+    setReportData(prev => prev.map(row => {
+      if (idSet.has(row.id)) {
+        const uConfig = normalizeChecklistConfig(row.uniformConfig, DEFAULT_UNIFORM_CONFIG);
+        const dConfig = normalizeChecklistConfig(row.dutyConfig, DEFAULT_DUTY_CONFIG);
+        return {
+          ...row,
+          attendance: 'present',
+          arrivalTime: undefined,
+          uniformStatus: 'yes',
+          uniformConfig: uConfig,
+          uniformItems: uConfig.map((c: any) => ({ key: c.key, label: c.label, status: 'yes' })),
+          dutyStatus: 'yes',
+          dutyConfig: dConfig,
+          dutyItems: dConfig.map((c: any) => ({ key: c.key, label: c.label, status: 'done' })),
+          details: {
+            ...row.details,
+            uniformMissing: [],
+            dutiesPending: []
+          },
+          dailyScore: 3,
+          isDirty: true
+        };
+      }
+      return row;
+    }));
+
+    toast.success(`⚡ Marked ${idsToUpdate.length} staff as 100% Full Score (3/3)`);
+  };
+
+  // BULK ACTION 2: Mark only remaining Unmarked staff
+  const handleBulkMarkUnmarked = (type: 'present' | 'fullScore') => {
+    const unmarkedRows = currentVisibleRows.filter(r => r.attendance === 'unmarked');
+    if (unmarkedRows.length === 0) {
+      toast.error("No unmarked staff members found");
+      return;
+    }
+    const idSet = new Set(unmarkedRows.map(r => r.id));
+
+    setReportData(prev => prev.map(row => {
+      if (idSet.has(row.id)) {
+        if (type === 'fullScore') {
+          const uConfig = normalizeChecklistConfig(row.uniformConfig, DEFAULT_UNIFORM_CONFIG);
+          const dConfig = normalizeChecklistConfig(row.dutyConfig, DEFAULT_DUTY_CONFIG);
+          return {
+            ...row,
+            attendance: 'present',
+            arrivalTime: undefined,
+            uniformStatus: 'yes',
+            uniformConfig: uConfig,
+            uniformItems: uConfig.map((c: any) => ({ key: c.key, label: c.label, status: 'yes' })),
+            dutyStatus: 'yes',
+            dutyConfig: dConfig,
+            dutyItems: dConfig.map((c: any) => ({ key: c.key, label: c.label, status: 'done' })),
+            details: {
+              ...row.details,
+              uniformMissing: [],
+              dutiesPending: []
+            },
+            dailyScore: 3,
+            isDirty: true
+          };
+        } else {
+          const onLeave = false;
+          const attPoint = 1;
+          const uniformPoint = (!onLeave && row.uniformStatus === 'yes') ? 1 : 0;
+          const dutyPoint = (!onLeave && row.dutyStatus === 'yes') ? 1 : 0;
+          return {
+            ...row,
+            attendance: 'present',
+            arrivalTime: undefined,
+            dailyScore: attPoint + uniformPoint + dutyPoint,
+            isDirty: true
+          };
+        }
+      }
+      return row;
+    }));
+
+    toast.success(`Marked ${unmarkedRows.length} unmarked staff as ${type === 'fullScore' ? 'Full Score (3/3)' : 'Present'}`);
+  };
+
+  // BULK ACTION 3: Attendance bulk update
+  const handleBulkAttendance = (status: 'present' | 'absent' | 'late' | 'leave' | 'unmarked', targetIds?: string[]) => {
+    const idsToUpdate = targetIds && targetIds.length > 0 
+      ? targetIds 
+      : (selectedIds.length > 0 ? selectedIds : currentVisibleRows.map(r => r.id));
+
+    if (idsToUpdate.length === 0) {
+      toast.error("No staff members to mark");
+      return;
+    }
+
+    const idSet = new Set(idsToUpdate);
+    setReportData(prev => prev.map(row => {
+      if (idSet.has(row.id)) {
+        const onLeave = status === 'leave';
+        const attPoint = status === 'present' ? 1 : 0;
+        const uniformPoint = (!onLeave && row.uniformStatus === 'yes') ? 1 : 0;
+        const dutyPoint = (!onLeave && row.dutyStatus === 'yes') ? 1 : 0;
+        return {
+          ...row,
+          attendance: status,
+          arrivalTime: status === 'late' ? (row.arrivalTime || addMinutesToTime(row.dutyStartTime || '09:00', 5)) : undefined,
+          dailyScore: attPoint + uniformPoint + dutyPoint,
+          isDirty: true
+        };
+      }
+      return row;
+    }));
+
+    toast.success(`Marked ${idsToUpdate.length} staff attendance as ${status.toUpperCase()}`);
+  };
+
+  // BULK ACTION 4: Uniform bulk update
+  const handleBulkUniform = (status: 'yes' | 'no' | 'na', targetIds?: string[]) => {
+    const idsToUpdate = targetIds && targetIds.length > 0 
+      ? targetIds 
+      : (selectedIds.length > 0 ? selectedIds : currentVisibleRows.map(r => r.id));
+
+    if (idsToUpdate.length === 0) {
+      toast.error("No staff members to mark");
+      return;
+    }
+
+    const idSet = new Set(idsToUpdate);
+    setReportData(prev => prev.map(row => {
+      if (idSet.has(row.id)) {
+        const config = normalizeChecklistConfig(row.uniformConfig, DEFAULT_UNIFORM_CONFIG);
+        let uniformItems = row.uniformItems;
+        let missing: string[] = [];
+        if (status === 'yes') {
+          uniformItems = config.map((c: any) => ({ key: c.key, label: c.label, status: 'yes' }));
+          missing = [];
+        } else if (status === 'no') {
+          uniformItems = config.map((c: any) => ({ key: c.key, label: c.label, status: 'no' }));
+          missing = config.map((c: any) => c.label);
+        }
+
+        const onLeave = row.attendance === 'leave';
+        const attPoint = row.attendance === 'present' ? 1 : 0;
+        const uniformPoint = (!onLeave && status === 'yes') ? 1 : 0;
+        const dutyPoint = (!onLeave && row.dutyStatus === 'yes') ? 1 : 0;
+
+        return {
+          ...row,
+          uniformStatus: status,
+          uniformConfig: config,
+          uniformItems,
+          details: {
+            ...row.details,
+            uniformMissing: missing
+          },
+          dailyScore: attPoint + uniformPoint + dutyPoint,
+          isDirty: true
+        };
+      }
+      return row;
+    }));
+
+    toast.success(`Marked uniform as ${status.toUpperCase()} for ${idsToUpdate.length} staff`);
+  };
+
+  // BULK ACTION 5: Duty bulk update
+  const handleBulkDuty = (status: 'yes' | 'no' | 'na', targetIds?: string[]) => {
+    const idsToUpdate = targetIds && targetIds.length > 0 
+      ? targetIds 
+      : (selectedIds.length > 0 ? selectedIds : currentVisibleRows.map(r => r.id));
+
+    if (idsToUpdate.length === 0) {
+      toast.error("No staff members to mark");
+      return;
+    }
+
+    const idSet = new Set(idsToUpdate);
+    setReportData(prev => prev.map(row => {
+      if (idSet.has(row.id)) {
+        const config = normalizeChecklistConfig(row.dutyConfig, DEFAULT_DUTY_CONFIG);
+        let dutyItems = row.dutyItems;
+        let pending: string[] = [];
+        if (status === 'yes') {
+          dutyItems = config.map((c: any) => ({ key: c.key, label: c.label, status: 'done' }));
+          pending = [];
+        } else if (status === 'no') {
+          dutyItems = config.map((c: any) => ({ key: c.key, label: c.label, status: 'not_done' }));
+          pending = config.map((c: any) => c.label);
+        }
+
+        const onLeave = row.attendance === 'leave';
+        const attPoint = row.attendance === 'present' ? 1 : 0;
+        const uniformPoint = (!onLeave && row.uniformStatus === 'yes') ? 1 : 0;
+        const dutyPoint = (!onLeave && status === 'yes') ? 1 : 0;
+
+        return {
+          ...row,
+          dutyStatus: status,
+          dutyConfig: config,
+          dutyItems,
+          details: {
+            ...row.details,
+            dutiesPending: pending
+          },
+          dailyScore: attPoint + uniformPoint + dutyPoint,
+          isDirty: true
+        };
+      }
+      return row;
+    }));
+
+    toast.success(`Marked duties as ${status === 'yes' ? 'DONE' : status.toUpperCase()} for ${idsToUpdate.length} staff`);
+  };
+
   const handleSaveChecklist = (id: string, type: 'uniform' | 'duty', checkedKeys: string[], updatedItems: { key: string; label: string }[]) => {
     const normalizedUpdatedItems = normalizeChecklistConfig(updatedItems, type === 'uniform' ? DEFAULT_UNIFORM_CONFIG : DEFAULT_DUTY_CONFIG);
     setReportData(prev => prev.map(row => {
@@ -810,7 +1026,7 @@ export default function DailyReportPage() {
 
     try {
       setSaving(true);
-      toast.loading("Saving daily assessment...", { id: 'save-assessment' });
+      toast.loading(`Saving daily assessment for ${dirtyRows.length} staff...`, { id: 'save-assessment' });
 
       for (const row of dirtyRows) {
         const prefix = getDeptPrefix(row.department as StaffDept);
@@ -863,9 +1079,7 @@ export default function DailyReportPage() {
         } else {
           try {
             await deleteDoc(doc(db, `${prefix}_fines`, attId));
-          } catch (err) {
-            // Safe to ignore
-          }
+          } catch (err) {}
         }
 
         // Sync to primary staff document for immediate visibility across pages
@@ -893,7 +1107,7 @@ export default function DailyReportPage() {
         });
 
         // Trigger dynamic growth points recalculation for this month
-        const monthKey = reportDate.substring(0, 7); // YYYY-MM
+        const monthKey = reportDate.substring(0, 7);
         try {
           const { recalculateGrowthPoints } = await import('@/lib/rehab/growthPoints');
           await recalculateGrowthPoints(simpleId, monthKey, row.department);
@@ -902,13 +1116,41 @@ export default function DailyReportPage() {
         }
       }
       setReportData(prev => prev.map(r => ({ ...r, isDirty: false })));
+      setSelectedIds([]);
       toast.success("Assessment saved successfully!", { id: 'save-assessment' });
-      await fetchReport(); // Reload to sync monthly XP
+      await fetchReport();
     } catch (err) {
       console.error(err);
       toast.error("Failed to save changes", { id: 'save-assessment' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDownloadImage = async () => {
+    const captureContainer = document.getElementById('daily-report-table-capture-export');
+    if (!captureContainer) {
+      toast.error("Export template not found");
+      return;
+    }
+
+    try {
+      setDownloading(true);
+      toast.loading("Preparing high-quality report...", { id: 'download-image' });
+
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      await downloadElementAsPng(captureContainer, `HQ_Daily_Report_${reportDate}.png`, {
+        scale: 3,
+        backgroundColor: '#FFFFFF'
+      });
+
+      toast.success("Report downloaded successfully!", { id: 'download-image' });
+    } catch (err) {
+      console.error('Download error:', err);
+      toast.error("Failed to generate image", { id: 'download-image' });
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -926,6 +1168,7 @@ export default function DailyReportPage() {
   return (
     <div className="min-h-screen bg-[#FDFDFD] text-gray-900 font-sans p-2 sm:p-4 md:p-8 pb-32">
       <div id="daily-performance-report-content" className="max-w-7xl mx-auto space-y-6 sm:space-y-8 p-3 sm:p-6 md:p-8 rounded-3xl bg-white border border-gray-100 shadow-sm print:p-0 print:shadow-none print:border-none">
+        
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 print:hidden">
           <div className="flex items-center gap-4">
@@ -969,11 +1212,15 @@ export default function DailyReportPage() {
               <>
                 <button
                   onClick={saveAssessment}
-                  disabled={saving || !reportData.some(r => r.isDirty)}
-                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-3.5 bg-indigo-600 text-white rounded-2xl text-xs font-bold uppercase tracking-wider hover:bg-indigo-700 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:-translate-y-0.5 active:translate-y-0 duration-200"
+                  disabled={saving || dirtyCount === 0}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm duration-200 ${
+                    dirtyCount > 0 
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white ring-4 ring-indigo-500/20 shadow-indigo-600/30 animate-pulse'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40'
+                  }`}
                 >
                   {saving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                  Save Assessment
+                  <span>Save Assessment {dirtyCount > 0 && `(${dirtyCount})`}</span>
                 </button>
                 <button
                   onClick={handleDownloadImage}
@@ -989,21 +1236,6 @@ export default function DailyReportPage() {
                 </button>
               </>
             )}
-          </div>
-        </div>
-
-        {/* Branding for Image Export (Hidden in UI) */}
-        <div className="hidden print:block mb-8 pb-6 border-b border-gray-100">
-          <div className="flex justify-between items-end">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 leading-none">Khan Hub HQ</h1>
-              <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mt-2">Performance Intelligence Ledger</p>
-              <p className="text-sm text-gray-600 mt-2 font-medium">{new Date(reportDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-            </div>
-            <div className="text-right">
-              <div className="inline-block px-3 py-1.5 bg-gray-50 border border-gray-100 text-gray-700 text-xs font-bold uppercase tracking-wider rounded-xl">Verified Audit</div>
-              <p className="text-xs text-gray-400 mt-2 font-mono">Ref: HQ-DPR-{reportDate.replace(/-/g, '')}</p>
-            </div>
           </div>
         </div>
 
@@ -1281,6 +1513,131 @@ export default function DailyReportPage() {
               </div>
             </div>
 
+            {/* QUICK BULK MARKING TOOLBAR (Speed Bar) */}
+            <div className="p-4 rounded-3xl bg-gradient-to-r from-indigo-50 via-slate-50 to-indigo-50/70 border border-indigo-150/70 shadow-sm space-y-3 animate-fadeIn print:hidden">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-600/20 shrink-0">
+                    <Zap size={18} className="text-amber-300 fill-amber-300" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs font-black uppercase tracking-wider text-gray-900">Quick Bulk Actions</h3>
+                      {unmarkedCount > 0 ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
+                          {unmarkedCount} Unmarked
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          All Marked
+                        </span>
+                      )}
+                      {dirtyCount > 0 && (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-800 border border-indigo-200">
+                          {dirtyCount} Unsaved
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] font-medium text-gray-500 mt-0.5">
+                      Batch mark {currentVisibleRows.length} visible staff in 1 click
+                    </p>
+                  </div>
+                </div>
+
+                {/* Primary 1-Click Fast Actions */}
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                  {/* Mark All Full Score */}
+                  <button
+                    type="button"
+                    onClick={() => handleBulkFullScore()}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-sm hover:shadow transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    title="Mark all visible staff as Present + Uniform Yes + Duty Done (Score 3/3)"
+                  >
+                    <Zap size={14} className="text-amber-200 fill-amber-200" />
+                    <span>Mark All 3/3 Full Score</span>
+                  </button>
+
+                  {/* Mark Unmarked as Present */}
+                  {unmarkedCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleBulkMarkUnmarked('present')}
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      title="Mark only remaining unmarked staff as Present"
+                    >
+                      <CheckCheck size={14} />
+                      <span>Mark Unmarked Present ({unmarkedCount})</span>
+                    </button>
+                  )}
+
+                  {/* Bulk Dropdown Menu for all options */}
+                  <div className="relative group">
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 px-3.5 py-2.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all"
+                    >
+                      <span>More Presets</span>
+                      <ChevronDown size={14} className="text-gray-400 group-hover:text-gray-600" />
+                    </button>
+                    
+                    <div className="hidden group-hover:block absolute right-0 top-full mt-1 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-40 space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-gray-400">Attendance Presets</div>
+                      <button
+                        type="button"
+                        onClick={() => handleBulkAttendance('present')}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-xl transition-all flex items-center justify-between"
+                      >
+                        <span>Mark All Present</span>
+                        <span className="text-[10px] text-emerald-600 font-bold">1 pt</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleBulkAttendance('absent')}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-rose-50 hover:text-rose-700 rounded-xl transition-all flex items-center justify-between"
+                      >
+                        <span>Mark All Absent</span>
+                        <span className="text-[10px] text-rose-600 font-bold">0 pt</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleBulkAttendance('leave')}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-cyan-50 hover:text-cyan-700 rounded-xl transition-all flex items-center justify-between"
+                      >
+                        <span>Mark All On Leave</span>
+                        <span className="text-[10px] text-cyan-600 font-bold">Leave</span>
+                      </button>
+                      
+                      <div className="h-px bg-gray-100 my-1" />
+                      <div className="px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-gray-400">Compliance Presets</div>
+                      <button
+                        type="button"
+                        onClick={() => handleBulkUniform('yes')}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-all"
+                      >
+                        Mark All Uniform: Yes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleBulkDuty('yes')}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl transition-all"
+                      >
+                        Mark All Duties: Done (Yes)
+                      </button>
+
+                      <div className="h-px bg-gray-100 my-1" />
+                      <button
+                        type="button"
+                        onClick={() => handleBulkAttendance('unmarked')}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-gray-400 hover:bg-gray-100 hover:text-gray-700 rounded-xl transition-all"
+                      >
+                        Reset All to Unmarked
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Controls & Filter Tabs */}
             <div className="space-y-4 print:hidden">
               <div className="flex flex-col sm:flex-row gap-3 animate-fadeIn">
@@ -1341,71 +1698,502 @@ export default function DailyReportPage() {
         {activeStep === 'roster' && (
           <div id="daily-report-table-capture" className="rounded-3xl border border-gray-100 overflow-hidden shadow-sm bg-white transition-all duration-300">
             
-            {/* Desktop Table View - Hidden on smaller viewports */}
+            {/* Desktop Table View */}
             <div id="desktop-report-table-wrapper" className="hidden lg:block overflow-x-auto w-full">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-50/50 border-b border-gray-100">
+                    <th className="px-4 py-4 w-12 text-center">
+                      <button
+                        type="button"
+                        onClick={handleToggleSelectAllVisible}
+                        className="text-gray-400 hover:text-indigo-600 transition-colors p-1"
+                        title={isAllVisibleSelected ? "Deselect All" : "Select All Visible"}
+                      >
+                        {isAllVisibleSelected ? (
+                          <CheckSquare size={18} className="text-indigo-600" />
+                        ) : (
+                          <Square size={18} />
+                        )}
+                      </button>
+                    </th>
                     <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Staff Identity</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Attendance</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Uniform</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Duties</th>
+                    
+                    {/* Column Header Attendance with Quick Bulk trigger */}
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">
+                      <div className="inline-flex items-center gap-1.5">
+                        <span>Attendance</span>
+                        <div className="relative group inline-block">
+                          <button
+                            type="button"
+                            className="p-1 hover:bg-gray-200/60 rounded-md text-gray-400 hover:text-gray-700 transition-colors"
+                            title="Quick mark attendance for all"
+                          >
+                            <ChevronDown size={12} />
+                          </button>
+                          <div className="hidden group-hover:block absolute left-1/2 -translate-x-1/2 top-full mt-1 w-44 bg-white rounded-xl shadow-lg border border-gray-100 p-1.5 z-30 space-y-1">
+                            <button
+                              type="button"
+                              onClick={() => handleBulkAttendance('present')}
+                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 rounded-lg"
+                            >
+                              All Present
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleBulkAttendance('absent')}
+                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-rose-700 hover:bg-rose-50 rounded-lg"
+                            >
+                              All Absent
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleBulkAttendance('leave')}
+                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-cyan-700 hover:bg-cyan-50 rounded-lg"
+                            >
+                              All Leave
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </th>
+
+                    {/* Column Header Uniform with Quick Bulk trigger */}
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">
+                      <div className="inline-flex items-center gap-1.5">
+                        <span>Uniform</span>
+                        <div className="relative group inline-block">
+                          <button
+                            type="button"
+                            className="p-1 hover:bg-gray-200/60 rounded-md text-gray-400 hover:text-gray-700 transition-colors"
+                            title="Quick mark uniform for all"
+                          >
+                            <ChevronDown size={12} />
+                          </button>
+                          <div className="hidden group-hover:block absolute left-1/2 -translate-x-1/2 top-full mt-1 w-36 bg-white rounded-xl shadow-lg border border-gray-100 p-1.5 z-30 space-y-1">
+                            <button
+                              type="button"
+                              onClick={() => handleBulkUniform('yes')}
+                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 rounded-lg"
+                            >
+                              All Yes
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleBulkUniform('no')}
+                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-rose-700 hover:bg-rose-50 rounded-lg"
+                            >
+                              All No
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </th>
+
+                    {/* Column Header Duties with Quick Bulk trigger */}
+                    <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">
+                      <div className="inline-flex items-center gap-1.5">
+                        <span>Duties</span>
+                        <div className="relative group inline-block">
+                          <button
+                            type="button"
+                            className="p-1 hover:bg-gray-200/60 rounded-md text-gray-400 hover:text-gray-700 transition-colors"
+                            title="Quick mark duties for all"
+                          >
+                            <ChevronDown size={12} />
+                          </button>
+                          <div className="hidden group-hover:block absolute left-1/2 -translate-x-1/2 top-full mt-1 w-36 bg-white rounded-xl shadow-lg border border-gray-100 p-1.5 z-30 space-y-1">
+                            <button
+                              type="button"
+                              onClick={() => handleBulkDuty('yes')}
+                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 rounded-lg"
+                            >
+                              All Done (Yes)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleBulkDuty('no')}
+                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-rose-700 hover:bg-rose-50 rounded-lg"
+                            >
+                              All Not Done
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </th>
+
                     <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Score (3)</th>
                     <th className="px-6 py-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center">Fine</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {filteredData.filter(r => activeFilter === 'all' || r.attendance === activeFilter).map((row) => (
-                    <tr key={row.id} className={`group transition-all ${row.isDirty ? 'bg-indigo-50/30' : 'hover:bg-gray-50/30 transition-colors duration-200'}`}>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="min-w-10 h-10 px-2 rounded-xl flex items-center justify-center font-bold text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0 group-hover:scale-105 transition-transform uppercase tracking-wider">
-                            {row.employeeId}
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-xs font-black uppercase tracking-wider text-indigo-600 select-none leading-normal">
-                              {row.designation || 'Staff Member'}
-                            </span>
-                            {session?.isEditOnly ? (
-                              <span className="text-[11px] font-medium text-gray-500 select-none leading-tight mt-0.5">
-                                {row.name}
-                              </span>
+                  {currentVisibleRows.map((row) => {
+                    const isSelected = selectedIds.includes(row.id);
+                    return (
+                      <tr 
+                        key={row.id} 
+                        className={`group transition-all ${
+                          isSelected ? 'bg-indigo-50/50' : row.isDirty ? 'bg-indigo-50/20' : 'hover:bg-gray-50/30'
+                        }`}
+                      >
+                        <td className="px-4 py-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleSelectRow(row.id)}
+                            className="text-gray-400 hover:text-indigo-600 transition-colors p-1"
+                          >
+                            {isSelected ? (
+                              <CheckSquare size={18} className="text-indigo-600" />
                             ) : (
-                              <a
-                                href={`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  router.push(`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`);
+                              <Square size={18} />
+                            )}
+                          </button>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="min-w-10 h-10 px-2 rounded-xl flex items-center justify-center font-bold text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0 group-hover:scale-105 transition-transform uppercase tracking-wider">
+                              {row.employeeId}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-black uppercase tracking-wider text-indigo-600 select-none leading-normal">
+                                {row.designation || 'Staff Member'}
+                              </span>
+                              {session?.isEditOnly ? (
+                                <span className="text-[11px] font-medium text-gray-500 select-none leading-tight mt-0.5">
+                                  {row.name}
+                                </span>
+                              ) : (
+                                <a
+                                  href={`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    router.push(`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`);
+                                  }}
+                                  className="text-[11px] font-medium text-gray-500 hover:text-indigo-600 transition-colors leading-tight hover:underline cursor-pointer select-none mt-0.5"
+                                >
+                                  {row.name}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4 text-center">
+                          <select
+                            value={row.attendance}
+                            onChange={(e) => handleInlineUpdate(row.id, 'attendance', e.target.value)}
+                            className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
+                              row.attendance === 'present' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                              row.attendance === 'absent' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                              row.attendance === 'late' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                              row.attendance === 'leave' ? 'bg-cyan-50 text-cyan-700 border-cyan-100' :
+                              'bg-gray-50 text-gray-700 border border-gray-200'
+                            }`}
+                          >
+                            <option value="unmarked">Unmarked</option>
+                            <option value="present">Present</option>
+                            <option value="absent">Absent</option>
+                            <option value="late">Late</option>
+                            <option value="leave">Leave</option>
+                          </select>
+                          {row.attendance === 'late' && (
+                            <div className="mt-1 flex justify-center">
+                              <span
+                                onClick={() => {
+                                  const start = row.dutyStartTime || '09:00';
+                                  const defaultArrival = (row as any).arrivalTime || addMinutesToTime(start, 5);
+                                  setLatePicker({
+                                    id: row.id,
+                                    dutyStartTime: start,
+                                    arrivalTime: defaultArrival,
+                                    lateMinutes: calculateLateMinutes(start, defaultArrival)
+                                  });
                                 }}
-                                className="text-[11px] font-medium text-gray-500 hover:text-indigo-600 transition-colors leading-tight hover:underline cursor-pointer select-none mt-0.5"
+                                className="font-mono text-[9px] font-bold text-gray-500 bg-gray-50 px-1 py-0.5 rounded border border-gray-100 hover:bg-gray-100 cursor-pointer select-none"
                               >
-                                {row.name}
-                              </a>
+                                @{(row as any).arrivalTime || 'Set Time'}
+                              </span>
+                            </div>
+                          )}
+                        </td>
+
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <select
+                              value={row.uniformStatus}
+                              onChange={(e) => handleInlineUpdate(row.id, 'uniformStatus', e.target.value)}
+                              className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
+                                row.uniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                row.uniformStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                                row.uniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                'bg-gray-50 text-gray-700 border border-gray-200'
+                              }`}
+                            >
+                              <option value="na">N/A</option>
+                              <option value="yes">Yes</option>
+                              <option value="no">No</option>
+                              <option value="incomplete">Incomplete</option>
+                            </select>
+                            {row.uniformStatus === 'incomplete' && (
+                              <div className="flex flex-col items-center">
+                                <button
+                                  onClick={() => {
+                                    const config = normalizeChecklistConfig((row as any).uniformConfig, DEFAULT_UNIFORM_CONFIG);
+                                    const checked = (row as any).uniformItems?.filter((i: any) => i && i.status === 'yes').map((i: any) => i.key) || [];
+                                    setActiveChecklist({
+                                      id: row.id,
+                                      type: 'uniform',
+                                      items: config,
+                                      checkedKeys: checked
+                                    });
+                                  }}
+                                  className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-center max-w-[120px] leading-tight"
+                                >
+                                  Missing: {(() => {
+                                    const config = (row.uniformConfig && row.uniformConfig.length > 0) ? row.uniformConfig : [
+                                      { key: 'uniform', label: 'Uniform' },
+                                      { key: 'shoes', label: 'Polished Shoes' },
+                                      { key: 'card', label: 'Identity Card' }
+                                    ];
+                                    const missing = row.details?.uniformMissing?.length > 0
+                                      ? row.details.uniformMissing
+                                      : config.filter((c: any) => {
+                                          const item = row.uniformItems?.find((i: any) => i.key === c.key);
+                                          return !item || item.status === 'no';
+                                        }).map((c: any) => c.label);
+                                    return missing.length > 0 ? missing.join(', ') : config.map((c: any) => c.label).join(', ');
+                                  })()}
+                                </button>
+                              </div>
                             )}
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      <td className="px-6 py-4 text-center">
-                        <select
-                          value={row.attendance}
-                          onChange={(e) => handleInlineUpdate(row.id, 'attendance', e.target.value)}
-                          className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
-                            row.attendance === 'present' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                            row.attendance === 'absent' ? 'bg-rose-50 text-rose-700 border-rose-100' :
-                            row.attendance === 'late' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                            row.attendance === 'leave' ? 'bg-cyan-50 text-cyan-700 border-cyan-100' :
-                            'bg-gray-50 text-gray-700 border border-gray-200'
-                          }`}
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <select
+                              value={row.dutyStatus}
+                              onChange={(e) => handleInlineUpdate(row.id, 'dutyStatus', e.target.value)}
+                              className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
+                                row.dutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                row.dutyStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                                row.dutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                'bg-gray-50 text-gray-700 border border-gray-200'
+                              }`}
+                            >
+                              <option value="na">N/A</option>
+                              <option value="yes">Yes</option>
+                              <option value="no">No</option>
+                              <option value="incomplete">Incomplete</option>
+                            </select>
+                            {row.dutyStatus === 'incomplete' && (
+                              <div className="flex flex-col items-center">
+                                <button
+                                  onClick={() => {
+                                    const config = normalizeChecklistConfig((row as any).dutyConfig, DEFAULT_DUTY_CONFIG);
+                                    const checked = (row as any).dutyItems?.filter((i: any) => i && i.status === 'done').map((i: any) => i.key) || [];
+                                    setActiveChecklist({
+                                      id: row.id,
+                                      type: 'duty',
+                                      items: config,
+                                      checkedKeys: checked
+                                    });
+                                  }}
+                                  className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-center max-w-[120px] leading-tight"
+                                >
+                                  Pending: {(() => {
+                                    const config = (row.dutyConfig && row.dutyConfig.length > 0) ? row.dutyConfig : [
+                                      { key: 'morning', label: 'Morning Duty' },
+                                      { key: 'afternoon', label: 'Afternoon Duty' },
+                                      { key: 'evening', label: 'Evening Duty' }
+                                    ];
+                                    const pending = row.details?.dutiesPending?.length > 0
+                                      ? row.details.dutiesPending
+                                      : config.filter((c: any) => {
+                                          const item = row.dutyItems?.find((d: any) => d.key === c.key);
+                                          return !item || item.status !== 'done';
+                                        }).map((c: any) => c.label);
+                                    return pending.length > 0 ? pending.join(', ') : config.map((c: any) => c.label).join(', ');
+                                  })()}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-4 text-center">
+                          <span className={`text-sm font-bold ${row.dailyScore >= 2.5 ? 'text-emerald-600' : row.dailyScore >= 1.5 ? 'text-amber-500' : 'text-rose-500'}`}>
+                            {row.dailyScore} / 3
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex flex-col gap-1.5 items-center">
+                            <input
+                              type="text"
+                              value={row.fineReason || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                handleInlineUpdate(row.id, 'fineReason', val);
+                                if (!val) {
+                                  handleInlineUpdate(row.id, 'fines', 0);
+                                }
+                              }}
+                              placeholder="Reason for fine"
+                              className="w-28 px-2 py-1 text-[10px] border border-gray-200 rounded-lg focus:border-indigo-500 font-medium text-center outline-none bg-white transition-all select-none"
+                            />
+                            {row.fineReason ? (
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <input
+                                  type="number"
+                                  value={row.fines || ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value === '' ? 0 : Number(e.target.value);
+                                    handleInlineUpdate(row.id, 'fines', val);
+                                  }}
+                                  placeholder="Amount"
+                                  className="w-20 px-2 py-1.5 text-xs text-center border border-gray-200 rounded-xl focus:border-indigo-500 font-bold outline-none bg-white select-none transition-all duration-200"
+                                />
+                                {row.fines > 0 && (
+                                  <button
+                                    onClick={() => {
+                                      handleInlineUpdate(row.id, 'fines', 0);
+                                      handleInlineUpdate(row.id, 'fineReason', '');
+                                    }}
+                                    className="text-rose-500 hover:text-rose-700 transition-colors"
+                                    title="Remove fine"
+                                  >
+                                    <XCircle size={16} />
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-[9px] text-gray-400 font-bold uppercase mt-1">Enter reason first</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div id="mobile-report-cards-wrapper" className="block lg:hidden bg-gray-50/50 p-2 space-y-4">
+              {/* Select All Bar on Mobile */}
+              <div className="flex items-center justify-between px-3 py-2 bg-white rounded-2xl border border-gray-100 text-xs">
+                <button
+                  type="button"
+                  onClick={handleToggleSelectAllVisible}
+                  className="flex items-center gap-2 font-bold text-gray-700"
+                >
+                  {isAllVisibleSelected ? (
+                    <CheckSquare size={16} className="text-indigo-600" />
+                  ) : (
+                    <Square size={16} className="text-gray-400" />
+                  )}
+                  <span>Select All Visible ({currentVisibleRows.length})</span>
+                </button>
+                {selectedIds.length > 0 && (
+                  <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg">
+                    {selectedIds.length} Selected
+                  </span>
+                )}
+              </div>
+
+              {currentVisibleRows.map((row) => {
+                const isSelected = selectedIds.includes(row.id);
+                return (
+                  <div 
+                    key={row.id} 
+                    className={`p-4 rounded-2xl bg-white border border-gray-100 shadow-sm flex flex-col gap-3.5 transition-all ${
+                      isSelected ? 'ring-2 ring-indigo-600 border-indigo-200 bg-indigo-50/10' : row.isDirty ? 'ring-2 ring-indigo-500/20 border-indigo-200' : 'hover:shadow-md'
+                    }`}
+                  >
+                    {/* Mobile Header */}
+                    <div className="flex items-start justify-between gap-3 w-full">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSelectRow(row.id)}
+                          className="text-gray-400 hover:text-indigo-600 shrink-0"
                         >
-                          <option value="unmarked">Unmarked</option>
-                          <option value="present">Present</option>
-                          <option value="absent">Absent</option>
-                          <option value="late">Late</option>
-                          <option value="leave">Leave</option>
-                        </select>
+                          {isSelected ? (
+                            <CheckSquare size={18} className="text-indigo-600" />
+                          ) : (
+                            <Square size={18} />
+                          )}
+                        </button>
+                        <div className="w-10 h-10 px-2 rounded-xl flex items-center justify-center font-bold text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0 uppercase tracking-wider">
+                          {row.employeeId}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs font-black uppercase tracking-wider text-gray-900 select-none leading-normal truncate">
+                            {row.designation || 'Staff Member'}
+                          </span>
+                          {session?.isEditOnly ? (
+                            <span className="text-[11px] font-medium text-gray-500 select-none leading-tight mt-0.5 truncate">
+                              {row.name}
+                            </span>
+                          ) : (
+                            <a
+                              href={`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                router.push(`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`);
+                              }}
+                              className="text-[11px] font-medium text-gray-500 hover:text-indigo-600 transition-colors leading-tight hover:underline cursor-pointer select-none mt-0.5 truncate"
+                            >
+                              {row.name}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className={`inline-block px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider select-none ${
+                          row.dailyScore >= 3 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100/50' : 
+                          row.dailyScore >= 2 ? 'bg-amber-50 text-amber-700 border border-amber-100/50' : 
+                          'bg-rose-50 text-rose-700 border border-rose-100/50'
+                        }`}>
+                          Today: {row.dailyScore} / 3
+                        </span>
+                        <span className="inline-block px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider select-none bg-gradient-to-r from-amber-500/10 to-orange-500/10 text-amber-700 border border-amber-500/20 font-extrabold shadow-sm">
+                          Month: {row.totalScore || 0} XP
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Form Elements */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                      {/* Mobile Attendance */}
+                      <div className="flex flex-col gap-1.5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50 w-full">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Attendance</label>
+                        <div className="flex flex-wrap gap-1 mt-0.5 w-full">
+                          {[
+                            { value: 'present', label: 'Pres', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/40 hover:bg-emerald-100/40 text-emerald-700 border border-emerald-100/60' },
+                            { value: 'absent', label: 'Abs', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/40 hover:bg-rose-100/40 text-rose-700 border border-rose-100/60' },
+                            { value: 'late', label: 'Late', activeBg: 'bg-amber-500 text-white shadow-sm shadow-amber-500/20', inactiveBg: 'bg-amber-50/40 hover:bg-amber-100/40 text-amber-700 border border-amber-100/60' },
+                            { value: 'leave', label: 'Leave', activeBg: 'bg-cyan-600 text-white shadow-sm shadow-cyan-600/20', inactiveBg: 'bg-cyan-50/40 hover:bg-cyan-100/40 text-cyan-700 border border-cyan-100/60' },
+                            { value: 'unmarked', label: 'Unmark', activeBg: 'bg-gray-700 text-white', inactiveBg: 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200' }
+                          ].map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => handleInlineUpdate(row.id, 'attendance', opt.value)}
+                              className={`px-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all select-none duration-150 flex-1 text-center shrink-0 min-w-0 ${
+                                row.attendance === opt.value ? opt.activeBg : opt.inactiveBg
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+
                         {row.attendance === 'late' && (
-                          <div className="mt-1 flex justify-center">
+                          <div className="mt-1">
                             <span
                               onClick={() => {
                                 const start = row.dutyStartTime || '09:00';
@@ -1417,126 +2205,136 @@ export default function DailyReportPage() {
                                   lateMinutes: calculateLateMinutes(start, defaultArrival)
                                 });
                               }}
-                              className="font-mono text-[9px] font-bold text-gray-500 bg-gray-50 px-1 py-0.5 rounded border border-gray-100 hover:bg-gray-100 cursor-pointer select-none"
+                              className="inline-block font-mono text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 hover:bg-indigo-100 cursor-pointer select-none"
                             >
-                              @{(row as any).arrivalTime || 'Set Time'}
+                              Arrived @ {(row as any).arrivalTime || 'Set Time'}
                             </span>
                           </div>
                         )}
-                      </td>
+                      </div>
 
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex flex-col items-center gap-1">
-                          <select
-                            value={row.uniformStatus}
-                            onChange={(e) => handleInlineUpdate(row.id, 'uniformStatus', e.target.value)}
-                            className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
-                              row.uniformStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                              row.uniformStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
-                              row.uniformStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                              'bg-gray-50 text-gray-700 border border-gray-200'
-                            }`}
-                          >
-                            <option value="na">N/A</option>
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
-                            <option value="incomplete">Incomplete</option>
-                          </select>
-                          {row.uniformStatus === 'incomplete' && (
-                            <div className="flex flex-col items-center">
-                              <button
-                                onClick={() => {
-                                  const config = normalizeChecklistConfig((row as any).uniformConfig, DEFAULT_UNIFORM_CONFIG);
-                                  const checked = (row as any).uniformItems?.filter((i: any) => i && i.status === 'yes').map((i: any) => i.key) || [];
-                                  setActiveChecklist({
-                                    id: row.id,
-                                    type: 'uniform',
-                                    items: config,
-                                    checkedKeys: checked
-                                  });
-                                }}
-                                className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-center max-w-[120px] leading-tight"
-                              >
-                                Missing: {(() => {
-                                  const config = (row.uniformConfig && row.uniformConfig.length > 0) ? row.uniformConfig : [
-                                    { key: 'uniform', label: 'Uniform' },
-                                    { key: 'shoes', label: 'Polished Shoes' },
-                                    { key: 'card', label: 'Identity Card' }
-                                  ];
-                                  const missing = row.details?.uniformMissing?.length > 0
-                                    ? row.details.uniformMissing
-                                    : config.filter((c: any) => {
-                                        const item = row.uniformItems?.find((i: any) => i.key === c.key);
-                                        return !item || item.status === 'no';
-                                      }).map((c: any) => c.label);
-                                  return missing.length > 0 ? missing.join(', ') : config.map((c: any) => c.label).join(', ');
-                                })()}
-                              </button>
-                            </div>
-                          )}
+                      {/* Mobile Uniform */}
+                      <div className="flex flex-col gap-1.5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50 w-full">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Uniform Code</label>
+                        <div className="flex flex-wrap gap-1 mt-0.5 w-full">
+                          {[
+                            { value: 'yes', label: 'Yes', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/40 hover:bg-emerald-100/40 text-emerald-700 border border-emerald-100/60' },
+                            { value: 'no', label: 'No', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/40 hover:bg-rose-100/40 text-rose-700 border border-rose-100/60' },
+                            { value: 'incomplete', label: 'Incomp', activeBg: 'bg-amber-500 text-white shadow-sm shadow-amber-500/20', inactiveBg: 'bg-amber-50/40 hover:bg-amber-100/40 text-amber-700 border border-amber-100/60' },
+                            { value: 'na', label: 'N/A', activeBg: 'bg-gray-700 text-white', inactiveBg: 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200' }
+                          ].map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              disabled={row.attendance === 'leave'}
+                              onClick={() => handleInlineUpdate(row.id, 'uniformStatus', opt.value)}
+                              className={`px-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all select-none duration-150 flex-1 text-center shrink-0 min-w-0 ${
+                                row.attendance === 'leave' ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200' :
+                                row.uniformStatus === opt.value ? opt.activeBg : opt.inactiveBg
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
                         </div>
-                      </td>
 
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex flex-col items-center gap-1">
-                          <select
-                            value={row.dutyStatus}
-                            onChange={(e) => handleInlineUpdate(row.id, 'dutyStatus', e.target.value)}
-                            className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border outline-none cursor-pointer select-none transition-all duration-200 appearance-none text-center ${
-                              row.dutyStatus === 'yes' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                              row.dutyStatus === 'no' ? 'bg-rose-50 text-rose-700 border-rose-100' :
-                              row.dutyStatus === 'incomplete' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                              'bg-gray-50 text-gray-700 border border-gray-200'
-                            }`}
-                          >
-                            <option value="na">N/A</option>
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
-                            <option value="incomplete">Incomplete</option>
-                          </select>
-                          {row.dutyStatus === 'incomplete' && (
-                            <div className="flex flex-col items-center">
-                              <button
-                                onClick={() => {
-                                  const config = normalizeChecklistConfig((row as any).dutyConfig, DEFAULT_DUTY_CONFIG);
-                                  const checked = (row as any).dutyItems?.filter((i: any) => i && i.status === 'done').map((i: any) => i.key) || [];
-                                  setActiveChecklist({
-                                    id: row.id,
-                                    type: 'duty',
-                                    items: config,
-                                    checkedKeys: checked
-                                  });
-                                }}
-                                className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-center max-w-[120px] leading-tight"
-                              >
-                                Pending: {(() => {
-                                  const config = (row.dutyConfig && row.dutyConfig.length > 0) ? row.dutyConfig : [
-                                    { key: 'morning', label: 'Morning Duty' },
-                                    { key: 'afternoon', label: 'Afternoon Duty' },
-                                    { key: 'evening', label: 'Evening Duty' }
-                                  ];
-                                  const pending = row.details?.dutiesPending?.length > 0
-                                    ? row.details.dutiesPending
-                                    : config.filter((c: any) => {
-                                        const item = row.dutyItems?.find((d: any) => d.key === c.key);
-                                        return !item || item.status !== 'done';
-                                      }).map((c: any) => c.label);
-                                  return pending.length > 0 ? pending.join(', ') : config.map((c: any) => c.label).join(', ');
-                                })()}
-                              </button>
-                            </div>
-                          )}
+                        {row.uniformStatus === 'incomplete' && (
+                          <div className="mt-1">
+                            <button
+                              onClick={() => {
+                                const config = normalizeChecklistConfig((row as any).uniformConfig, DEFAULT_UNIFORM_CONFIG);
+                                const checked = (row as any).uniformItems?.filter((i: any) => i && i.status === 'yes').map((i: any) => i.key) || [];
+                                setActiveChecklist({
+                                  id: row.id,
+                                  type: 'uniform',
+                                  items: config,
+                                  checkedKeys: checked
+                                });
+                              }}
+                              className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-left leading-tight"
+                            >
+                              Missing: {(() => {
+                                const config = (row.uniformConfig && row.uniformConfig.length > 0) ? row.uniformConfig : [
+                                  { key: 'uniform', label: 'Uniform' },
+                                  { key: 'shoes', label: 'Polished Shoes' },
+                                  { key: 'card', label: 'Identity Card' }
+                                ];
+                                const missing = row.details?.uniformMissing?.length > 0
+                                  ? row.details.uniformMissing
+                                  : config.filter((c: any) => {
+                                      const item = row.uniformItems?.find((i: any) => i.key === c.key);
+                                      return !item || item.status === 'no';
+                                    }).map((c: any) => c.label);
+                                return missing.length > 0 ? missing.join(', ') : config.map((c: any) => c.label).join(', ');
+                              })()}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Mobile Duties */}
+                      <div className="flex flex-col gap-1.5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50 w-full">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Duties Performed</label>
+                        <div className="flex flex-wrap gap-1 mt-0.5 w-full">
+                          {[
+                            { value: 'yes', label: 'Yes', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/40 hover:bg-emerald-100/40 text-emerald-700 border border-emerald-100/60' },
+                            { value: 'no', label: 'No', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/40 hover:bg-rose-100/40 text-rose-700 border border-rose-100/60' },
+                            { value: 'incomplete', label: 'Incomp', activeBg: 'bg-amber-500 text-white shadow-sm shadow-amber-500/20', inactiveBg: 'bg-amber-50/40 hover:bg-amber-100/40 text-amber-700 border border-amber-100/60' },
+                            { value: 'na', label: 'N/A', activeBg: 'bg-gray-700 text-white', inactiveBg: 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200' }
+                          ].map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              disabled={row.attendance === 'leave'}
+                              onClick={() => handleInlineUpdate(row.id, 'dutyStatus', opt.value)}
+                              className={`px-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all select-none duration-150 flex-1 text-center shrink-0 min-w-0 ${
+                                row.attendance === 'leave' ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200' :
+                                row.dutyStatus === opt.value ? opt.activeBg : opt.inactiveBg
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
                         </div>
-                      </td>
 
-                      <td className="px-6 py-4 text-center">
-                        <span className={`text-sm font-bold ${row.dailyScore >= 2.5 ? 'text-emerald-600' : row.dailyScore >= 1.5 ? 'text-amber-500' : 'text-rose-500'}`}>
-                          {row.dailyScore} / 3
-                        </span>
-                      </td>
+                        {row.dutyStatus === 'incomplete' && (
+                          <div className="mt-1">
+                            <button
+                              onClick={() => {
+                                const config = normalizeChecklistConfig((row as any).dutyConfig, DEFAULT_DUTY_CONFIG);
+                                const checked = (row as any).dutyItems?.filter((i: any) => i && i.status === 'done').map((i: any) => i.key) || [];
+                                setActiveChecklist({
+                                  id: row.id,
+                                  type: 'duty',
+                                  items: config,
+                                  checkedKeys: checked
+                                });
+                              }}
+                              className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-left leading-tight"
+                            >
+                              Pending: {(() => {
+                                const config = (row.dutyConfig && row.dutyConfig.length > 0) ? row.dutyConfig : [
+                                  { key: 'morning', label: 'Morning Duty' },
+                                  { key: 'afternoon', label: 'Afternoon Duty' },
+                                  { key: 'evening', label: 'Evening Duty' }
+                                ];
+                                const pending = row.details?.dutiesPending?.length > 0
+                                  ? row.details.dutiesPending
+                                  : config.filter((c: any) => {
+                                      const item = row.dutyItems?.find((d: any) => d.key === c.key);
+                                      return !item || item.status !== 'done';
+                                    }).map((c: any) => c.label);
+                                return pending.length > 0 ? pending.join(', ') : config.map((c: any) => c.label).join(', ');
+                              })()}
+                            </button>
+                          </div>
+                        )}
+                      </div>
 
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex flex-col gap-1.5 items-center">
+                      {/* Mobile Fines */}
+                      <div className="flex flex-col gap-1.5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50 sm:col-span-2 w-full">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Fines & Reason</label>
+                        <div className="flex flex-col gap-2 w-full">
                           <input
                             type="text"
                             value={row.fineReason || ''}
@@ -1547,11 +2345,11 @@ export default function DailyReportPage() {
                                 handleInlineUpdate(row.id, 'fines', 0);
                               }
                             }}
-                            placeholder="Reason for fine"
-                            className="w-28 px-2 py-1 text-[10px] border border-gray-200 rounded-lg focus:border-indigo-500 font-medium text-center outline-none bg-white transition-all select-none"
+                            placeholder="Deduction reason..."
+                            className="w-full px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold placeholder:text-gray-300 outline-none focus:border-indigo-500 bg-white"
                           />
                           {row.fineReason ? (
-                            <div className="flex items-center gap-1.5 mt-1">
+                            <div className="flex items-center gap-2">
                               <input
                                 type="number"
                                 value={row.fines || ''}
@@ -1559,304 +2357,31 @@ export default function DailyReportPage() {
                                   const val = e.target.value === '' ? 0 : Number(e.target.value);
                                   handleInlineUpdate(row.id, 'fines', val);
                                 }}
-                                placeholder="Amount"
-                                className="w-20 px-2 py-1.5 text-xs text-center border border-gray-200 rounded-xl focus:border-indigo-500 font-bold outline-none bg-white select-none transition-all duration-200"
+                                placeholder="Fine amount"
+                                className="flex-1 px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 bg-white"
                               />
                               {row.fines > 0 && (
                                 <button
+                                  type="button"
                                   onClick={() => {
                                     handleInlineUpdate(row.id, 'fines', 0);
                                     handleInlineUpdate(row.id, 'fineReason', '');
                                   }}
-                                  className="text-rose-500 hover:text-rose-700 transition-colors"
-                                  title="Remove fine"
+                                  className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 shrink-0"
                                 >
-                                  <XCircle size={16} />
+                                  <XCircle size={14} /> Clear
                                 </button>
                               )}
                             </div>
                           ) : (
-                            <span className="text-[9px] text-gray-400 font-bold uppercase mt-1">Enter reason first</span>
+                            <span className="text-[10px] text-gray-400 italic text-center">Enter reason first</span>
                           )}
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Cards View - Displays under lg (992px) breakpoint */}
-            <div id="mobile-report-cards-wrapper" className="block lg:hidden bg-gray-50/50 p-2 space-y-4">
-              {filteredData.filter(r => activeFilter === 'all' || r.attendance === activeFilter).map((row) => (
-                <div 
-                  key={row.id} 
-                  className={`p-4 rounded-2xl bg-white border border-gray-100 shadow-sm flex flex-col gap-3.5 transition-all ${
-                    row.isDirty ? 'ring-2 ring-indigo-500/20 border-indigo-200' : 'hover:shadow-md'
-                  }`}
-                >
-                  
-                  {/* Mobile Header: Staff details & score */}
-                  <div className="flex items-start justify-between gap-3 w-full">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-10 h-10 px-2 rounded-xl flex items-center justify-center font-bold text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0 uppercase tracking-wider">
-                        {row.employeeId}
                       </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-xs font-black uppercase tracking-wider text-gray-900 select-none leading-normal truncate">
-                          {row.designation || 'Staff Member'}
-                        </span>
-                        {session?.isEditOnly ? (
-                          <span className="text-[11px] font-medium text-gray-500 select-none leading-tight mt-0.5 truncate">
-                            {row.name}
-                          </span>
-                        ) : (
-                          <a
-                            href={`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              router.push(`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`);
-                            }}
-                            className="text-[11px] font-medium text-gray-500 hover:text-indigo-600 transition-colors leading-tight hover:underline cursor-pointer select-none mt-0.5 truncate"
-                          >
-                            {row.name}
-                          </a>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span className={`inline-block px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider select-none ${
-                        row.dailyScore >= 3 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100/50' : 
-                        row.dailyScore >= 2 ? 'bg-amber-50 text-amber-700 border border-amber-100/50' : 
-                        'bg-rose-50 text-rose-700 border border-rose-100/50'
-                      }`}>
-                        Today: {row.dailyScore} / 4
-                      </span>
-                      <span className="inline-block px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider select-none bg-gradient-to-r from-amber-500/10 to-orange-500/10 text-amber-700 border border-amber-500/20 font-extrabold shadow-sm">
-                        Month: {row.totalScore || 0} XP
-                      </span>
                     </div>
                   </div>
-
-                  {/* Form Elements for Easy Tapping */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-                    
-                    {/* Mobile Attendance */}
-                    <div className="flex flex-col gap-1.5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50 w-full">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Attendance</label>
-                      <div className="flex flex-wrap gap-1 mt-0.5 w-full">
-                        {[
-                          { value: 'present', label: 'Pres', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/40 hover:bg-emerald-100/40 text-emerald-700 border border-emerald-100/60' },
-                          { value: 'absent', label: 'Abs', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/40 hover:bg-rose-100/40 text-rose-700 border border-rose-100/60' },
-                          { value: 'late', label: 'Late', activeBg: 'bg-amber-500 text-white shadow-sm shadow-amber-500/20', inactiveBg: 'bg-amber-50/40 hover:bg-amber-100/40 text-amber-700 border border-amber-100/60' },
-                          { value: 'leave', label: 'Leave', activeBg: 'bg-cyan-600 text-white shadow-sm shadow-cyan-600/20', inactiveBg: 'bg-cyan-50/40 hover:bg-cyan-100/40 text-cyan-700 border border-cyan-100/60' },
-                          { value: 'unmarked', label: 'Unmark', activeBg: 'bg-gray-700 text-white', inactiveBg: 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200' }
-                        ].map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => handleInlineUpdate(row.id, 'attendance', opt.value)}
-                            className={`px-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all select-none duration-150 flex-1 text-center shrink-0 min-w-0 ${
-                              row.attendance === opt.value ? opt.activeBg : opt.inactiveBg
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-
-                      {row.attendance === 'late' && (
-                        <div className="mt-1">
-                          <span
-                            onClick={() => {
-                              const start = row.dutyStartTime || '09:00';
-                              const defaultArrival = (row as any).arrivalTime || addMinutesToTime(start, 5);
-                              setLatePicker({
-                                id: row.id,
-                                dutyStartTime: start,
-                                arrivalTime: defaultArrival,
-                                lateMinutes: calculateLateMinutes(start, defaultArrival)
-                              });
-                            }}
-                            className="inline-block font-mono text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 hover:bg-indigo-100 cursor-pointer select-none"
-                          >
-                            Arrived @ {(row as any).arrivalTime || 'Set Time'}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Mobile Uniform */}
-                    <div className="flex flex-col gap-1.5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50 w-full">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Uniform Code</label>
-                      <div className="flex flex-wrap gap-1 mt-0.5 w-full">
-                        {[
-                          { value: 'yes', label: 'Yes', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/40 hover:bg-emerald-100/40 text-emerald-700 border border-emerald-100/60' },
-                          { value: 'no', label: 'No', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/40 hover:bg-rose-100/40 text-rose-700 border border-rose-100/60' },
-                          { value: 'incomplete', label: 'Incomp', activeBg: 'bg-amber-500 text-white shadow-sm shadow-amber-500/20', inactiveBg: 'bg-amber-50/40 hover:bg-amber-100/40 text-amber-700 border border-amber-100/60' },
-                          { value: 'na', label: 'N/A', activeBg: 'bg-gray-700 text-white', inactiveBg: 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200' }
-                        ].map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            disabled={row.attendance === 'leave'}
-                            onClick={() => handleInlineUpdate(row.id, 'uniformStatus', opt.value)}
-                            className={`px-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all select-none duration-150 flex-1 text-center shrink-0 min-w-0 ${
-                              row.attendance === 'leave' ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200' :
-                              row.uniformStatus === opt.value ? opt.activeBg : opt.inactiveBg
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-
-                      {row.uniformStatus === 'incomplete' && (
-                        <div className="mt-1">
-                          <button
-                            onClick={() => {
-                              const config = normalizeChecklistConfig((row as any).uniformConfig, DEFAULT_UNIFORM_CONFIG);
-                              const checked = (row as any).uniformItems?.filter((i: any) => i && i.status === 'yes').map((i: any) => i.key) || [];
-                              setActiveChecklist({
-                                id: row.id,
-                                type: 'uniform',
-                                items: config,
-                                checkedKeys: checked
-                              });
-                            }}
-                            className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-left leading-tight"
-                          >
-                            Missing: {(() => {
-                              const config = (row.uniformConfig && row.uniformConfig.length > 0) ? row.uniformConfig : [
-                                { key: 'uniform', label: 'Uniform' },
-                                { key: 'shoes', label: 'Polished Shoes' },
-                                { key: 'card', label: 'Identity Card' }
-                              ];
-                              const missing = row.details?.uniformMissing?.length > 0
-                                ? row.details.uniformMissing
-                                : config.filter((c: any) => {
-                                    const item = row.uniformItems?.find((i: any) => i.key === c.key);
-                                    return !item || item.status === 'no';
-                                  }).map((c: any) => c.label);
-                              return missing.length > 0 ? missing.join(', ') : config.map((c: any) => c.label).join(', ');
-                            })()}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Mobile Duties */}
-                    <div className="flex flex-col gap-1.5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50 w-full">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Duties Performed</label>
-                      <div className="flex flex-wrap gap-1 mt-0.5 w-full">
-                        {[
-                          { value: 'yes', label: 'Yes', activeBg: 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20', inactiveBg: 'bg-emerald-50/40 hover:bg-emerald-100/40 text-emerald-700 border border-emerald-100/60' },
-                          { value: 'no', label: 'No', activeBg: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20', inactiveBg: 'bg-rose-50/40 hover:bg-rose-100/40 text-rose-700 border border-rose-100/60' },
-                          { value: 'incomplete', label: 'Incomp', activeBg: 'bg-amber-500 text-white shadow-sm shadow-amber-500/20', inactiveBg: 'bg-amber-50/40 hover:bg-amber-100/40 text-amber-700 border border-amber-100/60' },
-                          { value: 'na', label: 'N/A', activeBg: 'bg-gray-700 text-white', inactiveBg: 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200' }
-                        ].map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            disabled={row.attendance === 'leave'}
-                            onClick={() => handleInlineUpdate(row.id, 'dutyStatus', opt.value)}
-                            className={`px-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all select-none duration-150 flex-1 text-center shrink-0 min-w-0 ${
-                              row.attendance === 'leave' ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200' :
-                              row.dutyStatus === opt.value ? opt.activeBg : opt.inactiveBg
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-
-                      {row.dutyStatus === 'incomplete' && (
-                        <div className="mt-1">
-                          <button
-                            onClick={() => {
-                              const config = normalizeChecklistConfig((row as any).dutyConfig, DEFAULT_DUTY_CONFIG);
-                              const checked = (row as any).dutyItems?.filter((i: any) => i && i.status === 'done').map((i: any) => i.key) || [];
-                              setActiveChecklist({
-                                id: row.id,
-                                type: 'duty',
-                                items: config,
-                                checkedKeys: checked
-                              });
-                            }}
-                            className="text-[9px] text-amber-600 hover:text-amber-700 underline font-semibold transition-all select-none text-left leading-tight"
-                          >
-                            Pending: {(() => {
-                              const config = (row.dutyConfig && row.dutyConfig.length > 0) ? row.dutyConfig : [
-                                { key: 'morning', label: 'Morning Duty' },
-                                { key: 'afternoon', label: 'Afternoon Duty' },
-                                { key: 'evening', label: 'Evening Duty' }
-                              ];
-                              const pending = row.details?.dutiesPending?.length > 0
-                                ? row.details.dutiesPending
-                                : config.filter((c: any) => {
-                                    const item = row.dutyItems?.find((i: any) => i.key === c.key);
-                                    return !item || item.status !== 'done';
-                                  }).map((c: any) => c.label);
-                              return pending.length > 0 ? pending.join(', ') : config.map((c: any) => c.label).join(', ');
-                            })()}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Mobile Fines & Penalty */}
-                    <div className="flex flex-col gap-1.5 bg-gray-50/50 p-3 rounded-2xl border border-gray-100/50 sm:col-span-2 w-full">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Fines & Reason</label>
-                      <div className="flex flex-col gap-2 w-full">
-                        <input
-                          type="text"
-                          value={row.fineReason || ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            handleInlineUpdate(row.id, 'fineReason', val);
-                            if (!val) {
-                              handleInlineUpdate(row.id, 'fines', 0);
-                            }
-                          }}
-                          placeholder="Deduction reason..."
-                          className="w-full px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold placeholder:text-gray-300 outline-none focus:border-indigo-500 bg-white"
-                        />
-                        {row.fineReason ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              value={row.fines || ''}
-                              onChange={(e) => {
-                                const val = e.target.value === '' ? 0 : Number(e.target.value);
-                                handleInlineUpdate(row.id, 'fines', val);
-                              }}
-                              placeholder="Fine amount"
-                              className="flex-1 px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 bg-white"
-                            />
-                            {row.fines > 0 && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  handleInlineUpdate(row.id, 'fines', 0);
-                                  handleInlineUpdate(row.id, 'fineReason', '');
-                                }}
-                                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 shrink-0"
-                              >
-                                <XCircle size={14} /> Clear
-                              </button>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-[10px] text-gray-400 italic text-center">Enter reason first</span>
-                        )}
-                      </div>
-                    </div>
-
-                  </div>
-
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {filteredData.length === 0 && (
@@ -1886,7 +2411,89 @@ export default function DailyReportPage() {
           </div>
         )}
 
-        {/* ACTIVE CHECKLIST MODAL with Add Custom Item Input */}
+        {/* FLOATING STICKY BULK ACTION BAR (Appears when staff rows are selected) */}
+        {selectedIds.length > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-5xl w-[95%] sm:w-auto bg-gray-900/95 backdrop-blur-md text-white px-4 sm:px-6 py-3.5 rounded-3xl shadow-2xl border border-white/10 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-5 duration-200">
+            <div className="flex items-center gap-2.5 shrink-0">
+              <div className="w-7 h-7 rounded-xl bg-indigo-500 text-white flex items-center justify-center text-xs font-black shadow-inner">
+                {selectedIds.length}
+              </div>
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-200">Selected</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleBulkFullScore(selectedIds)}
+                className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-[11px] font-black uppercase tracking-wider rounded-xl flex items-center gap-1.5 shadow-sm transition-all hover:scale-105 active:scale-95"
+                title="Mark Present, Uniform Yes, Duty Done (Score 3/3)"
+              >
+                <Zap size={13} className="text-amber-200 fill-amber-200" />
+                All 3/3 Full Score
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleBulkAttendance('present', selectedIds)}
+                className="px-2.5 py-1.5 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all"
+              >
+                Present
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleBulkAttendance('absent', selectedIds)}
+                className="px-2.5 py-1.5 bg-rose-600/30 hover:bg-rose-600/50 text-rose-300 border border-rose-500/30 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all"
+              >
+                Absent
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleBulkAttendance('leave', selectedIds)}
+                className="px-2.5 py-1.5 bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all"
+              >
+                Leave
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleBulkUniform('yes', selectedIds)}
+                className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-gray-200 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all"
+              >
+                Uniform: Yes
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleBulkDuty('yes', selectedIds)}
+                className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-gray-200 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all"
+              >
+                Duty: Yes
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleBulkAttendance('unmarked', selectedIds)}
+                className="px-2 py-1.5 bg-white/5 hover:bg-white/10 text-gray-400 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all"
+                title="Reset to unmarked"
+              >
+                Reset
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              className="p-1.5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl transition-colors ml-auto sm:ml-0"
+              title="Clear selection"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        )}
+
+        {/* ACTIVE CHECKLIST MODAL */}
         {activeChecklist && (
           <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white border border-gray-100 rounded-3xl max-w-md w-full p-6 shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200">
@@ -1897,7 +2504,6 @@ export default function DailyReportPage() {
                 Mark completed items for {activeChecklist.type === 'uniform' ? 'dress code' : 'daily tasks'}
               </p>
 
-              {/* Checklist checklist */}
               <div className="space-y-2 mb-4 max-h-52 overflow-y-auto pr-1">
                 {normalizeChecklistConfig(activeChecklist.items, activeChecklist.type === 'uniform' ? DEFAULT_UNIFORM_CONFIG : DEFAULT_DUTY_CONFIG).map((item) => {
                   const isChecked = activeChecklist.checkedKeys.includes(item.key);
@@ -1929,7 +2535,7 @@ export default function DailyReportPage() {
                 })}
               </div>
 
-              {/* Add Custom Duty / Uniform Item Form */}
+              {/* Add Custom Requirement */}
               <div className="mt-4 pt-4 border-t border-gray-100 mb-6">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Add Custom Requirement</p>
                 <div className="flex gap-2">
@@ -1963,6 +2569,7 @@ export default function DailyReportPage() {
                     <option value="Canteen Duty" />
                   </datalist>
                   <button
+                    type="button"
                     onClick={() => {
                       if (!newCustomItemText.trim()) return;
                       const label = newCustomItemText.trim();
@@ -1992,9 +2599,10 @@ export default function DailyReportPage() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Modal Buttons */}
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => {
                     setActiveChecklist(null);
                     setNewCustomItemText('');
@@ -2004,6 +2612,7 @@ export default function DailyReportPage() {
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleSaveChecklist(activeChecklist.id, activeChecklist.type, activeChecklist.checkedKeys, activeChecklist.items)}
                   className="flex-1 px-4 py-2.5 bg-indigo-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-indigo-700 transition-all select-none shadow-sm"
                 >
@@ -2058,12 +2667,14 @@ export default function DailyReportPage() {
 
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => setLatePicker(null)}
                   className="flex-1 px-4 py-2.5 bg-gray-50 text-gray-600 font-bold text-xs uppercase tracking-wider rounded-xl border border-gray-100 hover:bg-gray-100 transition-all select-none"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     setReportData(prev => prev.map(row => {
                       if (row.id === latePicker.id) {
@@ -2143,7 +2754,7 @@ export default function DailyReportPage() {
               </div>
             </div>
 
-            {/* Desktop-styled Table */}
+            {/* Export Table */}
             <div className="overflow-x-auto w-full bg-white rounded-3xl border border-gray-100">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -2157,7 +2768,7 @@ export default function DailyReportPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {filteredData.filter(r => activeFilter === 'all' || r.attendance === activeFilter).map((row) => (
+                  {currentVisibleRows.map((row) => (
                     <tr key={row.id} className="transition-all">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -2239,7 +2850,7 @@ export default function DailyReportPage() {
                               const pending = row.details?.dutiesPending?.length > 0
                                 ? row.details.dutiesPending
                                 : config.filter((c: any) => {
-                                    const item = row.dutyItems?.find((i: any) => i.key === c.key);
+                                    const item = row.dutyItems?.find((d: any) => d.key === c.key);
                                     return !item || item.status !== 'done';
                                   }).map((c: any) => c.label);
                               return pending.length > 0 ? pending.join(', ') : config.map((c: any) => c.label).join(', ');
