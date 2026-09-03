@@ -1,7 +1,7 @@
 // src/app/hq/dashboard/cashier/page.tsx
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { addDoc, collection, doc, deleteDoc, getDoc, getDocs, increment, limit, onSnapshot, orderBy, query, startAfter, Timestamp, updateDoc, where, QueryConstraint, getAggregateFromServer, sum, count } from 'firebase/firestore';
 import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, DollarSign, FileText, History, LayoutDashboard, Loader2, Lock, Minus, Plus, Search, TrendingDown, TrendingUp, X, RefreshCw, ShieldCheck, Clock, Activity, Trash2, Sparkles, Eye, Calendar, Check, Camera, Terminal, User, Printer, ChevronRight, ArrowUp, ArrowDown, Calculator } from 'lucide-react';
@@ -135,6 +135,62 @@ function getLocalDateString(val: any): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+export interface QuickTemplate {
+  id: string;
+  label: string;
+  icon: string;
+  flowType: TxnType;
+  receiverName?: string;
+  reason?: string;
+  paymentMethod?: PaymentMethod;
+  categoryId?: string;
+  categoryName?: string;
+  hospitalIncomeType?: 'fee' | 'medicine' | 'oprate' | 'none';
+  hospitalFeeType?: string;
+  hospitalCustomFeeName?: string;
+  createdBy?: string;
+  createdByName?: string;
+  usageCount?: number;
+  lastUsedAt?: any;
+  createdAt?: any;
+  shared?: boolean;
+  isDefault?: boolean;
+}
+
+const DEFAULT_STARTER_TEMPLATES: Record<string, Omit<QuickTemplate, 'id'>[]> = {
+  hospital: [
+    { label: 'Medicine Purchase', icon: '💊', flowType: 'expense', receiverName: 'Pharmacy / Supplier', reason: 'Medicine Stock Purchase', paymentMethod: 'cash', usageCount: 10, isDefault: true, shared: true },
+    { label: 'Petty Cash', icon: '🧾', flowType: 'expense', receiverName: 'Hospital Cashier', reason: 'Daily Petty Cash Expense', paymentMethod: 'cash', usageCount: 9, isDefault: true, shared: true },
+    { label: 'Equipment & Repair', icon: '🔧', flowType: 'expense', receiverName: 'Maintenance Tech', reason: 'Hospital Equipment Repair / Service', paymentMethod: 'cash', usageCount: 8, isDefault: true, shared: true },
+    { label: 'Staff Advance', icon: '👤', flowType: 'expense', receiverName: 'Staff Member', reason: 'Emergency Salary Advance', paymentMethod: 'cash', usageCount: 7, isDefault: true, shared: true },
+    { label: 'Utility Bill', icon: '💡', flowType: 'expense', receiverName: 'Utility Office (WAPDA/Gas)', reason: 'Monthly Utility Bill Payment', paymentMethod: 'bank_transfer', usageCount: 6, isDefault: true, shared: true },
+    { label: 'Tea & Refreshment', icon: '🍵', flowType: 'expense', receiverName: 'Office Boy / Canteen', reason: 'Daily Tea & Refreshment Expenses', paymentMethod: 'cash', usageCount: 5, isDefault: true, shared: true },
+    { label: 'OPD Check-up', icon: '🩺', flowType: 'income', receiverName: 'OPD Patient', reason: 'Doctor Consultation Fee', paymentMethod: 'cash', hospitalIncomeType: 'fee', hospitalFeeType: 'checkup', usageCount: 15, isDefault: true, shared: true },
+    { label: 'Lab Test Fee', icon: '🧪', flowType: 'income', receiverName: 'Lab Patient', reason: 'Diagnostic Laboratory Test', paymentMethod: 'cash', hospitalIncomeType: 'fee', hospitalFeeType: 'custom', hospitalCustomFeeName: 'Laboratory Test', usageCount: 12, isDefault: true, shared: true },
+  ],
+  rehab: [
+    { label: 'Medicine Purchase', icon: '💊', flowType: 'expense', receiverName: 'Pharmacy Supplier', reason: 'Patient Medicine Stock', paymentMethod: 'cash', usageCount: 10, isDefault: true, shared: true },
+    { label: 'Petty Cash', icon: '🧾', flowType: 'expense', receiverName: 'Rehab Admin', reason: 'Daily Petty Cash', paymentMethod: 'cash', usageCount: 9, isDefault: true, shared: true },
+    { label: 'Grocery / Food', icon: '🥗', flowType: 'expense', receiverName: 'Kitchen Supplier', reason: 'Daily Patient Mess & Grocery', paymentMethod: 'cash', usageCount: 8, isDefault: true, shared: true },
+    { label: 'Staff Advance', icon: '👤', flowType: 'expense', receiverName: 'Staff Member', reason: 'Salary Advance', paymentMethod: 'cash', usageCount: 7, isDefault: true, shared: true },
+    { label: 'Utility Bill', icon: '💡', flowType: 'expense', receiverName: 'Utility Office', reason: 'Electricity & Gas Bill', paymentMethod: 'bank_transfer', usageCount: 6, isDefault: true, shared: true },
+  ],
+  spims: [
+    { label: 'Petty Cash', icon: '🧾', flowType: 'expense', receiverName: 'SPIMS Cashier', reason: 'Campus Petty Cash', paymentMethod: 'cash', usageCount: 10, isDefault: true, shared: true },
+    { label: 'Stationery & Printing', icon: '📚', flowType: 'expense', receiverName: 'Printer Vendor', reason: 'Exam & Office Stationery', paymentMethod: 'cash', usageCount: 9, isDefault: true, shared: true },
+    { label: 'Staff Advance', icon: '👤', flowType: 'expense', receiverName: 'SPIMS Faculty', reason: 'Staff Advance', paymentMethod: 'cash', usageCount: 8, isDefault: true, shared: true },
+    { label: 'Utility Bill', icon: '💡', flowType: 'expense', receiverName: 'WAPDA', reason: 'Monthly Campus Utility', paymentMethod: 'bank_transfer', usageCount: 7, isDefault: true, shared: true },
+  ],
+};
+
+function getCurrentTimeString(): string {
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+
 export default function CashierStationPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
@@ -180,11 +236,11 @@ export default function CashierStationPage() {
   const [hospitalCustomFeeName, setHospitalCustomFeeName] = useState('');
   const [hospitalExpenseReceiver, setHospitalExpenseReceiver] = useState('');
   const [hospitalExpenseReason, setHospitalExpenseReason] = useState('');
-  const [hospitalExpenseTime, setHospitalExpenseTime] = useState('');
+  const [hospitalExpenseTime, setHospitalExpenseTime] = useState(getCurrentTimeString());
   const [hospitalFeePatientName, setHospitalFeePatientName] = useState('');
-  const [hospitalFeeTime, setHospitalFeeTime] = useState('');
+  const [hospitalFeeTime, setHospitalFeeTime] = useState(getCurrentTimeString());
   const [hospitalMedicinePatientName, setHospitalMedicinePatientName] = useState('');
-  const [hospitalMedicineTime, setHospitalMedicineTime] = useState('');
+  const [hospitalMedicineTime, setHospitalMedicineTime] = useState(getCurrentTimeString());
   const [hospitalMedicineItems, setHospitalMedicineItems] = useState<{ id: string; name: string; price: number }[]>([]);
   const [newMedItemName, setNewMedItemName] = useState('');
   const [newMedItemPrice, setNewMedItemPrice] = useState('');
@@ -193,7 +249,7 @@ export default function CashierStationPage() {
   const [hospitalOperateName, setHospitalOperateName] = useState('');
   const [hospitalOperatePatientName, setHospitalOperatePatientName] = useState('');
   const [hospitalOperateDoctorName, setHospitalOperateDoctorName] = useState('');
-  const [hospitalOperateTime, setHospitalOperateTime] = useState('');
+  const [hospitalOperateTime, setHospitalOperateTime] = useState(getCurrentTimeString());
 
   // General Transaction States
   const [itemizedList, setItemizedList] = useState<{ id: string; name: string; price: number }[]>([]);
@@ -294,6 +350,26 @@ export default function CashierStationPage() {
   const [rejecting, setRejecting] = useState(false);
   const [incomingActionId, setIncomingActionId] = useState<string | null>(null);
 
+
+  // Speed-up & Quick Templates State
+  const amountInputRef = useRef<HTMLInputElement>(null);
+  const receiverDropdownRef = useRef<HTMLDivElement>(null);
+  const [quickTemplates, setQuickTemplates] = useState<QuickTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
+  const [isMoreTemplatesModalOpen, setIsMoreTemplatesModalOpen] = useState(false);
+  const [isSaveTemplateModalOpen, setIsSaveTemplateModalOpen] = useState(false);
+  const [newTemplateLabel, setNewTemplateLabel] = useState('');
+  const [newTemplateIcon, setNewTemplateIcon] = useState('💊');
+  const [newTemplateShared, setNewTemplateShared] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
+  // Receivers Autocomplete State
+  const [recentReceivers, setRecentReceivers] = useState<string[]>([]);
+  const [staffList, setStaffList] = useState<{ id: string; name: string; role?: string }[]>([]);
+  const [receiverSuggestions, setReceiverSuggestions] = useState<{ name: string; type: 'staff' | 'recent'; role: string }[]>([]);
+  const [isReceiverDropdownOpen, setIsReceiverDropdownOpen] = useState(false);
+
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -328,6 +404,327 @@ export default function CashierStationPage() {
     });
     return list;
   }, [departmentCode, selectedEntity]);
+
+
+  // Close receiver dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (receiverDropdownRef.current && !receiverDropdownRef.current.contains(event.target as Node)) {
+        setIsReceiverDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Fetch Quick Templates (No orderBy+where combo: sort client-side)
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchTemplates() {
+      setTemplatesLoading(true);
+      try {
+        const colName = `${activeDepartment.code}_quick_templates`;
+        const snap = await getDocs(collection(db, colName));
+        const dbList: QuickTemplate[] = snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as any),
+        }));
+
+        // Client-side filter: createdBy current user OR shared == true OR no creator (org-wide)
+        const userUid = session?.uid;
+        const userCustomId = session?.customId;
+        const filtered = dbList.filter((t) => 
+          t.shared === true || 
+          (userUid && t.createdBy === userUid) || 
+          (userCustomId && t.createdBy === userCustomId) || 
+          !t.createdBy
+        );
+
+        // Get starter defaults for this department
+        const defaults = (DEFAULT_STARTER_TEMPLATES[activeDepartment.code] || DEFAULT_STARTER_TEMPLATES['hospital'] || []).map((t, i) => ({
+          id: `default-${activeDepartment.code}-${i}`,
+          ...t,
+        }));
+
+        // Combine custom and default without label duplicates
+        const combined = [...filtered];
+        for (const def of defaults) {
+          if (!combined.some((c) => c.label.toLowerCase() === def.label.toLowerCase())) {
+            combined.push(def as any);
+          }
+        }
+
+        // Sort client-side: usageCount desc, then lastUsedAt desc
+        combined.sort((a, b) => {
+          const countDiff = (b.usageCount || 0) - (a.usageCount || 0);
+          if (countDiff !== 0) return countDiff;
+          const timeA = toDate(a.lastUsedAt || a.createdAt)?.getTime() || 0;
+          const timeB = toDate(b.lastUsedAt || b.createdAt)?.getTime() || 0;
+          return timeB - timeA;
+        });
+
+        if (isMounted) setQuickTemplates(combined);
+      } catch (err) {
+        console.error('[Cashier] Error loading templates:', err);
+        const defaults = (DEFAULT_STARTER_TEMPLATES[activeDepartment.code] || DEFAULT_STARTER_TEMPLATES['hospital'] || []).map((t, i) => ({
+          id: `default-${activeDepartment.code}-${i}`,
+          ...t,
+        }));
+        if (isMounted) setQuickTemplates(defaults as any);
+      } finally {
+        if (isMounted) setTemplatesLoading(false);
+      }
+    }
+    fetchTemplates();
+    return () => { isMounted = false; };
+  }, [activeDepartment.code, session?.uid, session?.customId]);
+
+  // Fetch recent distinct receiver names + staff profiles (fetch once on mount/dept change)
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchReceiversAndStaff() {
+      try {
+        // 1. Fetch recent transactions without composite index
+        const txSnap = await getDocs(query(collection(db, activeDepartment.txCollection), limit(50)));
+        const distinct = new Set<string>();
+        txSnap.docs.forEach((d) => {
+          const data = d.data() as any;
+          const val = data.receiverName || data.hospitalExpenseReceiver || data.receiver || data.patientName || data.staffName || data.customTargetName;
+          if (val && typeof val === 'string' && val.trim().length > 1) {
+            distinct.add(val.trim());
+          }
+        });
+
+        // 2. Fetch staff profiles
+        const staff: { id: string; name: string; role?: string }[] = [];
+        try {
+          const sSnap = await getDocs(collection(db, `${activeDepartment.code}_staff`));
+          sSnap.docs.forEach((docItem) => {
+            const data = docItem.data() as any;
+            const sName = data.name || data.fullName || data.displayName;
+            if (sName) {
+              staff.push({ id: docItem.id, name: sName.trim(), role: data.designation || data.role || 'Staff' });
+            }
+          });
+        } catch (_) {}
+
+        if (isMounted) {
+          setRecentReceivers(Array.from(distinct).slice(0, 20));
+          setStaffList(staff);
+        }
+      } catch (err) {
+        console.error('[Cashier] Error fetching recent receivers/staff:', err);
+      }
+    }
+    fetchReceiversAndStaff();
+    return () => { isMounted = false; };
+  }, [activeDepartment.code, activeDepartment.txCollection]);
+
+  // Debounced 200ms suggestions filter for receiver name
+  useEffect(() => {
+    const term = (hospitalExpenseReceiver || '').trim().toLowerCase();
+    const timer = setTimeout(() => {
+      const allEntries = [
+        ...staffList.map((s) => ({ name: s.name, type: 'staff' as const, role: s.role || 'Staff' })),
+        ...recentReceivers.map((r) => ({ name: r, type: 'recent' as const, role: 'Recent Receiver' })),
+      ];
+      const seen = new Set<string>();
+      const deduped = allEntries.filter((item) => {
+        const key = item.name.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      if (!term) {
+        setReceiverSuggestions(deduped.slice(0, 10));
+      } else {
+        setReceiverSuggestions(deduped.filter((i) => i.name.toLowerCase().includes(term)).slice(0, 8));
+      }
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [hospitalExpenseReceiver, staffList, recentReceivers]);
+
+  // Apply Quick Template
+  const applyQuickTemplate = (tpl: QuickTemplate) => {
+    setActiveTemplateId(tpl.id);
+    const flow = tpl.flowType || 'expense';
+    setTxnType(flow);
+
+    if (departmentCode === 'hospital') {
+      if (hospitalMode === 'none') {
+        setHospitalMode('all_transactions');
+      }
+      if (flow === 'expense') {
+        setHospitalIncomeType('none');
+        setHospitalFeeType('none');
+        if (tpl.receiverName) setHospitalExpenseReceiver(tpl.receiverName);
+        if (tpl.reason) setHospitalExpenseReason(tpl.reason);
+        setHospitalExpenseTime(getCurrentTimeString());
+        setCustomTargetName(tpl.receiverName || '');
+      } else {
+        setHospitalIncomeType(tpl.hospitalIncomeType || 'fee');
+        if (tpl.hospitalFeeType) setHospitalFeeType(tpl.hospitalFeeType as any);
+        if (tpl.hospitalCustomFeeName) setHospitalCustomFeeName(tpl.hospitalCustomFeeName);
+        if (tpl.receiverName) setHospitalFeePatientName(tpl.receiverName);
+        setHospitalFeeTime(getCurrentTimeString());
+        setCustomTargetName(tpl.receiverName || '');
+      }
+    } else {
+      if (flow === 'expense') {
+        if (tpl.receiverName) setHospitalExpenseReceiver(tpl.receiverName);
+        if (tpl.reason) setHospitalExpenseReason(tpl.reason);
+        setHospitalExpenseTime(getCurrentTimeString());
+        setCustomTargetName(tpl.receiverName || '');
+      } else {
+        setCustomTargetName(tpl.receiverName || '');
+      }
+    }
+
+    if (tpl.paymentMethod) setPaymentMethod(tpl.paymentMethod);
+    if (tpl.categoryId) setSelectedCategoryId(tpl.categoryId);
+
+    // Auto-focus amount
+    setTimeout(() => {
+      if (amountInputRef.current) {
+        amountInputRef.current.focus();
+        amountInputRef.current.select();
+      }
+    }, 100);
+
+    toast.success(`Applied template: ${tpl.icon || '⚡'} ${tpl.label}`);
+  };
+
+  // Repeat Last Entry Shortcut
+  const repeatLastEntry = async () => {
+    try {
+      const snap = await getDocs(query(collection(db, activeDepartment.txCollection), limit(40)));
+      const userUid = session?.uid;
+      const userCustomId = session?.customId;
+      const myTxns = snap.docs
+        .map((d) => ({ id: d.id, ...(d.data() as any) }))
+        .filter((t) => !userCustomId || t.cashierId === userCustomId || t.createdBy === userUid || true)
+        .sort((a, b) => {
+          const timeA = toDate(a.transactionDate || a.date || a.createdAt)?.getTime() || 0;
+          const timeB = toDate(b.transactionDate || b.date || b.createdAt)?.getTime() || 0;
+          return timeB - timeA;
+        });
+
+      const last = myTxns[0];
+      if (!last) {
+        toast.error('No previous transaction found to repeat.');
+        return;
+      }
+
+      const flow = last.type || 'expense';
+      setTxnType(flow);
+      if (last.paymentMethod) setPaymentMethod(last.paymentMethod);
+      if (last.categoryId) setSelectedCategoryId(last.categoryId);
+
+      if (departmentCode === 'hospital') {
+        if (hospitalMode === 'none') setHospitalMode('all_transactions');
+        if (flow === 'expense') {
+          setHospitalExpenseReceiver(last.receiverName || last.patientName || last.hospitalExpenseReceiver || '');
+          setHospitalExpenseReason(last.reason || last.hospitalExpenseReason || last.description || '');
+          setHospitalExpenseTime(getCurrentTimeString());
+        } else {
+          setHospitalFeePatientName(last.patientName || last.receiverName || '');
+          setHospitalFeeTime(getCurrentTimeString());
+        }
+      } else {
+        setHospitalExpenseReceiver(last.receiverName || last.patientName || last.hospitalExpenseReceiver || '');
+        setHospitalExpenseReason(last.reason || last.hospitalExpenseReason || last.description || '');
+        setHospitalExpenseTime(getCurrentTimeString());
+      }
+
+      setCustomTargetName(last.patientName || last.receiverName || last.customTargetName || '');
+      if (last.description) setDescription(last.description);
+
+      // Reset amount, date to today, proof to empty
+      setAmount('');
+      setDiscount('');
+      setReturnAmount('');
+      setTxDate(getLocalDateString(new Date()));
+      setProofFile(null);
+      setProofReason('');
+
+      setTimeout(() => {
+        if (amountInputRef.current) {
+          amountInputRef.current.focus();
+          amountInputRef.current.select();
+        }
+      }, 100);
+
+      toast.success('↻ Loaded last transaction details');
+    } catch (err) {
+      console.error('[Cashier] repeatLastEntry error:', err);
+      toast.error('Could not repeat last entry.');
+    }
+  };
+
+  // Save Current Form as Quick Template
+  const saveCurrentAsTemplate = async () => {
+    if (!newTemplateLabel.trim()) {
+      toast.error('Please enter a template label / name.');
+      return;
+    }
+    setSavingTemplate(true);
+    try {
+      const colName = `${activeDepartment.code}_quick_templates`;
+      const tplData = {
+        label: newTemplateLabel.trim(),
+        icon: newTemplateIcon || '⚡',
+        flowType: txnType,
+        receiverName: hospitalExpenseReceiver || customTargetName || hospitalFeePatientName || '',
+        reason: hospitalExpenseReason || description || '',
+        paymentMethod,
+        categoryId: selectedCategoryId,
+        categoryName: selectedCategory?.name || '',
+        hospitalIncomeType,
+        hospitalFeeType,
+        hospitalCustomFeeName,
+        createdBy: session?.uid || session?.customId || 'HQ-CASHIER',
+        createdByName: session?.displayName || session?.name || 'Cashier',
+        shared: newTemplateShared,
+        usageCount: 1,
+        lastUsedAt: Timestamp.now(),
+        createdAt: Timestamp.now(),
+      };
+
+      const ref = await addDoc(collection(db, colName), tplData);
+      setQuickTemplates((prev) => [{ id: ref.id, ...tplData }, ...prev]);
+      setIsSaveTemplateModalOpen(false);
+      setNewTemplateLabel('');
+      toast.success(`Saved template "${tplData.label}"!`);
+    } catch (err: any) {
+      console.error('[Cashier] saveCurrentAsTemplate error:', err);
+      toast.error('Failed to save template: ' + (err?.message || 'Error'));
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  // Delete custom template
+  const deleteCustomTemplate = async (templateId: string) => {
+    try {
+      if (!templateId.startsWith('default-')) {
+        await deleteDoc(doc(db, `${activeDepartment.code}_quick_templates`, templateId));
+      }
+      setQuickTemplates((prev) => prev.filter((t) => t.id !== templateId));
+      toast.success('Template removed');
+    } catch (err: any) {
+      toast.error('Failed to delete template');
+    }
+  };
+
+  // Keyboard navigation & Ctrl+Enter to submit
+  const handleFormKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      submitTx(e as any);
+    }
+  };
 
   const isHospitalDayClose = departmentCode === 'hospital' && hospitalMode === 'day_close';
   const isJobCenterDayClose = departmentCode === 'job-center' && jobCenterMode === 'day_close';
@@ -1145,7 +1542,328 @@ export default function CashierStationPage() {
     if (processing) return;
     setMessage(null);
 
-    const isHospitalDayClose = departmentCode === 'hospital' && hospitalMode === 'day_close';
+  
+  // Close receiver dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (receiverDropdownRef.current && !receiverDropdownRef.current.contains(event.target as Node)) {
+        setIsReceiverDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Fetch Quick Templates (No orderBy+where combo: sort client-side)
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchTemplates() {
+      setTemplatesLoading(true);
+      try {
+        const colName = `${activeDepartment.code}_quick_templates`;
+        const snap = await getDocs(collection(db, colName));
+        const dbList: QuickTemplate[] = snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as any),
+        }));
+
+        // Client-side filter: createdBy current user OR shared == true OR no creator (org-wide)
+        const userUid = session?.uid;
+        const userCustomId = session?.customId;
+        const filtered = dbList.filter((t) => 
+          t.shared === true || 
+          (userUid && t.createdBy === userUid) || 
+          (userCustomId && t.createdBy === userCustomId) || 
+          !t.createdBy
+        );
+
+        // Get starter defaults for this department
+        const defaults = (DEFAULT_STARTER_TEMPLATES[activeDepartment.code] || DEFAULT_STARTER_TEMPLATES['hospital'] || []).map((t, i) => ({
+          id: `default-${activeDepartment.code}-${i}`,
+          ...t,
+        }));
+
+        // Combine custom and default without label duplicates
+        const combined = [...filtered];
+        for (const def of defaults) {
+          if (!combined.some((c) => c.label.toLowerCase() === def.label.toLowerCase())) {
+            combined.push(def as any);
+          }
+        }
+
+        // Sort client-side: usageCount desc, then lastUsedAt desc
+        combined.sort((a, b) => {
+          const countDiff = (b.usageCount || 0) - (a.usageCount || 0);
+          if (countDiff !== 0) return countDiff;
+          const timeA = toDate(a.lastUsedAt || a.createdAt)?.getTime() || 0;
+          const timeB = toDate(b.lastUsedAt || b.createdAt)?.getTime() || 0;
+          return timeB - timeA;
+        });
+
+        if (isMounted) setQuickTemplates(combined);
+      } catch (err) {
+        console.error('[Cashier] Error loading templates:', err);
+        const defaults = (DEFAULT_STARTER_TEMPLATES[activeDepartment.code] || DEFAULT_STARTER_TEMPLATES['hospital'] || []).map((t, i) => ({
+          id: `default-${activeDepartment.code}-${i}`,
+          ...t,
+        }));
+        if (isMounted) setQuickTemplates(defaults as any);
+      } finally {
+        if (isMounted) setTemplatesLoading(false);
+      }
+    }
+    fetchTemplates();
+    return () => { isMounted = false; };
+  }, [activeDepartment.code, session?.uid, session?.customId]);
+
+  // Fetch recent distinct receiver names + staff profiles (fetch once on mount/dept change)
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchReceiversAndStaff() {
+      try {
+        // 1. Fetch recent transactions without composite index
+        const txSnap = await getDocs(query(collection(db, activeDepartment.txCollection), limit(50)));
+        const distinct = new Set<string>();
+        txSnap.docs.forEach((d) => {
+          const data = d.data() as any;
+          const val = data.receiverName || data.hospitalExpenseReceiver || data.receiver || data.patientName || data.staffName || data.customTargetName;
+          if (val && typeof val === 'string' && val.trim().length > 1) {
+            distinct.add(val.trim());
+          }
+        });
+
+        // 2. Fetch staff profiles
+        const staff: { id: string; name: string; role?: string }[] = [];
+        try {
+          const sSnap = await getDocs(collection(db, `${activeDepartment.code}_staff`));
+          sSnap.docs.forEach((docItem) => {
+            const data = docItem.data() as any;
+            const sName = data.name || data.fullName || data.displayName;
+            if (sName) {
+              staff.push({ id: docItem.id, name: sName.trim(), role: data.designation || data.role || 'Staff' });
+            }
+          });
+        } catch (_) {}
+
+        if (isMounted) {
+          setRecentReceivers(Array.from(distinct).slice(0, 20));
+          setStaffList(staff);
+        }
+      } catch (err) {
+        console.error('[Cashier] Error fetching recent receivers/staff:', err);
+      }
+    }
+    fetchReceiversAndStaff();
+    return () => { isMounted = false; };
+  }, [activeDepartment.code, activeDepartment.txCollection]);
+
+  // Debounced 200ms suggestions filter for receiver name
+  useEffect(() => {
+    const term = (hospitalExpenseReceiver || '').trim().toLowerCase();
+    const timer = setTimeout(() => {
+      const allEntries = [
+        ...staffList.map((s) => ({ name: s.name, type: 'staff' as const, role: s.role || 'Staff' })),
+        ...recentReceivers.map((r) => ({ name: r, type: 'recent' as const, role: 'Recent Receiver' })),
+      ];
+      const seen = new Set<string>();
+      const deduped = allEntries.filter((item) => {
+        const key = item.name.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      if (!term) {
+        setReceiverSuggestions(deduped.slice(0, 10));
+      } else {
+        setReceiverSuggestions(deduped.filter((i) => i.name.toLowerCase().includes(term)).slice(0, 8));
+      }
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [hospitalExpenseReceiver, staffList, recentReceivers]);
+
+  // Apply Quick Template
+  const applyQuickTemplate = (tpl: QuickTemplate) => {
+    setActiveTemplateId(tpl.id);
+    const flow = tpl.flowType || 'expense';
+    setTxnType(flow);
+
+    if (departmentCode === 'hospital') {
+      if (hospitalMode === 'none') {
+        setHospitalMode('all_transactions');
+      }
+      if (flow === 'expense') {
+        setHospitalIncomeType('none');
+        setHospitalFeeType('none');
+        if (tpl.receiverName) setHospitalExpenseReceiver(tpl.receiverName);
+        if (tpl.reason) setHospitalExpenseReason(tpl.reason);
+        setHospitalExpenseTime(getCurrentTimeString());
+        setCustomTargetName(tpl.receiverName || '');
+      } else {
+        setHospitalIncomeType(tpl.hospitalIncomeType || 'fee');
+        if (tpl.hospitalFeeType) setHospitalFeeType(tpl.hospitalFeeType as any);
+        if (tpl.hospitalCustomFeeName) setHospitalCustomFeeName(tpl.hospitalCustomFeeName);
+        if (tpl.receiverName) setHospitalFeePatientName(tpl.receiverName);
+        setHospitalFeeTime(getCurrentTimeString());
+        setCustomTargetName(tpl.receiverName || '');
+      }
+    } else {
+      if (flow === 'expense') {
+        if (tpl.receiverName) setHospitalExpenseReceiver(tpl.receiverName);
+        if (tpl.reason) setHospitalExpenseReason(tpl.reason);
+        setHospitalExpenseTime(getCurrentTimeString());
+        setCustomTargetName(tpl.receiverName || '');
+      } else {
+        setCustomTargetName(tpl.receiverName || '');
+      }
+    }
+
+    if (tpl.paymentMethod) setPaymentMethod(tpl.paymentMethod);
+    if (tpl.categoryId) setSelectedCategoryId(tpl.categoryId);
+
+    // Auto-focus amount
+    setTimeout(() => {
+      if (amountInputRef.current) {
+        amountInputRef.current.focus();
+        amountInputRef.current.select();
+      }
+    }, 100);
+
+    toast.success(`Applied template: ${tpl.icon || '⚡'} ${tpl.label}`);
+  };
+
+  // Repeat Last Entry Shortcut
+  const repeatLastEntry = async () => {
+    try {
+      const snap = await getDocs(query(collection(db, activeDepartment.txCollection), limit(40)));
+      const userUid = session?.uid;
+      const userCustomId = session?.customId;
+      const myTxns = snap.docs
+        .map((d) => ({ id: d.id, ...(d.data() as any) }))
+        .filter((t) => !userCustomId || t.cashierId === userCustomId || t.createdBy === userUid || true)
+        .sort((a, b) => {
+          const timeA = toDate(a.transactionDate || a.date || a.createdAt)?.getTime() || 0;
+          const timeB = toDate(b.transactionDate || b.date || b.createdAt)?.getTime() || 0;
+          return timeB - timeA;
+        });
+
+      const last = myTxns[0];
+      if (!last) {
+        toast.error('No previous transaction found to repeat.');
+        return;
+      }
+
+      const flow = last.type || 'expense';
+      setTxnType(flow);
+      if (last.paymentMethod) setPaymentMethod(last.paymentMethod);
+      if (last.categoryId) setSelectedCategoryId(last.categoryId);
+
+      if (departmentCode === 'hospital') {
+        if (hospitalMode === 'none') setHospitalMode('all_transactions');
+        if (flow === 'expense') {
+          setHospitalExpenseReceiver(last.receiverName || last.patientName || last.hospitalExpenseReceiver || '');
+          setHospitalExpenseReason(last.reason || last.hospitalExpenseReason || last.description || '');
+          setHospitalExpenseTime(getCurrentTimeString());
+        } else {
+          setHospitalFeePatientName(last.patientName || last.receiverName || '');
+          setHospitalFeeTime(getCurrentTimeString());
+        }
+      } else {
+        setHospitalExpenseReceiver(last.receiverName || last.patientName || last.hospitalExpenseReceiver || '');
+        setHospitalExpenseReason(last.reason || last.hospitalExpenseReason || last.description || '');
+        setHospitalExpenseTime(getCurrentTimeString());
+      }
+
+      setCustomTargetName(last.patientName || last.receiverName || last.customTargetName || '');
+      if (last.description) setDescription(last.description);
+
+      // Reset amount, date to today, proof to empty
+      setAmount('');
+      setDiscount('');
+      setReturnAmount('');
+      setTxDate(getLocalDateString(new Date()));
+      setProofFile(null);
+      setProofReason('');
+
+      setTimeout(() => {
+        if (amountInputRef.current) {
+          amountInputRef.current.focus();
+          amountInputRef.current.select();
+        }
+      }, 100);
+
+      toast.success('↻ Loaded last transaction details');
+    } catch (err) {
+      console.error('[Cashier] repeatLastEntry error:', err);
+      toast.error('Could not repeat last entry.');
+    }
+  };
+
+  // Save Current Form as Quick Template
+  const saveCurrentAsTemplate = async () => {
+    if (!newTemplateLabel.trim()) {
+      toast.error('Please enter a template label / name.');
+      return;
+    }
+    setSavingTemplate(true);
+    try {
+      const colName = `${activeDepartment.code}_quick_templates`;
+      const tplData = {
+        label: newTemplateLabel.trim(),
+        icon: newTemplateIcon || '⚡',
+        flowType: txnType,
+        receiverName: hospitalExpenseReceiver || customTargetName || hospitalFeePatientName || '',
+        reason: hospitalExpenseReason || description || '',
+        paymentMethod,
+        categoryId: selectedCategoryId,
+        categoryName: selectedCategory?.name || '',
+        hospitalIncomeType,
+        hospitalFeeType,
+        hospitalCustomFeeName,
+        createdBy: session?.uid || session?.customId || 'HQ-CASHIER',
+        createdByName: session?.displayName || session?.name || 'Cashier',
+        shared: newTemplateShared,
+        usageCount: 1,
+        lastUsedAt: Timestamp.now(),
+        createdAt: Timestamp.now(),
+      };
+
+      const ref = await addDoc(collection(db, colName), tplData);
+      setQuickTemplates((prev) => [{ id: ref.id, ...tplData }, ...prev]);
+      setIsSaveTemplateModalOpen(false);
+      setNewTemplateLabel('');
+      toast.success(`Saved template "${tplData.label}"!`);
+    } catch (err: any) {
+      console.error('[Cashier] saveCurrentAsTemplate error:', err);
+      toast.error('Failed to save template: ' + (err?.message || 'Error'));
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  // Delete custom template
+  const deleteCustomTemplate = async (templateId: string) => {
+    try {
+      if (!templateId.startsWith('default-')) {
+        await deleteDoc(doc(db, `${activeDepartment.code}_quick_templates`, templateId));
+      }
+      setQuickTemplates((prev) => prev.filter((t) => t.id !== templateId));
+      toast.success('Template removed');
+    } catch (err: any) {
+      toast.error('Failed to delete template');
+    }
+  };
+
+  // Keyboard navigation & Ctrl+Enter to submit
+  const handleFormKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      submitTx(e as any);
+    }
+  };
+
+  const isHospitalDayClose = departmentCode === 'hospital' && hospitalMode === 'day_close';
     const isJobCenterDayClose = departmentCode === 'job-center' && jobCenterMode === 'day_close';
     const isHospitalCommonAllTx = departmentCode === 'hospital' && hospitalMode === 'all_transactions';
     const missingReason = proofReason.trim();
@@ -1862,7 +2580,17 @@ export default function CashierStationPage() {
 
       toast.success((isSuperadmin || departmentCode === 'welfare') ? 'Transaction approved & synced successfully ✓' : 'Transaction submitted successfully ✓');
       
-      setSelectedEntity(null);
+      // Increment template usage if a template was used
+      if (activeTemplateId && !activeTemplateId.startsWith('default-')) {
+        try {
+          await updateDoc(doc(db, `${activeDepartment.code}_quick_templates`, activeTemplateId), {
+            usageCount: increment(1),
+            lastUsedAt: Timestamp.now(),
+          });
+        } catch (_) {}
+      }
+
+      // Fast-entry reset: Clear amount/proof/notes, keep date as today and time as now
       setAmount('');
       setDiscount('');
       setReturnAmount('');
@@ -1871,31 +2599,24 @@ export default function CashierStationPage() {
       setReferenceNo('');
       setProofFile(null);
       setProofReason('');
-      setCategorySearch('');
-      setSearchQuery('');
-      setEntityResults([]);
       setItemizedList([]);
       setNewItemName('');
       setNewItemPrice('');
-      setShowGeneralTxForm(false);
-      setHospitalMode('none');
-      setHospitalIncomeType('none');
-      setHospitalFeeType('none');
-      setHospitalCustomFeeName('');
-      setHospitalExpenseReceiver('');
-      setHospitalExpenseReason('');
-      setHospitalExpenseTime('');
-      setHospitalFeePatientName('');
-      setHospitalFeeTime('');
-      setHospitalMedicinePatientName('');
-      setHospitalMedicineTime('');
       setHospitalMedicineItems([]);
       setNewMedItemName('');
       setNewMedItemPrice('');
-      setHospitalOperateName('');
-      setHospitalOperatePatientName('');
-      setHospitalOperateDoctorName('');
-      setHospitalOperateTime('');
+      setTxDate(getLocalDateString(new Date()));
+      setHospitalExpenseTime(getCurrentTimeString());
+      setHospitalFeeTime(getCurrentTimeString());
+      setHospitalMedicineTime(getCurrentTimeString());
+      setHospitalOperateTime(getCurrentTimeString());
+
+      // Auto-focus amount field for next transaction
+      setTimeout(() => {
+        if (amountInputRef.current) {
+          amountInputRef.current.focus();
+        }
+      }, 100);
 
       setProofUploading(false);
       setIsHold(false);
@@ -2745,7 +3466,7 @@ export default function CashierStationPage() {
               )}
 
               {(departmentCode !== 'hospital' || hospitalMode !== 'none') && (
-              <form onSubmit={submitTx} className="space-y-10 pt-10 border-t border-zinc-100">
+              <form onSubmit={submitTx} onKeyDown={handleFormKeyDown} className="space-y-10 pt-10 border-t border-zinc-100">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
                   <div className="space-y-8">
                     {!selectedEntity && departmentCode !== 'hospital' && (
@@ -2797,15 +3518,85 @@ export default function CashierStationPage() {
                           </div>
                         </div>
 
+                        {/* Quick Templates for other departments */}
+                        <div className="space-y-2 pb-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Quick Templates</label>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={repeatLastEntry}
+                                className="text-[9px] font-black text-amber-700 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded uppercase cursor-pointer"
+                              >
+                                ↻ Repeat Last
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setNewTemplateLabel(hospitalExpenseReason || hospitalExpenseReceiver || 'New Template');
+                                  setIsSaveTemplateModalOpen(true);
+                                }}
+                                className="text-[9px] font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded uppercase cursor-pointer"
+                              >
+                                + Save Template
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                            {quickTemplates.slice(0, 6).map((tpl) => (
+                              <button
+                                key={tpl.id}
+                                type="button"
+                                onClick={() => applyQuickTemplate(tpl)}
+                                className={cn(
+                                  "flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
+                                  activeTemplateId === tpl.id
+                                    ? "bg-rose-600 border-rose-600 text-white"
+                                    : "bg-white border-zinc-200 text-zinc-700 hover:border-rose-300"
+                                )}
+                              >
+                                <span>{tpl.icon || '⚡'}</span>
+                                <span className="truncate max-w-[120px]">{tpl.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
+                          <div className="space-y-1.5 relative">
                             <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-1">Receiver Name (Who is taking?)</label>
                             <input
                               value={hospitalExpenseReceiver}
-                              onChange={(e) => setHospitalExpenseReceiver(e.target.value)}
+                              onFocus={() => setIsReceiverDropdownOpen(true)}
+                              onChange={(e) => {
+                                setHospitalExpenseReceiver(e.target.value);
+                                setIsReceiverDropdownOpen(true);
+                              }}
                               placeholder="e.g. Staff Name, Vendor, Driver..."
                               className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-rose-600/10 focus:border-rose-600 transition-all text-gray-900 shadow-sm"
                             />
+                            {isReceiverDropdownOpen && receiverSuggestions.length > 0 && (
+                              <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-rose-100 rounded-xl shadow-xl p-1.5 z-50 max-h-48 overflow-y-auto no-scrollbar">
+                                {receiverSuggestions.map((item, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      setHospitalExpenseReceiver(item.name);
+                                      setIsReceiverDropdownOpen(false);
+                                      setTimeout(() => {
+                                        if (amountInputRef.current) amountInputRef.current.focus();
+                                      }, 50);
+                                    }}
+                                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left hover:bg-rose-50 transition-colors text-xs font-bold text-zinc-800 cursor-pointer"
+                                  >
+                                    <span>{item.type === 'staff' ? '👤 ' : '🕒 '}{item.name}</span>
+                                    <span className="text-[9px] text-zinc-400">{item.role}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <div className="space-y-1.5">
                             <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-1">Reason / Purpose</label>
@@ -2875,17 +3666,138 @@ export default function CashierStationPage() {
                           </div>
                         </div>
 
+                        {/* Quick Templates Chips Row */}
+                        <div className="space-y-3 pb-3 border-b border-zinc-200/60">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-base">⚡</span>
+                              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600">Quick Templates</label>
+                              <span className="text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">1-Tap Fill</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={repeatLastEntry}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 text-[9px] font-black uppercase tracking-wider transition-all border border-amber-500/20 active:scale-95 cursor-pointer"
+                                title="Autofill from your most recent transaction"
+                              >
+                                <RefreshCw size={11} className="text-amber-600" />
+                                Repeat Last
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setNewTemplateLabel(hospitalExpenseReason || hospitalExpenseReceiver || 'New Template');
+                                  setIsSaveTemplateModalOpen(true);
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-[9px] font-black uppercase tracking-wider transition-all border border-indigo-200 active:scale-95 cursor-pointer"
+                                title="Save current form values as a new template"
+                              >
+                                <Sparkles size={11} />
+                                Save As Template
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar">
+                            {quickTemplates.slice(0, 8).map((tpl) => (
+                              <button
+                                key={tpl.id}
+                                type="button"
+                                onClick={() => applyQuickTemplate(tpl)}
+                                className={cn(
+                                  "flex-shrink-0 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all border-2 active:scale-95 shadow-sm group cursor-pointer",
+                                  activeTemplateId === tpl.id
+                                    ? "bg-indigo-600 border-indigo-600 text-white shadow-indigo-600/20"
+                                    : "bg-white border-zinc-200/80 hover:border-indigo-300 text-zinc-700 hover:text-indigo-600 hover:bg-indigo-50/30"
+                                )}
+                              >
+                                <span className="text-sm group-hover:scale-110 transition-transform">{tpl.icon || '⚡'}</span>
+                                <span className="truncate max-w-[140px]">{tpl.label}</span>
+                                <span className={cn(
+                                  "text-[8px] font-black uppercase px-1.5 py-0.5 rounded",
+                                  tpl.flowType === 'income'
+                                    ? (activeTemplateId === tpl.id ? "bg-white/20 text-white" : "bg-emerald-50 text-emerald-700")
+                                    : (activeTemplateId === tpl.id ? "bg-white/20 text-white" : "bg-rose-50 text-rose-700")
+                                )}>
+                                  {tpl.flowType}
+                                </span>
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => setIsMoreTemplatesModalOpen(true)}
+                              className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider bg-zinc-100 hover:bg-zinc-200 text-zinc-600 border border-zinc-200 transition-all cursor-pointer"
+                            >
+                              <span>⋯ More ({quickTemplates.length})</span>
+                            </button>
+                          </div>
+                        </div>
+
                         {/* Expense Fields */}
                         {txnType === 'expense' && (
                           <div className="space-y-4 pt-4 border-t border-zinc-200/60 animate-in fade-in duration-300">
-                            <div className="space-y-2">
-                              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Receiver Name (Who is taking?)</label>
-                              <input
-                                value={hospitalExpenseReceiver}
-                                onChange={(e) => setHospitalExpenseReceiver(e.target.value)}
-                                placeholder="e.g. Aqsa Nasreen, Dr. Khan, Staff Member..."
-                                className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
-                              />
+                            {/* Autocomplete Receiver Name */}
+                            <div className="space-y-2 relative" ref={receiverDropdownRef}>
+                              <div className="flex items-center justify-between">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Receiver Name (Who is taking?)</label>
+                                {hospitalExpenseReceiver && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setHospitalExpenseReceiver('')}
+                                    className="text-[8px] font-black text-zinc-400 hover:text-rose-500 uppercase tracking-widest cursor-pointer"
+                                  >
+                                    Clear
+                                  </button>
+                                )}
+                              </div>
+                              <div className="relative">
+                                <input
+                                  value={hospitalExpenseReceiver}
+                                  onFocus={() => setIsReceiverDropdownOpen(true)}
+                                  onChange={(e) => {
+                                    setHospitalExpenseReceiver(e.target.value);
+                                    setIsReceiverDropdownOpen(true);
+                                  }}
+                                  placeholder="e.g. Aqsa Nasreen, Dr. Khan, Staff Member, Vendor..."
+                                  className="w-full h-12 bg-white border border-zinc-200 rounded-xl px-4 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600/20 transition-all text-gray-900"
+                                />
+                                {isReceiverDropdownOpen && receiverSuggestions.length > 0 && (
+                                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border-2 border-indigo-100 rounded-2xl shadow-2xl p-2 z-50 max-h-56 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <div className="px-2 py-1 text-[8px] font-black uppercase tracking-widest text-zinc-400 border-b border-zinc-100 mb-1">
+                                      Suggestions ({receiverSuggestions.length})
+                                    </div>
+                                    {receiverSuggestions.map((item, idx) => (
+                                      <button
+                                        key={idx}
+                                        type="button"
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          setHospitalExpenseReceiver(item.name);
+                                          setIsReceiverDropdownOpen(false);
+                                          setTimeout(() => {
+                                            if (amountInputRef.current) amountInputRef.current.focus();
+                                          }, 50);
+                                        }}
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left hover:bg-indigo-50 transition-colors group cursor-pointer"
+                                      >
+                                        <div className="flex items-center gap-2.5">
+                                          <span className="w-6 h-6 rounded-lg bg-zinc-100 group-hover:bg-indigo-100 flex items-center justify-center text-xs text-zinc-600 group-hover:text-indigo-600 font-black">
+                                            {item.type === 'staff' ? '👤' : '🕒'}
+                                          </span>
+                                          <div>
+                                            <p className="text-xs font-black text-zinc-900 group-hover:text-indigo-600">{item.name}</p>
+                                            <p className="text-[9px] font-bold text-zinc-400">{item.role}</p>
+                                          </div>
+                                        </div>
+                                        <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                          Select ↵
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             <div className="space-y-2">
                               <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400 ml-1">Reason / Purpose</label>
@@ -3373,6 +4285,7 @@ export default function CashierStationPage() {
                               <DollarSign size={20} className="sm:w-6 sm:h-6 text-indigo-600/20 group-focus-within/amount:text-indigo-600 transition-colors" />
                             </div>
                             <input
+                              ref={amountInputRef}
                               type="number"
                               step="0.01"
                               value={amount}
