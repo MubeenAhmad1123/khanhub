@@ -31,6 +31,9 @@ export interface SalaryRowData {
   payableDays: number;
   earnings: number;
   absentDays: number;
+  weeklyOffDaysCount?: number;
+  holidayDaysCount?: number;
+  weeklyOffDay?: string;
   totalAbsentDeduction: number;
   staffFines?: any[];
   totalFines: number;
@@ -65,6 +68,8 @@ interface Props {
   selectedMonth?: string; // YYYY-MM
   selectedYear?: number;
   paidDate?: string; // YYYY-MM-DD or formatted date string
+  weeklyOffDaysCount?: number;
+  holidayDaysCount?: number;
 }
 
 export function SalarySlipPrintable({

@@ -44,6 +44,7 @@ export type StaffCardRow = {
   emergencyContactName?: string;
   emergencyPhone?: string;
   seniority?: string;
+  weeklyOffDay?: 'none' | 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
   // Daily Stats for Today
   todayUniformStatus?: 'yes' | 'no' | 'incomplete' | 'na';
   todayDutyStatus?: 'yes' | 'no' | 'incomplete' | 'na';

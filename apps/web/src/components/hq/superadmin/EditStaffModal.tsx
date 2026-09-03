@@ -25,6 +25,7 @@ export function EditStaffModal({ staff, onClose, onSuccess }: EditStaffModalProp
     photoUrl: staff.photoUrl || '',
     dutyStartTime: staff.dutyStartTime || '09:00',
     dutyEndTime: staff.dutyEndTime || '18:00',
+    weeklyOffDay: (staff as any).weeklyOffDay || 'none',
   });
 
   async function handleSubmit(e: React.FormEvent) {

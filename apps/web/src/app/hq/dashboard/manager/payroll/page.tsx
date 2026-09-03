@@ -77,6 +77,18 @@ function getDaysInMonth(year: number, monthZeroIndexed: number): string[] {
   return days;
 }
 
+export interface HqHoliday {
+  id: string;
+  date: string; // YYYY-MM-DD
+  label: string;
+  scope: 'all' | 'department' | 'staff';
+  departments?: StaffDept[];
+  staffIds?: string[];
+  createdBy?: string;
+  createdAt?: any;
+}
+
+
 export default function ManagerPayrollPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
@@ -89,7 +101,7 @@ export default function ManagerPayrollPage() {
   const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-  const [tab, setTab] = useState<'salary' | 'fines'>('salary');
+  const [tab, setTab] = useState<'salary' | 'fines' | 'holidays'>('salary');
   const [deptFilter, setDeptFilter] = useState<string>('all');
   const [fineStaffFilter, setFineStaffFilter] = useState<string>('all');
   const [fineDeptFilter, setFineDeptFilter] = useState<string>('all');
@@ -120,6 +132,26 @@ export default function ManagerPayrollPage() {
   const [syncingProfileId, setSyncingProfileId] = useState<string | null>(null);
 
   // Fine form
+
+  // Holiday calendar states
+  const [showHolidayForm, setShowHolidayForm] = useState(false);
+  const [holidayForm, setHolidayForm] = useState<{
+    date: string;
+    label: string;
+    scope: 'all' | 'department' | 'staff';
+    departments: StaffDept[];
+    staffIds: string[];
+  }>({
+    date: '',
+    label: '',
+    scope: 'all',
+    departments: [],
+    staffIds: [],
+  });
+  const [savingHoliday, setSavingHoliday] = useState(false);
+  const [deletingHolidayId, setDeletingHolidayId] = useState<string | null>(null);
+  const [updatingOffDayId, setUpdatingOffDayId] = useState<string | null>(null);
+
   const [showFineForm, setShowFineForm] = useState(false);
   const [fineForm, setFineForm] = useState({ dept: '', staffId: '', amount: '', reason: '', date: '' });
   const [savingFine, setSavingFine] = useState(false);
@@ -219,6 +251,11 @@ export default function ManagerPayrollPage() {
       setLoading(true);
 
       const globalTxns = await fetchGlobalTransactionsForMonth();
+
+      // Fetch all HQ holidays once (no where+orderBy composite index; filter client-side)
+      const holidaysSnap = await getDocs(collection(db, 'hq_holidays')).catch(() => ({ docs: [] } as any));
+      const allHolidaysList: HqHoliday[] = holidaysSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+      const monthHolidays = allHolidaysList.filter((h) => h.date && h.date.startsWith(monthStr));
 
       const results = await Promise.all(ALL_DEPTS.map(async (dept) => {
         const prefix = getDeptPrefix(dept);
@@ -456,11 +493,31 @@ export default function ManagerPayrollPage() {
             let unmarkedDaysCount = 0;
             let paidLeaveCount = 0;
             let unpaidLeaveCount = 0;
+            let weeklyOffDaysCount = 0;
+            let holidayDaysCount = 0;
 
             monthDays.forEach(dayStr => {
               // Ignore dates before staff joining date
               if (joiningDateStr && dayStr < joiningDateStr) {
                 return;
+              }
+
+              const dayOfWeekName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date(`${dayStr}T00:00:00`).getDay()];
+              const isWeeklyOff = staff.weeklyOffDay && staff.weeklyOffDay !== 'none' && staff.weeklyOffDay === dayOfWeekName;
+              const isHoliday = monthHolidays.some(h => 
+                h.date === dayStr && 
+                (h.scope === 'all' || 
+                 (h.scope === 'department' && h.departments?.includes(dept)) ||
+                 (h.scope === 'staff' && (h.staffIds?.includes(uid) || (loginId && h.staffIds?.includes(loginId)) || (staff.id && h.staffIds?.includes(staff.id)))))
+              );
+
+              if (isHoliday) {
+                holidayDaysCount++;
+                return; // fully paid, skip all other status logic for this day
+              }
+              if (isWeeklyOff) {
+                weeklyOffDaysCount++;
+                return; // fully paid, skip all other status logic for this day
               }
 
               const att = attMapByDate[dayStr];
@@ -901,6 +958,76 @@ export default function ManagerPayrollPage() {
     }
   };
 
+
+  const handleAddHoliday = async () => {
+    if (!holidayForm.date || !holidayForm.label.trim()) {
+      alert('Please provide holiday date and title/label.');
+      return;
+    }
+    if (holidayForm.scope === 'department' && (!holidayForm.departments || holidayForm.departments.length === 0)) {
+      alert('Please select at least one department for department-scoped holiday.');
+      return;
+    }
+    if (holidayForm.scope === 'staff' && (!holidayForm.staffIds || holidayForm.staffIds.length === 0)) {
+      alert('Please select at least one staff member for staff-scoped holiday.');
+      return;
+    }
+    setSavingHoliday(true);
+    try {
+      await addDoc(collection(db, 'hq_holidays'), {
+        date: holidayForm.date,
+        label: holidayForm.label.trim(),
+        scope: holidayForm.scope,
+        departments: holidayForm.departments || [],
+        staffIds: holidayForm.staffIds || [],
+        createdBy: session?.name || session?.customId || 'Manager',
+        createdAt: Timestamp.now(),
+      });
+      setHolidayForm({ date: '', label: '', scope: 'all', departments: [], staffIds: [] });
+      setShowHolidayForm(false);
+      await handleLoad();
+    } catch (err: any) {
+      alert('Failed to save holiday: ' + err.message);
+    } finally {
+      setSavingHoliday(false);
+    }
+  };
+
+  const handleDeleteHoliday = async (holiday: HqHoliday) => {
+    if (!confirm(`Delete holiday "${holiday.label}" on ${holiday.date}?`)) return;
+    try {
+      setDeletingHolidayId(holiday.id);
+      await deleteDoc(doc(db, 'hq_holidays', holiday.id));
+      await handleLoad();
+    } catch (err: any) {
+      alert('Failed to delete holiday: ' + err.message);
+    } finally {
+      setDeletingHolidayId(null);
+    }
+  };
+
+  const handleUpdateStaffWeeklyOff = async (staffRow: any, newOffDay: string) => {
+    try {
+      setUpdatingOffDayId(staffRow.id);
+      const prefix = getDeptPrefix(staffRow.dept as StaffDept);
+      const dept = staffRow.dept as StaffDept;
+      const staffCol = dept === 'hq' ? 'hq_users'
+        : dept === 'job-center' ? 'jobcenter_users'
+        : dept === 'social-media' ? 'media_users'
+        : `${prefix}_users`;
+
+      await updateDoc(doc(db, staffCol, staffRow.id), {
+        weeklyOffDay: newOffDay,
+        updatedAt: Timestamp.now(),
+      });
+      await handleLoad();
+    } catch (err: any) {
+      alert('Failed to update weekly off day: ' + err.message);
+    } finally {
+      setUpdatingOffDayId(null);
+    }
+  };
+
   const handlePrint = () => window.print();
   const handleDownload = async () => {
     if (!printRef.current) return;
@@ -1115,6 +1242,9 @@ export default function ManagerPayrollPage() {
               <button onClick={() => setTab('fines')} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === 'fines' ? 'bg-emerald-600 text-white shadow' : 'text-gray-500 hover:text-gray-800'}`}>
                 Fines Ledger ({data.allFines.length} fines)
               </button>
+              <button onClick={() => setTab('holidays')} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === 'holidays' ? 'bg-emerald-600 text-white shadow' : 'text-gray-500 hover:text-gray-800'}`}>
+                Office Holidays ({data.allHolidays?.length || 0} days)
+              </button>
             </div>
 
             {/* ── SALARY SHEET ── */}
@@ -1220,6 +1350,26 @@ export default function ManagerPayrollPage() {
                           <td className="px-3 py-3.5 font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">
                             <div>{r.name}</div>
                             <div className="text-[10px] text-gray-400 font-normal">{r.designation}</div>
+                            <div className="flex items-center gap-1.5 mt-1 no-print">
+                              <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Off:</span>
+                              <select
+                                value={r.weeklyOffDay || 'none'}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => handleUpdateStaffWeeklyOff(r, e.target.value)}
+                                disabled={updatingOffDayId === r.id}
+                                className="text-[9px] font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200 rounded px-1.5 py-0.5 outline-none hover:bg-emerald-100 transition-all cursor-pointer"
+                                title="Set weekly paid off day"
+                              >
+                                <option value="none">None</option>
+                                <option value="sunday">Sun</option>
+                                <option value="monday">Mon</option>
+                                <option value="tuesday">Tue</option>
+                                <option value="wednesday">Wed</option>
+                                <option value="thursday">Thu</option>
+                                <option value="friday">Fri</option>
+                                <option value="saturday">Sat</option>
+                              </select>
+                            </div>
                           </td>
                           <td className="px-3 py-3.5">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${DEPT_COLORS[r.dept] || 'bg-gray-100 text-gray-600'}`}>
@@ -1228,9 +1378,23 @@ export default function ManagerPayrollPage() {
                           </td>
                           <td className="px-3 py-3.5 text-right font-medium text-gray-700">{formatPKR(r.gross)}</td>
                           <td className="px-3 py-3.5 text-center">
-                            <span className="font-bold text-xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
+                            <span className="font-bold text-xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100 block">
                               {r.payableDays} Days ({formatPKR(r.earnings)})
                             </span>
+                            {(r.weeklyOffDaysCount > 0 || r.holidayDaysCount > 0) && (
+                              <div className="flex items-center justify-center gap-1 mt-1 text-[9px] font-extrabold">
+                                {r.weeklyOffDaysCount > 0 && (
+                                  <span className="bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.2 rounded" title="Paid weekly off days">
+                                    Off: {r.weeklyOffDaysCount}d
+                                  </span>
+                                )}
+                                {r.holidayDaysCount > 0 && (
+                                  <span className="bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.2 rounded" title="Paid official holidays">
+                                    Holidays: {r.holidayDaysCount}d
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </td>
 
                           {/* Custom Additions Column */}
@@ -1364,6 +1528,224 @@ export default function ManagerPayrollPage() {
                     <div className="text-[10px] text-slate-400 font-bold uppercase">Official Stamp & Signature</div>
                   </div>
                 </div>
+
+              </div>
+            )}
+
+
+            {/* ── OFFICE HOLIDAYS CALENDAR ── */}
+            {tab === 'holidays' && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
+
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 no-print">
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-emerald-600" /> Organization Holiday Calendar
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Days marked as holidays are fully paid for staff and never treated as absent or deducted.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowHolidayForm(v => !v)}
+                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" /> Add Holiday
+                  </button>
+                </div>
+
+                {/* Add Holiday Form */}
+                {showHolidayForm && (
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 space-y-4 no-print animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-emerald-800 flex items-center gap-2">
+                        <Calendar className="w-4 h-4" /> Add Official Holiday
+                      </h3>
+                      <button onClick={() => setShowHolidayForm(false)} className="text-gray-400 hover:text-gray-700 cursor-pointer">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Holiday Date *</label>
+                        <input
+                          type="date"
+                          value={holidayForm.date}
+                          onChange={e => setHolidayForm(p => ({ ...p, date: e.target.value }))}
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-black font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Holiday Title / Label *</label>
+                        <input
+                          type="text"
+                          value={holidayForm.label}
+                          onChange={e => setHolidayForm(p => ({ ...p, label: e.target.value }))}
+                          placeholder="e.g. Eid-ul-Fitr, Pakistan Day, Labour Day..."
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-black font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Scope *</label>
+                        <select
+                          value={holidayForm.scope}
+                          onChange={e => setHolidayForm(p => ({ ...p, scope: e.target.value as any }))}
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-black font-bold"
+                        >
+                          <option value="all">All Staff (Entire Organization)</option>
+                          <option value="department">Specific Department(s)</option>
+                          <option value="staff">Specific Staff Member(s)</option>
+                        </select>
+                      </div>
+
+                      {holidayForm.scope === 'department' && (
+                        <div className="sm:col-span-2 lg:col-span-3">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Select Departments *</label>
+                          <div className="flex flex-wrap gap-2">
+                            {ALL_DEPTS.map(dept => {
+                              const isSelected = holidayForm.departments.includes(dept);
+                              return (
+                                <button
+                                  key={dept}
+                                  type="button"
+                                  onClick={() => {
+                                    setHolidayForm(p => ({
+                                      ...p,
+                                      departments: isSelected
+                                        ? p.departments.filter(d => d !== dept)
+                                        : [...p.departments, dept]
+                                    }));
+                                  }}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {DEPT_LABELS[dept] || dept}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {holidayForm.scope === 'staff' && (
+                        <div className="sm:col-span-2 lg:col-span-3">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Select Staff Members *</label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 max-h-48 overflow-y-auto p-2 bg-white rounded-xl border border-gray-200">
+                            {(data?.allStaff || []).map((s: any) => {
+                              const isSelected = holidayForm.staffIds.includes(s.id);
+                              return (
+                                <button
+                                  key={s.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setHolidayForm(p => ({
+                                      ...p,
+                                      staffIds: isSelected
+                                        ? p.staffIds.filter(id => id !== s.id)
+                                        : [...p.staffIds, s.id]
+                                    }));
+                                  }}
+                                  className={`p-2 rounded-lg text-left text-xs font-bold border transition-all truncate cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-emerald-600 text-white border-emerald-600'
+                                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                                  }`}
+                                >
+                                  <div className="truncate">{s.name || s.displayName}</div>
+                                  <div className="text-[9px] opacity-75">{DEPT_LABELS[s.dept] || s.dept}</div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={handleAddHoliday}
+                      disabled={savingHoliday}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-colors disabled:opacity-60 flex items-center gap-2 cursor-pointer"
+                    >
+                      {savingHoliday ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                      Save Holiday
+                    </button>
+                  </div>
+                )}
+
+                {/* Holidays Table */}
+                {(data?.allHolidays || []).length === 0 ? (
+                  <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl text-gray-400 font-medium">
+                    No official holidays registered for {data?.monthLabel}.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-gray-200">
+                    <table className="w-full text-sm border-collapse">
+                      <thead className="bg-emerald-50">
+                        <tr>
+                          <th className="px-4 py-2.5 text-left font-bold text-emerald-900">#</th>
+                          <th className="px-4 py-2.5 text-left font-bold text-emerald-900">Date</th>
+                          <th className="px-4 py-2.5 text-left font-bold text-emerald-900">Holiday Label</th>
+                          <th className="px-4 py-2.5 text-left font-bold text-emerald-900">Scope</th>
+                          <th className="px-4 py-2.5 text-left font-bold text-emerald-900">Target Coverage</th>
+                          <th className="px-4 py-2.5 text-left font-bold text-emerald-900">Recorded By</th>
+                          <th className="px-4 py-2.5 text-center font-bold text-emerald-900 no-print">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {(data?.allHolidays || []).map((h: HqHoliday, idx: number) => (
+                          <tr key={h.id} className="hover:bg-gray-50/70 transition-colors">
+                            <td className="px-4 py-3 text-gray-400 font-mono text-xs">{idx + 1}</td>
+                            <td className="px-4 py-3 font-mono font-bold text-gray-900">{h.date}</td>
+                            <td className="px-4 py-3 font-bold text-gray-900">{h.label}</td>
+                            <td className="px-4 py-3">
+                              <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
+                                h.scope === 'all'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : h.scope === 'department'
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                  : 'bg-purple-50 text-purple-700 border-purple-200'
+                              }`}>
+                                {h.scope === 'all' ? 'All Staff (Org)' : h.scope === 'department' ? 'Department(s)' : 'Specific Staff'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-xs text-gray-600">
+                              {h.scope === 'all' && <span className="font-bold text-emerald-700">All 9 Departments</span>}
+                              {h.scope === 'department' && (
+                                <div className="flex flex-wrap gap-1">
+                                  {(h.departments || []).map(d => (
+                                    <span key={d} className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                      {DEPT_LABELS[d] || d}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              {h.scope === 'staff' && (
+                                <span>{h.staffIds?.length || 0} Staff Members</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-gray-500">{h.createdBy || 'Manager'}</td>
+                            <td className="px-4 py-3 text-center no-print">
+                              <button
+                                onClick={() => handleDeleteHoliday(h)}
+                                disabled={deletingHolidayId === h.id}
+                                className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                title="Delete holiday"
+                              >
+                                {deletingHolidayId === h.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
               </div>
             )}
@@ -1852,7 +2234,10 @@ export default function ManagerPayrollPage() {
                 <div className="bg-emerald-50 border border-emerald-100 p-2.5 rounded-2xl text-center">
                   <div className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider mb-0.5">Earned Days</div>
                   <div className="text-xs font-black text-emerald-800">{selectedStaffModal.payableDays} Days</div>
-                  <div className="text-[9px] text-emerald-600 mt-0.5">+{formatPKR(selectedStaffModal.earnings)}</div>
+                  <div className="text-[9px] text-emerald-600 mt-0.5">
+                    {selectedStaffModal.weeklyOffDaysCount ? `Off: ${selectedStaffModal.weeklyOffDaysCount}d ` : ''}
+                    {selectedStaffModal.holidayDaysCount ? `Hol: ${selectedStaffModal.holidayDaysCount}d` : ''}
+                  </div>
                 </div>
 
                 <div className="bg-green-50 border border-green-100 p-2.5 rounded-2xl text-center">
