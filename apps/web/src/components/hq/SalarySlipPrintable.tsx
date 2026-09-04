@@ -38,6 +38,7 @@ export interface SalaryRowData {
   staffFines?: any[];
   totalFines: number;
   totalAdvance: number;
+  previousMonthDebt?: number;
   staffAdvanceTxns?: any[];
   customAdj?: any;
   remainingBalance: number;
@@ -131,7 +132,7 @@ export function SalarySlipPrintable({
 
     initialAbsentee = Number(row.totalAbsentDeduction) || 0;
     initialFines = Number(row.totalFines) || 0;
-    initialAdvancePay = Number(row.totalAdvance) || 0;
+    initialAdvancePay = (Number(row.totalAdvance) || 0) + (Number(row.previousMonthDebt) || 0);
     initialOtherDed = Number(row.totalCustomDeductions) || 0;
   } else if (slip) {
     initialEmpName = slip.staffName || '—';

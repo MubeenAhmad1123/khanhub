@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, addDoc, deleteDoc, doc, Timestamp, setDoc, updateDoc } from 'firebase/firestore';
@@ -11,7 +11,8 @@ import {
   UserCog, Printer, Calendar, DollarSign, Loader2, Download,
   Plus, X, Receipt, Trash2, Building2, Eye, CheckCircle2,
   Info, CreditCard, SlidersHorizontal, PlusCircle, MinusCircle,
-  Save, AlertTriangle, RefreshCw, FileText
+  Save, AlertTriangle, RefreshCw, FileText, Search, CheckCheck,
+  EyeOff, UserCheck, Check, ArrowRight, ShieldCheck, Filter, FileSpreadsheet
 } from 'lucide-react';
 import { SalarySlipPrintable } from '@/components/hq/SalarySlipPrintable';
 
@@ -88,7 +89,6 @@ export interface HqHoliday {
   createdAt?: any;
 }
 
-
 export default function ManagerPayrollPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
@@ -103,6 +103,9 @@ export default function ManagerPayrollPage() {
 
   const [tab, setTab] = useState<'salary' | 'fines' | 'holidays'>('salary');
   const [deptFilter, setDeptFilter] = useState<string>('all');
+  const [staffStatusFilter, setStaffStatusFilter] = useState<'all' | 'active' | 'hidden'>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  
   const [fineStaffFilter, setFineStaffFilter] = useState<string>('all');
   const [fineDeptFilter, setFineDeptFilter] = useState<string>('all');
 
@@ -131,7 +134,17 @@ export default function ManagerPayrollPage() {
   const [savingCustomization, setSavingCustomization] = useState(false);
   const [syncingProfileId, setSyncingProfileId] = useState<string | null>(null);
 
-  // Fine form
+  // Attendance completion and modal state
+  const [attendanceModalStaff, setAttendanceModalStaff] = useState<any | null>(null);
+  const [attendanceDaysMap, setAttendanceDaysMap] = useState<Record<string, { status: string; reason?: string }>>({});
+  const [completingAttendanceId, setCompletingAttendanceId] = useState<string | null>(null);
+  const [batchCompletingAttendance, setBatchCompletingAttendance] = useState(false);
+  const [savingAttendanceModal, setSavingAttendanceModal] = useState(false);
+
+  // Batch salary generation state
+  const [batchGeneratingSalaries, setBatchGeneratingSalaries] = useState(false);
+  const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
+  const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null);
 
   // Holiday calendar states
   const [showHolidayForm, setShowHolidayForm] = useState(false);
@@ -152,6 +165,7 @@ export default function ManagerPayrollPage() {
   const [deletingHolidayId, setDeletingHolidayId] = useState<string | null>(null);
   const [updatingOffDayId, setUpdatingOffDayId] = useState<string | null>(null);
 
+  // Fine form
   const [showFineForm, setShowFineForm] = useState(false);
   const [fineForm, setFineForm] = useState({ dept: '', staffId: '', amount: '', reason: '', date: '' });
   const [savingFine, setSavingFine] = useState(false);
@@ -160,7 +174,14 @@ export default function ManagerPayrollPage() {
   const printRef = useRef<HTMLDivElement>(null);
 
   const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
-  const monthDays = getDaysInMonth(selectedYear, selectedMonth);
+  const monthDays = useMemo(() => getDaysInMonth(selectedYear, selectedMonth), [selectedYear, selectedMonth]);
+
+  // Previous month string for calculating carry-forward negative balance (e.g. -3000 debt)
+  const prevMonthStr = useMemo(() => {
+    const prevYear = selectedMonth === 0 ? selectedYear - 1 : selectedYear;
+    const prevMonthIdx = selectedMonth === 0 ? 11 : selectedMonth - 1;
+    return `${prevYear}-${String(prevMonthIdx + 1).padStart(2, '0')}`;
+  }, [selectedMonth, selectedYear]);
 
   const fetchGlobalTransactionsForMonth = async () => {
     const txMap = new Map<string, any>();
@@ -227,9 +248,6 @@ export default function ManagerPayrollPage() {
 
       const staffDocRef = doc(db, staffCol, staffRow.id);
 
-      // If net salary is negative, advance / debt balance is the positive magnitude
-      const outstandingDebt = staffRow.netPayable < 0 ? Math.abs(staffRow.netPayable) : staffRow.totalAdvance;
-
       await updateDoc(staffDocRef, {
         salaryBalance: staffRow.netPayable,
         outstandingBalance: staffRow.netPayable < 0 ? Math.abs(staffRow.netPayable) : 0,
@@ -246,769 +264,10 @@ export default function ManagerPayrollPage() {
     }
   };
 
-  const handleLoad = useCallback(async () => {
+  // Toggle staff hide status directly
+  const handleToggleStaffHide = async (staffRow: any) => {
     try {
-      setLoading(true);
-
-      const globalTxns = await fetchGlobalTransactionsForMonth();
-
-      // Fetch all HQ holidays once (no where+orderBy composite index; filter client-side)
-      const holidaysSnap = await getDocs(collection(db, 'hq_holidays')).catch(() => ({ docs: [] } as any));
-      const allHolidaysList: HqHoliday[] = holidaysSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
-      const monthHolidays = allHolidaysList.filter((h) => h.date && h.date.startsWith(monthStr));
-
-      const results = await Promise.all(ALL_DEPTS.map(async (dept) => {
-        const prefix = getDeptPrefix(dept);
-        try {
-          const staffCol = dept === 'hq' ? 'hq_users'
-            : dept === 'job-center' ? 'jobcenter_users'
-            : dept === 'social-media' ? 'media_users'
-            : `${prefix}_users`;
-
-          const STAFF_ROLES = new Set([
-            'admin', 'staff', 'cashier', 'superadmin', 'manager',
-            'doctor', 'nurse', 'counselor', 'personnel', 'other',
-          ]);
-
-          const daysInThisCalendarMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-          const monthEndStr = `${monthStr}-${String(daysInThisCalendarMonth).padStart(2, '0')}`;
-
-          const staffSnap = await getDocs(collection(db, staffCol));
-          const allStaff = staffSnap.docs
-            .map(d => ({ id: d.id, ...d.data() as any, dept }))
-            .filter((s: any) => {
-              const name = String(s.name || s.displayName || '').toLowerCase();
-              const email = String(s.email || '').toLowerCase();
-              if (name.includes('super') || name.includes('network') || email.includes('super') || email.includes('network')) return false;
-
-              const role = String(s.role || '').toLowerCase();
-              if (['student', 'patient', 'family', 'visitor'].includes(role)) return false;
-
-              const hasSalaryField = s.monthlySalary !== undefined || s.salary !== undefined;
-              if (role && !STAFF_ROLES.has(role) && !hasSalaryField) return false;
-
-              // Exclude if staff joined after selected month
-              const joiningRaw = s.joiningDate || s.startDate || s.dateJoined || s.createdAt;
-              const joiningStr = formatDateString(joiningRaw);
-              if (joiningStr && joiningStr > monthEndStr) {
-                return false;
-              }
-
-              const statusStr = String(s.status || '').toLowerCase();
-              return s.isActive !== false && !['inactive', 'resigned', 'terminated', 'executive', 'hide'].includes(statusStr);
-            })
-            .sort((a: any, b: any) => (a.name || a.displayName || '').localeCompare(b.name || b.displayName || ''));
-
-          if (allStaff.length === 0) return { dept, salaryRows: [], allFines: [], allStaff: [] };
-
-          // Fines
-          const finesCol = `${prefix}_fines`;
-          const finesSnap = await getDocs(collection(db, finesCol)).catch(() => ({ docs: [] } as any));
-          const allFines = finesSnap.docs.map((d: any) => ({ id: d.id, dept, ...d.data() }));
-
-          // Custom Salary Adjustments (e.g. security fee, remaining arrears, custom additions/deductions)
-          const adjCol = `${prefix}_salary_adjustments`;
-          const adjSnap = await getDocs(collection(db, adjCol)).catch(() => ({ docs: [] } as any));
-          const allAdjustments = adjSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
-
-          // Attendance for selected month across all department prefix collections
-          const attMapDocs = new Map<string, any>();
-          await Promise.all(ALL_PREFIXES.map(async (p) => {
-            const attColName = p ? `${p}_attendance` : 'attendance';
-            try {
-              const attSnap = await getDocs(query(
-                collection(db, attColName),
-                where('date', '>=', `${monthStr}-01`),
-                where('date', '<=', `${monthStr}-31`)
-              )).catch(() => ({ docs: [] } as any));
-              attSnap.docs.forEach((d: any) => {
-                if (d && d.id) {
-                  attMapDocs.set(`${attColName}-${d.id}`, { id: d.id, _collection: attColName, ...d.data() });
-                }
-              });
-            } catch (e) {}
-          }));
-          const allAttDocs = Array.from(attMapDocs.values());
-
-          // Salary Slips
-          const salarySnap = await getDocs(collection(db, `${prefix}_salary_records`)).catch(() => ({ docs: [] } as any));
-          const allSalarySlips = salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
-
-          const staffMap = Object.fromEntries(allStaff.map((s: any) => [s.id, s.name || s.displayName || s.id]));
-
-          // Build salary rows
-          const salaryRows = allStaff.map((staff: any) => {
-            const gross = Number(staff.monthlySalary || staff.salary || 0);
-            const dailyRate = gross / 30;
-
-            const uid = staff.staffId || staff.id;
-            const loginId = staff.loginUserId || staff.uid || staff.userId || '';
-
-            const candidateIds = new Set<string>();
-            const rawIds = [uid, loginId, staff.customId, staff.employeeId, staff.userId, staff.staffId].filter(Boolean);
-
-            rawIds.forEach(idStr => {
-              const id = String(idStr);
-              candidateIds.add(id);
-              const stripped = id.replace(/^(hq|rehab|spims|hospital|sukoon|welfare|jobcenter|media|it)_/, '');
-              candidateIds.add(stripped);
-              ALL_PREFIXES.forEach(p => {
-                if (p) {
-                  candidateIds.add(`${p}_${stripped}`);
-                }
-              });
-            });
-
-            const staffNameLower = String(staff.name || staff.displayName || '').toLowerCase();
-
-            // Match advances from globalTxns array
-            const staffAdvanceTxns = globalTxns.filter((tx: any) => {
-              if (!isAdvanceTxInSelectedMonth(tx, monthStr)) return false;
-              const txStaffId = String(tx.staffId || tx.patientId || tx.userId || tx.customId || tx.employeeId || tx.memberId || '');
-              if (txStaffId && candidateIds.has(txStaffId)) return true;
-
-              if (staffNameLower) {
-                if (tx.staffName && String(tx.staffName).toLowerCase() === staffNameLower) return true;
-                if (tx.userName && String(tx.userName).toLowerCase() === staffNameLower) return true;
-                if (tx.name && String(tx.name).toLowerCase() === staffNameLower) return true;
-                if (tx.description && String(tx.description).toLowerCase().includes(staffNameLower)) return true;
-              }
-              return false;
-            });
-
-            const approvedAdvancesForMonth = staffAdvanceTxns.reduce((s: number, t: any) => s + (Number(t.amount) || 0), 0);
-            const staffDocAdvance = Number(staff.advance || staff.advanceSalary || staff.monthlyAdvance || 0);
-
-            // Salary Slip check
-            const slip = allSalarySlips.find((s: any) => {
-              if (s.month !== monthStr) return false;
-              if (candidateIds.has(String(s.staffId))) return true;
-              if (s.staffName && String(s.staffName).toLowerCase() === staffNameLower) return true;
-              return false;
-            });
-
-            // Find Custom Adjustment Doc for staff
-            const customAdj = allAdjustments.find((a: any) => {
-              if (a.month !== monthStr) return false;
-              if (candidateIds.has(String(a.staffId))) return true;
-              if (a.staffName && String(a.staffName).toLowerCase() === staffNameLower) return true;
-              return false;
-            });
-
-            const customAdvanceVal = Number(customAdj?.previousAdvance || 0);
-            const actualAdvance = (slip && slip.advance !== undefined && slip.advance !== null)
-              ? Number(slip.advance)
-              : (approvedAdvancesForMonth > 0 ? approvedAdvancesForMonth : customAdvanceVal);
-
-            // Additional Custom Additions (Remaining balance/arrears, bonus, allowance, custom items)
-            const remainingBalance = Number(customAdj?.remainingBalance || 0);
-            const bonus = Number(customAdj?.bonus || 0);
-            const allowance = Number(customAdj?.allowance || 0);
-            const customAdditionsList: Array<{ label: string; amount: number }> = (customAdj?.customAdditions || []).map((ca: any) => ({
-              label: ca.label || 'Custom Addition',
-              amount: Number(ca.amount || 0)
-            }));
-
-            const totalCustomAdditions = remainingBalance + bonus + allowance + customAdditionsList.reduce((acc, c) => acc + c.amount, 0);
-
-            // Additional Custom Deductions (Security fee, damage/penalties, custom items)
-            const securityFee = Number(customAdj?.securityFee || 0);
-            const customDeductionsList: Array<{ label: string; amount: number }> = (customAdj?.customDeductions || []).map((cd: any) => ({
-              label: cd.label || 'Custom Deduction',
-              amount: Number(cd.amount || 0)
-            }));
-
-            const totalCustomDeductions = securityFee + customDeductionsList.reduce((acc, c) => acc + c.amount, 0);
-
-            // Filter attendance docs for this staff member across all fetched attendance records
-            const staffAtt = allAttDocs.filter((a: any) => {
-              const aStaffId = String(a.staffId || a.userId || a.customId || a.employeeId || '');
-              if (aStaffId && candidateIds.has(aStaffId)) return true;
-              if (staffNameLower && a.staffName && String(a.staffName).toLowerCase() === staffNameLower) return true;
-              return false;
-            });
-
-            const getAttPriority = (statusVal?: string) => {
-              if (!statusVal) return 0;
-              const s = String(statusVal).toLowerCase();
-              if (s === 'present') return 4;
-              if (s === 'late') return 3;
-              if (s === 'leave' || s === 'paid_leave' || s === 'unpaid_leave') return 2;
-              if (s === 'absent') return 1;
-              return 0;
-            };
-
-            const attMapByDate: Record<string, any> = {};
-            staffAtt.forEach((a: any) => {
-              const dStr = formatDateString(a.date);
-              if (dStr) {
-                const existing = attMapByDate[dStr];
-                const existingPriority = getAttPriority(existing?.status || existing?.state);
-                const currentPriority = getAttPriority(a.status || a.state);
-                if (!existing || currentPriority >= existingPriority) {
-                  attMapByDate[dStr] = a;
-                }
-              }
-            });
-
-            // Joining Date calculation
-            const joiningRaw = staff.joiningDate || staff.startDate || staff.dateJoined || staff.createdAt;
-            const joiningDateStr = formatDateString(joiningRaw);
-
-            let joiningDay = 1;
-            let joinedMidMonth = false;
-
-            if (joiningDateStr && joiningDateStr.startsWith(monthStr)) {
-              joiningDay = parseInt(joiningDateStr.substring(8, 10), 10) || 1;
-              if (joiningDay > 1) {
-                joinedMidMonth = true;
-              }
-            }
-
-            let totalBaseDaysForStaff = 30;
-            if (joinedMidMonth) {
-              totalBaseDaysForStaff = Math.max(0, 30 - joiningDay + 1);
-            }
-
-            // Calculate days passed in month (always based on 30-day standard)
-            let daysPassed = totalBaseDaysForStaff;
-            if (monthStr === currentMonthStr) {
-              const currentDay = today.getDate();
-              if (joinedMidMonth) {
-                if (currentDay < joiningDay) {
-                  daysPassed = 0;
-                } else {
-                  const elapsedDays = currentDay - joiningDay + 1;
-                  daysPassed = Math.min(elapsedDays, totalBaseDaysForStaff);
-                }
-              } else {
-                daysPassed = Math.min(currentDay, 30);
-              }
-            } else if (monthStr > currentMonthStr) {
-              daysPassed = 0;
-            }
-
-            const absences: Array<{ date: string; reason: string; isUnmarked: boolean }> = [];
-            let absentDaysCount = 0;
-            let unmarkedDaysCount = 0;
-            let paidLeaveCount = 0;
-            let unpaidLeaveCount = 0;
-            let weeklyOffDaysCount = 0;
-            let holidayDaysCount = 0;
-
-            monthDays.forEach(dayStr => {
-              // Ignore dates before staff joining date
-              if (joiningDateStr && dayStr < joiningDateStr) {
-                return;
-              }
-
-              const dayOfWeekName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date(`${dayStr}T00:00:00`).getDay()];
-              const isWeeklyOff = staff.weeklyOffDay && staff.weeklyOffDay !== 'none' && staff.weeklyOffDay === dayOfWeekName;
-              const isHoliday = monthHolidays.some(h => 
-                h.date === dayStr && 
-                (h.scope === 'all' || 
-                 (h.scope === 'department' && h.departments?.includes(dept)) ||
-                 (h.scope === 'staff' && (h.staffIds?.includes(uid) || (loginId && h.staffIds?.includes(loginId)) || (staff.id && h.staffIds?.includes(staff.id)))))
-              );
-
-              if (isHoliday) {
-                holidayDaysCount++;
-                return; // fully paid, skip all other status logic for this day
-              }
-              if (isWeeklyOff) {
-                weeklyOffDaysCount++;
-                return; // fully paid, skip all other status logic for this day
-              }
-
-              const att = attMapByDate[dayStr];
-              const status = att ? String(att.status || att.state || '').toLowerCase() : 'unmarked';
-              const isPast = dayStr < todayStr;
-
-              if (status === 'absent') {
-                absentDaysCount++;
-                if (dayStr <= todayStr) {
-                  absences.push({
-                    date: dayStr,
-                    reason: att?.reason || `Absent from duty (Daily rate: ${formatPKR(dailyRate)})`,
-                    isUnmarked: false,
-                  });
-                }
-              } else if (status === 'unpaid_leave') {
-                unpaidLeaveCount++;
-                if (dayStr <= todayStr) {
-                  absences.push({
-                    date: dayStr,
-                    reason: att?.reason || `Unpaid Leave (Daily rate: ${formatPKR(dailyRate)})`,
-                    isUnmarked: false,
-                  });
-                }
-              } else if (status === 'leave') {
-                if (paidLeaveCount < 2) {
-                  paidLeaveCount++;
-                } else {
-                  unpaidLeaveCount++;
-                  if (dayStr <= todayStr) {
-                    absences.push({
-                      date: dayStr,
-                      reason: att?.reason || `Unpaid Leave (Daily rate: ${formatPKR(dailyRate)})`,
-                      isUnmarked: false,
-                    });
-                  }
-                }
-              } else if (status === 'paid_leave') {
-                paidLeaveCount++;
-              } else if (status === 'unmarked') {
-                if (isPast) {
-                  unmarkedDaysCount++;
-                  absences.push({
-                    date: dayStr,
-                    reason: `Unmarked Attendance (Past Day) (Daily rate: ${formatPKR(dailyRate)})`,
-                    isUnmarked: true,
-                  });
-                }
-              }
-            });
-
-            const totalAbsentDays = absentDaysCount + unmarkedDaysCount + unpaidLeaveCount;
-            const payableDays = Math.max(0, daysPassed - totalAbsentDays);
-
-            const baseEarnedSalary = payableDays * dailyRate;
-            const totalAbsentDeduction = totalAbsentDays * dailyRate;
-
-            // Filter fines for this staff member
-            const staffFines = allFines.filter((f: any) => {
-              const fDateStr = formatDateString(f.date || f.month);
-              if (!fDateStr || !fDateStr.startsWith(monthStr)) return false;
-
-              if (candidateIds.has(String(f.staffId))) return true;
-              if (f.staffName && String(f.staffName).toLowerCase() === staffNameLower) return true;
-              return false;
-            });
-
-            const totalFines = staffFines.reduce((s: number, f: any) => s + (Number(f.amount) || 0), 0);
-
-            // Total Gross & Net formula: CAN GO IN MINUS IF ADVANCE/DEDUCTIONS > EARNINGS!
-            const totalEarningsWithAdditions = gross + totalCustomAdditions;
-            const totalDeductions = Math.round(totalAbsentDeduction + totalFines + actualAdvance + totalCustomDeductions);
-            
-            // Allow negative net payable (e.g. -10,000 PKR if advance exceeds salary)
-            const netPayable = Math.floor(totalEarningsWithAdditions - totalDeductions);
-
-            // Itemized date-wise deduction & addition breakdown
-            const breakdownItems: Array<{
-              id: string;
-              date: string;
-              category: 'addition' | 'deduction';
-              type: 'absent' | 'fine' | 'advance' | 'security' | 'remaining' | 'bonus' | 'allowance' | 'custom_add' | 'custom_ded';
-              amount: number;
-              reason: string;
-              recordedBy?: string;
-            }> = [];
-
-            // Additions to breakdown
-            if (remainingBalance > 0) {
-              breakdownItems.push({
-                id: `rem-${staff.id}`,
-                date: monthStr,
-                category: 'addition',
-                type: 'remaining',
-                amount: remainingBalance,
-                reason: 'Remaining Salary / Previous Arrears Added',
-                recordedBy: customAdj?.updatedBy || 'Manager',
-              });
-            }
-            if (bonus > 0) {
-              breakdownItems.push({
-                id: `bonus-${staff.id}`,
-                date: monthStr,
-                category: 'addition',
-                type: 'bonus',
-                amount: bonus,
-                reason: 'Performance Bonus / Reward',
-                recordedBy: customAdj?.updatedBy || 'Manager',
-              });
-            }
-            if (allowance > 0) {
-              breakdownItems.push({
-                id: `allow-${staff.id}`,
-                date: monthStr,
-                category: 'addition',
-                type: 'allowance',
-                amount: allowance,
-                reason: 'Overtime / Special Allowance',
-                recordedBy: customAdj?.updatedBy || 'Manager',
-              });
-            }
-            customAdditionsList.forEach((ca, idx) => {
-              breakdownItems.push({
-                id: `cadd-${staff.id}-${idx}`,
-                date: monthStr,
-                category: 'addition',
-                type: 'custom_add',
-                amount: ca.amount,
-                reason: ca.label || 'Custom Salary Addition',
-                recordedBy: customAdj?.updatedBy || 'Manager',
-              });
-            });
-
-            // Deductions to breakdown
-            absences.forEach((a: any, idx: number) => {
-              breakdownItems.push({
-                id: `absent-${a.date}-${idx}`,
-                date: String(a.date),
-                category: 'deduction',
-                type: 'absent',
-                amount: Math.round(dailyRate),
-                reason: a.reason,
-              });
-            });
-
-            staffFines.forEach((f: any) => {
-              const dStr = formatDateString(f.date || f.month) || '—';
-              breakdownItems.push({
-                id: f.id || `fine-${dStr}`,
-                date: dStr,
-                category: 'deduction',
-                type: 'fine',
-                amount: Number(f.amount || 0),
-                reason: f.reason || 'Fine imposed',
-                recordedBy: f.recordedBy || 'Manager',
-              });
-            });
-
-            staffAdvanceTxns.forEach((tx: any) => {
-              const dateStr = formatDateString(tx.transactionDate || tx.date || tx.createdAt) || String(tx.month || monthStr);
-              breakdownItems.push({
-                id: tx.id || `adv-${dateStr}`,
-                date: dateStr,
-                category: 'deduction',
-                type: 'advance',
-                amount: Number(tx.amount || 0),
-                reason: tx.description || tx.categoryName || 'Advance Salary taken',
-                recordedBy: tx.recordedBy || tx.cashierName || 'Cashier / Manager',
-              });
-            });
-
-            if (staffAdvanceTxns.length === 0 && actualAdvance > 0) {
-              breakdownItems.push({
-                id: `doc-adv-${staff.id}`,
-                date: monthStr,
-                category: 'deduction',
-                type: 'advance',
-                amount: actualAdvance,
-                reason: customAdvanceVal > 0 ? 'Previous Advance Salary Adjustment' : 'Monthly Advance Salary Record',
-                recordedBy: customAdj?.updatedBy || 'System Record',
-              });
-            }
-
-            if (securityFee > 0) {
-              breakdownItems.push({
-                id: `sec-${staff.id}`,
-                date: monthStr,
-                category: 'deduction',
-                type: 'security',
-                amount: securityFee,
-                reason: 'Security Fee Deduction',
-                recordedBy: customAdj?.updatedBy || 'Manager',
-              });
-            }
-
-            customDeductionsList.forEach((cd, idx) => {
-              breakdownItems.push({
-                id: `cded-${staff.id}-${idx}`,
-                date: monthStr,
-                category: 'deduction',
-                type: 'custom_ded',
-                amount: cd.amount,
-                reason: cd.label || 'Custom Salary Deduction',
-                recordedBy: customAdj?.updatedBy || 'Manager',
-              });
-            });
-
-            // Safe sort with string conversion
-            breakdownItems.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
-
-            return {
-              id: staff.id,
-              name: staff.name || staff.displayName || '—',
-              designation: staff.designation || staff.role || '—',
-              employeeCode: staff.employeeId || staff.customId || staff.id,
-              joiningDate: joiningDateStr,
-              dept,
-              gross,
-              dailyRate: Math.round(dailyRate),
-              payableDays,
-              earnings: Math.round(baseEarnedSalary),
-              absentDays: totalAbsentDays,
-              totalAbsentDeduction: Math.round(totalAbsentDeduction),
-              staffFines,
-              totalFines,
-              totalAdvance: actualAdvance,
-              staffAdvanceTxns,
-              // Custom Salary Customizations
-              customAdj,
-              remainingBalance,
-              bonus,
-              allowance,
-              customAdditionsList,
-              totalCustomAdditions,
-              securityFee,
-              customDeductionsList,
-              totalCustomDeductions,
-              notes: customAdj?.notes || '',
-              deductions: totalDeductions,
-              netPayable,
-              breakdownItems,
-            };
-          });
-
-          const monthFinesFiltered = allFines.filter((f: any) => {
-            const fDateStr = formatDateString(f.date || f.month);
-            return fDateStr.startsWith(monthStr);
-          }).map((f: any) => ({
-            ...f,
-            date: formatDateString(f.date || f.month),
-            staffName: staffMap[f.staffId] || f.staffId
-          }));
-
-          return { dept, salaryRows, allFines: monthFinesFiltered, allStaff };
-        } catch (e) {
-          console.error(`Error loading dept ${dept}:`, e);
-          return { dept, salaryRows: [], allFines: [], allStaff: [] };
-        }
-      }));
-
-      const allSalaryRows = results.flatMap(r => r.salaryRows);
-      const allFines = results.flatMap(r => r.allFines);
-      const allStaff = results.flatMap(r => r.allStaff);
-
-      setData({
-        byDept: Object.fromEntries(results.map(r => [r.dept, r])),
-        allSalaryRows,
-        allFines,
-        allStaff,
-        totalGross: allSalaryRows.reduce((s, r) => s + r.gross, 0),
-        totalNet: allSalaryRows.reduce((s, r) => s + r.netPayable, 0),
-        totalAdditions: allSalaryRows.reduce((s, r) => s + r.totalCustomAdditions, 0),
-        totalSecurityFees: allSalaryRows.reduce((s, r) => s + r.securityFee, 0),
-        totalDeductions: allSalaryRows.reduce((s, r) => s + r.deductions, 0),
-        totalAbsentDeductions: allSalaryRows.reduce((s, r) => s + r.totalAbsentDeduction, 0),
-        totalFinesAmount: allFines.reduce((s: number, f: any) => s + Number(f.amount || 0), 0),
-        totalAdvancesAmount: allSalaryRows.reduce((s, r) => s + r.totalAdvance, 0),
-        monthLabel: `${MONTHS[selectedMonth]} ${selectedYear}`,
-      });
-    } catch (err: any) {
-      console.error('Payroll load error:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [monthStr, monthDays, currentMonthStr, todayStr, today, selectedMonth, selectedYear]);
-
-  // Auto-load on mount & month/year change
-  useEffect(() => {
-    if (sessionLoading) return;
-    if (!session || !['manager', 'superadmin'].includes(session.role)) {
-      router.push('/hq/login');
-      return;
-    }
-    handleLoad();
-  }, [session, sessionLoading, router, handleLoad]);
-
-  // Customization Form Handler
-  const openCustomizeModal = (staffRow: any) => {
-    const adj = staffRow.customAdj || {};
-    setCustomizeModalStaff(staffRow);
-    setCustomizeForm({
-      remainingBalance: adj.remainingBalance ? String(adj.remainingBalance) : '',
-      bonus: adj.bonus ? String(adj.bonus) : '',
-      allowance: adj.allowance ? String(adj.allowance) : '',
-      securityFee: adj.securityFee ? String(adj.securityFee) : '',
-      previousAdvance: adj.previousAdvance ? String(adj.previousAdvance) : (staffRow.totalAdvance ? String(staffRow.totalAdvance) : ''),
-      notes: adj.notes || '',
-      customAdditions: adj.customAdditions ? adj.customAdditions.map((ca: any) => ({
-        id: ca.id || String(Math.random()),
-        label: ca.label || '',
-        amount: String(ca.amount || '')
-      })) : [],
-      customDeductions: adj.customDeductions ? adj.customDeductions.map((cd: any) => ({
-        id: cd.id || String(Math.random()),
-        label: cd.label || '',
-        amount: String(cd.amount || '')
-      })) : [],
-    });
-  };
-
-  const handleSaveCustomization = async () => {
-    if (!customizeModalStaff) return;
-    try {
-      setSavingCustomization(true);
-      const prefix = getDeptPrefix(customizeModalStaff.dept as StaffDept);
-      const docId = `${customizeModalStaff.id}_${monthStr}`;
-      const adjRef = doc(db, `${prefix}_salary_adjustments`, docId);
-
-      const parsedAdditions = customizeForm.customAdditions
-        .filter(ca => ca.label.trim() && Number(ca.amount) > 0)
-        .map(ca => ({ id: ca.id, label: ca.label.trim(), amount: Number(ca.amount) }));
-
-      const parsedDeductions = customizeForm.customDeductions
-        .filter(cd => cd.label.trim() && Number(cd.amount) > 0)
-        .map(cd => ({ id: cd.id, label: cd.label.trim(), amount: Number(cd.amount) }));
-
-      const remainingBalNum = Number(customizeForm.remainingBalance) || 0;
-      const bonusNum = Number(customizeForm.bonus) || 0;
-      const allowanceNum = Number(customizeForm.allowance) || 0;
-      const secFeeNum = Number(customizeForm.securityFee) || 0;
-      const prevAdvNum = Number(customizeForm.previousAdvance) || 0;
-
-      // 1. Save salary adjustment doc
-      await setDoc(adjRef, {
-        staffId: customizeModalStaff.id,
-        staffName: customizeModalStaff.name,
-        dept: customizeModalStaff.dept,
-        month: monthStr,
-        remainingBalance: remainingBalNum,
-        bonus: bonusNum,
-        allowance: allowanceNum,
-        securityFee: secFeeNum,
-        previousAdvance: prevAdvNum,
-        customAdditions: parsedAdditions,
-        customDeductions: parsedDeductions,
-        notes: customizeForm.notes.trim(),
-        updatedBy: session?.name || session?.customId || 'Manager',
-        updatedAt: Timestamp.now(),
-      }, { merge: true });
-
-      // 2. ALSO save & sync to staff member's profile document in Firestore
-      const dept = customizeModalStaff.dept as StaffDept;
-      const staffCol = dept === 'hq' ? 'hq_users'
-        : dept === 'job-center' ? 'jobcenter_users'
-        : dept === 'social-media' ? 'media_users'
-        : `${prefix}_users`;
-
-      const staffDocRef = doc(db, staffCol, customizeModalStaff.id);
-      
-      // Calculate net salary for this customization
-      const grossSalary = customizeModalStaff.gross || 0;
-      const totalCustomAdd = remainingBalNum + bonusNum + allowanceNum + parsedAdditions.reduce((s, a) => s + a.amount, 0);
-      const totalCustomDed = secFeeNum + parsedDeductions.reduce((s, d) => s + d.amount, 0);
-      const totalDed = (customizeModalStaff.totalAbsentDeduction || 0) + (customizeModalStaff.totalFines || 0) + Math.max(customizeModalStaff.totalAdvance || 0, prevAdvNum) + totalCustomDed;
-      const calcNetPayable = Math.floor((grossSalary + totalCustomAdd) - totalDed);
-
-      const outstandingDebt = calcNetPayable < 0 ? Math.abs(calcNetPayable) : (prevAdvNum > 0 ? prevAdvNum : (customizeModalStaff.totalAdvance || 0));
-
-      await updateDoc(staffDocRef, {
-        advance: outstandingDebt,
-        advanceSalary: outstandingDebt,
-        monthlyAdvance: outstandingDebt,
-        salaryBalance: calcNetPayable,
-        outstandingBalance: calcNetPayable < 0 ? Math.abs(calcNetPayable) : 0,
-        remainingBalance: remainingBalNum,
-        securityFeeDeduction: secFeeNum,
-        lastPayrollMonth: monthStr,
-        updatedAt: Timestamp.now(),
-      }).catch(e => console.error('Failed updating staff profile doc:', e));
-
-      setCustomizeModalStaff(null);
-      await handleLoad();
-    } catch (err: any) {
-      alert('Failed to save salary customization: ' + err.message);
-    } finally {
-      setSavingCustomization(false);
-    }
-  };
-
-  const handleAddFine = async () => {
-    if (!fineForm.dept || !fineForm.staffId || !fineForm.amount || !fineForm.reason) {
-      alert('Department, staff, amount and reason are all required.');
-      return;
-    }
-    try {
-      setSavingFine(true);
-      const prefix = getDeptPrefix(fineForm.dept as StaffDept);
-      await addDoc(collection(db, `${prefix}_fines`), {
-        staffId: fineForm.staffId,
-        amount: Number(fineForm.amount),
-        reason: fineForm.reason.trim(),
-        date: fineForm.date || monthStr,
-        month: fineForm.date ? fineForm.date.substring(0, 7) : monthStr,
-        recordedBy: session?.name || session?.customId || 'Manager',
-        createdAt: Timestamp.now(),
-      });
-      setFineForm({ dept: '', staffId: '', amount: '', reason: '', date: '' });
-      setShowFineForm(false);
-      await handleLoad();
-    } catch (err: any) {
-      alert('Failed to save fine: ' + err.message);
-    } finally {
-      setSavingFine(false);
-    }
-  };
-
-  const handleDeleteFine = async (fine: any) => {
-    if (!confirm('Delete this fine? This cannot be undone.')) return;
-    try {
-      setDeletingId(fine.id);
-      const prefix = getDeptPrefix(fine.dept as StaffDept);
-      await deleteDoc(doc(db, `${prefix}_fines`, fine.id));
-      await handleLoad();
-    } catch (err: any) {
-      alert('Failed to delete: ' + err.message);
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
-
-  const handleAddHoliday = async () => {
-    if (!holidayForm.date || !holidayForm.label.trim()) {
-      alert('Please provide holiday date and title/label.');
-      return;
-    }
-    if (holidayForm.scope === 'department' && (!holidayForm.departments || holidayForm.departments.length === 0)) {
-      alert('Please select at least one department for department-scoped holiday.');
-      return;
-    }
-    if (holidayForm.scope === 'staff' && (!holidayForm.staffIds || holidayForm.staffIds.length === 0)) {
-      alert('Please select at least one staff member for staff-scoped holiday.');
-      return;
-    }
-    setSavingHoliday(true);
-    try {
-      await addDoc(collection(db, 'hq_holidays'), {
-        date: holidayForm.date,
-        label: holidayForm.label.trim(),
-        scope: holidayForm.scope,
-        departments: holidayForm.departments || [],
-        staffIds: holidayForm.staffIds || [],
-        createdBy: session?.name || session?.customId || 'Manager',
-        createdAt: Timestamp.now(),
-      });
-      setHolidayForm({ date: '', label: '', scope: 'all', departments: [], staffIds: [] });
-      setShowHolidayForm(false);
-      await handleLoad();
-    } catch (err: any) {
-      alert('Failed to save holiday: ' + err.message);
-    } finally {
-      setSavingHoliday(false);
-    }
-  };
-
-  const handleDeleteHoliday = async (holiday: HqHoliday) => {
-    if (!confirm(`Delete holiday "${holiday.label}" on ${holiday.date}?`)) return;
-    try {
-      setDeletingHolidayId(holiday.id);
-      await deleteDoc(doc(db, 'hq_holidays', holiday.id));
-      await handleLoad();
-    } catch (err: any) {
-      alert('Failed to delete holiday: ' + err.message);
-    } finally {
-      setDeletingHolidayId(null);
-    }
-  };
-
-  const handleUpdateStaffWeeklyOff = async (staffRow: any, newOffDay: string) => {
-    try {
-      setUpdatingOffDayId(staffRow.id);
+      setTogglingStatusId(staffRow.id);
       const prefix = getDeptPrefix(staffRow.dept as StaffDept);
       const dept = staffRow.dept as StaffDept;
       const staffCol = dept === 'hq' ? 'hq_users'
@@ -1016,94 +275,305 @@ export default function ManagerPayrollPage() {
         : dept === 'social-media' ? 'media_users'
         : `${prefix}_users`;
 
-      await updateDoc(doc(db, staffCol, staffRow.id), {
-        weeklyOffDay: newOffDay,
+      const newStatus = staffRow.isHidden ? 'active' : 'hide';
+      const staffDocRef = doc(db, staffCol, staffRow.id);
+
+      await updateDoc(staffDocRef, {
+        status: newStatus,
+        isActive: newStatus === 'active',
         updatedAt: Timestamp.now(),
       });
+
       await handleLoad();
     } catch (err: any) {
-      alert('Failed to update weekly off day: ' + err.message);
+      alert('Failed to update staff status: ' + err.message);
     } finally {
-      setUpdatingOffDayId(null);
+      setTogglingStatusId(null);
     }
   };
 
-  const handlePrint = () => window.print();
-  const handleDownload = async () => {
-    if (!printRef.current) return;
-    await downloadElementAsPng(printRef.current, `hq-payroll-all-depts-${monthStr}.png`, {
-      scale: 2, backgroundColor: '#ffffff', style: { width: '1400px', maxWidth: 'none' }
-    });
+  // Quick Complete Attendance for a single staff member
+  const handleCompleteStaffAttendance = async (staffRow: any) => {
+    try {
+      setCompletingAttendanceId(staffRow.id);
+      const prefix = getDeptPrefix(staffRow.dept as StaffDept);
+      const attColName = prefix ? `${prefix}_attendance` : 'attendance';
+      const uid = staffRow.staffId || staffRow.id;
+      
+      const holidaysSnap = await getDocs(collection(db, 'hq_holidays')).catch(() => ({ docs: [] } as any));
+      const monthHolidays = holidaysSnap.docs
+        .map((d: any) => ({ id: d.id, ...d.data() } as HqHoliday))
+        .filter((h) => h.date && h.date.startsWith(monthStr));
+
+      // Mark each day in this month as present unless it is a weekly off or holiday
+      const daysToMark = monthDays.filter(dayStr => {
+        if (staffRow.joiningDate && dayStr < staffRow.joiningDate) return false;
+        const dayOfWeekName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date(`${dayStr}T00:00:00`).getDay()];
+        const isWeeklyOff = staffRow.weeklyOffDay && staffRow.weeklyOffDay !== 'none' && staffRow.weeklyOffDay === dayOfWeekName;
+        const isHoliday = monthHolidays.some(h => 
+          h.date === dayStr && 
+          (h.scope === 'all' || 
+           (h.scope === 'department' && h.departments?.includes(staffRow.dept)) ||
+           (h.scope === 'staff' && (h.staffIds?.includes(uid) || h.staffIds?.includes(staffRow.id))))
+        );
+        return !isWeeklyOff && !isHoliday;
+      });
+
+      // Query existing attendance docs for this staff
+      const existingAttSnap = await getDocs(query(
+        collection(db, attColName),
+        where('date', '>=', `${monthStr}-01`),
+        where('date', '<=', `${monthStr}-31`)
+      )).catch(() => ({ docs: [] } as any));
+
+      const existingMap: Record<string, any> = {};
+      existingAttSnap.docs.forEach((d: any) => {
+        const dData = d.data();
+        const dStaffId = String(dData.staffId || dData.userId || '');
+        if (dStaffId === staffRow.id || dStaffId === uid || (prefix && dStaffId === `${prefix}_${staffRow.id}`)) {
+          existingMap[dData.date] = { docId: d.id, ...dData };
+        }
+      });
+
+      await Promise.all(daysToMark.map(async (dateStr) => {
+        const existing = existingMap[dateStr];
+        if (existing) {
+          if (existing.status !== 'present') {
+            await updateDoc(doc(db, attColName, existing.docId), {
+              status: 'present',
+              overriddenBy: session?.name || 'Manager',
+              updatedAt: Timestamp.now(),
+            });
+          }
+        } else {
+          await addDoc(collection(db, attColName), {
+            staffId: staffRow.id,
+            staffName: staffRow.name,
+            dept: staffRow.dept,
+            date: dateStr,
+            status: 'present',
+            checkInTime: Timestamp.now(),
+            recordedBy: session?.name || 'Manager',
+            completedByManager: true,
+          });
+        }
+      }));
+
+      alert(`Attendance for ${staffRow.name} marked as 100% Complete for ${monthStr}!`);
+      await handleLoad();
+    } catch (err: any) {
+      alert('Failed to complete attendance: ' + err.message);
+    } finally {
+      setCompletingAttendanceId(null);
+    }
   };
 
-  const handlePrintSingleSlip = () => {
-    const style = document.createElement('style');
-    style.id = 'single-slip-print-style';
-    style.innerHTML = `
-      @media print {
-        @page { size: auto; margin: 10mm; }
-        body * { display: none !important; }
-        #salary-slip-modal-print-container, #salary-slip-modal-print-container * { display: block !important; }
-        #salary-slip-modal-print-container { position: fixed !important; left: 0 !important; top: 0 !important; width: 100% !important; margin: 0 !important; padding: 0 !important; background: white !important; }
-        #salary-slip-modal-print-container .no-print-modal { display: none !important; }
+  // Batch Complete Attendance for All Displayed Staff
+  const handleBatchCompleteAttendance = async () => {
+    if (!data?.allSalaryRows || data.allSalaryRows.length === 0) return;
+    const targetRows = deptFilter === 'all' 
+      ? data.allSalaryRows 
+      : data.allSalaryRows.filter((r: any) => r.dept === deptFilter);
+
+    if (!confirm(`Are you sure you want to complete full attendance as 'Present' for all ${targetRows.length} staff members for ${data.monthLabel}?`)) {
+      return;
+    }
+
+    try {
+      setBatchCompletingAttendance(true);
+      for (const r of targetRows) {
+        const prefix = getDeptPrefix(r.dept as StaffDept);
+        const attColName = prefix ? `${prefix}_attendance` : 'attendance';
+        const uid = r.staffId || r.id;
+
+        const daysToMark = monthDays.filter(dayStr => {
+          if (r.joiningDate && dayStr < r.joiningDate) return false;
+          const dayOfWeekName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date(`${dayStr}T00:00:00`).getDay()];
+          const isWeeklyOff = r.weeklyOffDay && r.weeklyOffDay !== 'none' && r.weeklyOffDay === dayOfWeekName;
+          return !isWeeklyOff;
+        });
+
+        // Add attendance docs
+        for (const dateStr of daysToMark) {
+          const isAlreadyAtt = r.attMapByDate && r.attMapByDate[dateStr]?.status === 'present';
+          if (!isAlreadyAtt) {
+            await addDoc(collection(db, attColName), {
+              staffId: r.id,
+              staffName: r.name,
+              dept: r.dept,
+              date: dateStr,
+              status: 'present',
+              checkInTime: Timestamp.now(),
+              recordedBy: session?.name || 'Manager',
+            }).catch(() => {});
+          }
+        }
       }
-    `;
-    document.head.appendChild(style);
-    document.body.classList.add('printing-single-slip');
 
-    const cleanup = () => {
-      document.body.classList.remove('printing-single-slip');
-      const el = document.getElementById('single-slip-print-style');
-      if (el) el.remove();
-      window.removeEventListener('afterprint', cleanup);
-    };
-
-    window.addEventListener('afterprint', cleanup);
-    window.print();
+      alert(`Batch attendance completed successfully for ${targetRows.length} staff members!`);
+      await handleLoad();
+    } catch (err: any) {
+      alert('Failed to batch complete attendance: ' + err.message);
+    } finally {
+      setBatchCompletingAttendance(false);
+    }
   };
 
-  const handleDownloadSingleSlip = async () => {
-    if (!slipStaffModal) return;
-    const el = document.getElementById('salary-slip-print-root');
-    if (!el) return;
-    const safeName = (slipStaffModal.name || 'employee').replace(/\s+/g, '-');
-    await downloadElementAsPng(el, `salary-slip-${safeName}-${monthStr}.png`, { scale: 2, backgroundColor: '#ffffff' });
+  // Save changes from Attendance Modal
+  const handleSaveAttendanceModal = async () => {
+    if (!attendanceModalStaff) return;
+    try {
+      setSavingAttendanceModal(true);
+      const prefix = getDeptPrefix(attendanceModalStaff.dept as StaffDept);
+      const attColName = prefix ? `${prefix}_attendance` : 'attendance';
+
+      for (const [dateStr, attInfo] of Object.entries(attendanceDaysMap)) {
+        if (attInfo.status === 'weekly_off' || attInfo.status === 'unmarked') continue;
+        
+        await addDoc(collection(db, attColName), {
+          staffId: attendanceModalStaff.id,
+          staffName: attendanceModalStaff.name,
+          dept: attendanceModalStaff.dept,
+          date: dateStr,
+          status: attInfo.status,
+          reason: attInfo.reason || '',
+          recordedBy: session?.name || 'Manager',
+          updatedAt: Timestamp.now(),
+        }).catch(() => {});
+      }
+
+      setAttendanceModalStaff(null);
+      await handleLoad();
+    } catch (err: any) {
+      alert('Failed to save attendance edits: ' + err.message);
+    } finally {
+      setSavingAttendanceModal(false);
+    }
   };
 
-  // Filtered salary rows
-  const salaryRows = data?.allSalaryRows?.filter((r: any) =>
-    deptFilter === 'all' || r.dept === deptFilter
-  ) || [];
+  // Batch Generate & Save Salary Slips to Firestore
+  const handleGenerateAndSaveAllSalaryRecords = async () => {
+    if (!data?.allSalaryRows || data.allSalaryRows.length === 0) return;
+    const targetRows = deptFilter === 'all' 
+      ? data.allSalaryRows 
+      : data.allSalaryRows.filter((r: any) => r.dept === deptFilter);
 
-  const filteredTotalGross = salaryRows.reduce((s: number, r: any) => s + r.gross, 0);
-  const filteredTotalNet = salaryRows.reduce((s: number, r: any) => s + r.netPayable, 0);
-  const filteredTotalAdditions = salaryRows.reduce((s: number, r: any) => s + r.totalCustomAdditions, 0);
-  const filteredTotalDeductions = salaryRows.reduce((s: number, r: any) => s + r.deductions, 0);
-  const filteredTotalAdvances = salaryRows.reduce((s: number, r: any) => s + r.totalAdvance, 0);
+    if (!confirm(`Generate and save official salary records for ${targetRows.length} staff members for ${data.monthLabel}?`)) {
+      return;
+    }
 
-  // Filtered fines
-  const filteredFines = data?.allFines?.filter((f: any) => {
-    if (fineDeptFilter !== 'all' && f.dept !== fineDeptFilter) return false;
-    if (fineStaffFilter !== 'all' && f.staffId !== fineStaffFilter) return false;
-    return true;
-  }) || [];
-  const filteredFinesTotal = filteredFines.reduce((s: number, f: any) => s + Number(f.amount || 0), 0);
+    try {
+      setBatchGeneratingSalaries(true);
+      await Promise.all(targetRows.map(async (r: any) => {
+        const prefix = getDeptPrefix(r.dept as StaffDept);
+        const salaryCol = `${prefix}_salary_records`;
+        const slipId = `${r.id}_${monthStr}`;
+        const slipDocRef = doc(db, salaryCol, slipId);
 
-  // Staff for fine dept filter
-  const staffForFineDept = fineForm.dept
-    ? (data?.allStaff?.filter((s: any) => s.dept === fineForm.dept) || [])
-    : [];
+        const slipPayload = {
+          staffId: r.id,
+          employeeId: r.employeeCode || '',
+          staffName: r.name,
+          department: r.dept,
+          month: monthStr,
+          monthLabel: data.monthLabel,
+          basicSalary: r.gross,
+          dailyWage: r.dailyRate,
+          payableDays: r.payableDays,
+          earnedSalary: r.earnings,
+          absentDays: r.absentDays,
+          absentDeduction: r.totalAbsentDeduction,
+          totalFines: r.totalFines,
+          advance: r.totalAdvance,
+          previousMonthDebt: r.previousMonthDebt || 0,
+          remainingBalance: r.remainingBalance || 0,
+          bonus: r.bonus || 0,
+          allowance: r.allowance || 0,
+          totalCustomAdditions: r.totalCustomAdditions || 0,
+          securityFee: r.securityFee || 0,
+          totalCustomDeductions: r.totalCustomDeductions || 0,
+          netSalary: r.netPayable,
+          status: r.existingSlipStatus || 'approved',
+          generatedBy: session?.name || session?.customId || 'Manager',
+          updatedAt: Timestamp.now(),
+        };
 
-  const availableFineDepts = data ? ALL_DEPTS.filter(d => (data.byDept[d]?.allStaff?.length || 0) > 0) : [];
+        await setDoc(slipDocRef, slipPayload, { merge: true });
 
-  if (sessionLoading || (loading && !data)) return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className="text-center space-y-3">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-600 mx-auto" />
-        <p className="text-sm font-bold text-gray-600">Loading All-Department Payroll & Custom Adjustments...</p>
-      </div>
-    </div>
-  );
+        // Also update staff profile document
+        const staffCol = r.dept === 'hq' ? 'hq_users'
+          : r.dept === 'job-center' ? 'jobcenter_users'
+          : r.dept === 'social-media' ? 'media_users'
+          : `${prefix}_users`;
+
+        await updateDoc(doc(db, staffCol, r.id), {
+          salaryBalance: r.netPayable,
+          outstandingBalance: r.netPayable < 0 ? Math.abs(r.netPayable) : 0,
+          lastPayrollMonth: monthStr,
+          updatedAt: Timestamp.now(),
+        }).catch(() => {});
+      }));
+
+      alert(`Successfully generated and saved official salary records for ${targetRows.length} staff members!`);
+      await handleLoad();
+    } catch (err: any) {
+      alert('Failed generating salary records: ' + err.message);
+    } finally {
+      setBatchGeneratingSalaries(false);
+    }
+  };
+
+  // Export to CSV spreadsheet
+  const handleExportCSV = () => {
+    if (!data?.allSalaryRows) return;
+    const rows = data.allSalaryRows.filter((r: any) => {
+      if (deptFilter !== 'all' && r.dept !== deptFilter) return false;
+      if (staffStatusFilter === 'active' && r.isHidden) return false;
+      if (staffStatusFilter === 'hidden' && !r.isHidden) return false;
+      return true;
+    });
+
+    const headers = [
+      '#', 'Name', 'Designation', 'Department', 'Status', 'Joining Date',
+      'Gross Base', 'Earned Days', 'Additions (+)', 'Absent Deduction',
+      'Fines', 'Advance Deduction', 'Prev Month Debt (-)', 'Security Fee',
+      'Net Payable', 'Payroll Status'
+    ];
+
+    const csvRows = [headers.join(',')];
+    rows.forEach((r: any, idx: number) => {
+      const rowData = [
+        idx + 1,
+        `"${r.name.replace(/"/g, '""')}"`,
+        `"${(r.designation || '').replace(/"/g, '""')}"`,
+        `"${DEPT_LABELS[r.dept] || r.dept}"`,
+        r.isHidden ? 'Hidden' : 'Active',
+        r.joiningDate || '—',
+        r.gross,
+        r.payableDays,
+        r.totalCustomAdditions,
+        r.totalAbsentDeduction,
+        r.totalFines,
+        r.totalAdvance,
+        r.previousMonthDebt || 0,
+        r.securityFee || 0,
+        r.netPayable,
+        r.existingSlipStatus || 'Pending'
+      ];
+      csvRows.push(rowData.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `KhanHub-Payroll-${monthStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleLoadCallback = handleLoad;
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 text-black">
@@ -1128,58 +598,148 @@ export default function ManagerPayrollPage() {
         }
       `}</style>
 
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6">
 
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <UserCog className="w-6 h-6 text-emerald-600" /> All-Department Payroll & Custom Adjustments
+              <UserCog className="w-6 h-6 text-emerald-600" /> All-Department Payroll & Salary Engine
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Customize salary, add remaining arrears, deduct security fee, manage negative salary balances, and track staff advances</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Complete staff attendance, include hidden staff, deduct previous month negative debt (-Rs. 3,000), and generate official salary slips
+            </p>
           </div>
           {data && (
             <div className="flex gap-2 flex-wrap items-center">
+              <button
+                onClick={handleBatchCompleteAttendance}
+                disabled={batchCompletingAttendance}
+                className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm cursor-pointer disabled:opacity-60"
+                title="Mark all unmarked workdays as Present for all staff"
+              >
+                {batchCompletingAttendance ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCheck className="w-4 h-4" />}
+                Complete Attendance (All)
+              </button>
+
+              <button
+                onClick={handleGenerateAndSaveAllSalaryRecords}
+                disabled={batchGeneratingSalaries}
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm cursor-pointer disabled:opacity-60"
+                title="Generate and persist official salary slips to database"
+              >
+                {batchGeneratingSalaries ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Generate & Save Slips
+              </button>
+
+              <button
+                onClick={handleExportCSV}
+                className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm cursor-pointer"
+                title="Export complete payroll sheet to CSV"
+              >
+                <FileSpreadsheet className="w-4 h-4" /> Export CSV
+              </button>
+
               <button onClick={handleDownload} className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-md">
                 <Download className="w-4 h-4" /> Download Image
               </button>
               <button onClick={handlePrint} className="flex items-center gap-2 bg-gray-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-sm font-black tracking-wide shadow-lg shadow-gray-900/20 transition-all transform hover:scale-[1.02] border border-gray-800">
-                <Printer className="w-4 h-4 text-emerald-400" /> Print Payroll Sheet
+                <Printer className="w-4 h-4 text-emerald-400" /> Print Sheet
               </button>
             </div>
           )}
         </div>
 
-        {/* Controls */}
+        {/* Controls Bar */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4 no-print">
-          <h2 className="font-bold text-gray-800 flex items-center gap-2"><Calendar className="w-5 h-5 text-emerald-500" /> Select Month</h2>
-          <div className="flex flex-col sm:flex-row gap-4 items-end">
-            <div className="flex-1 w-full">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Month</label>
-              <select
-                value={selectedMonth}
-                onChange={e => setSelectedMonth(Number(e.target.value))}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-black font-bold"
+          <div className="flex flex-col lg:flex-row gap-4 items-end justify-between">
+            <div className="flex flex-wrap sm:flex-nowrap gap-4 items-end flex-1 w-full">
+              <div className="w-full sm:w-44">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Month</label>
+                <select
+                  value={selectedMonth}
+                  onChange={e => setSelectedMonth(Number(e.target.value))}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-black font-bold"
+                >
+                  {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                </select>
+              </div>
+              <div className="w-full sm:w-32">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Year</label>
+                <input
+                  type="number" value={selectedYear}
+                  onChange={e => setSelectedYear(Number(e.target.value))}
+                  min={2020} max={2100}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-black font-bold"
+                />
+              </div>
+
+              {/* Real-time search */}
+              <div className="flex-1 w-full">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Search Staff</label>
+                <div className="relative">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search by name, role, employee code..."
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-black font-medium"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 w-full lg:w-auto">
+              <button
+                onClick={handleLoadCallback} disabled={loading}
+                className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-2.5 rounded-xl font-bold text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
               >
-                {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
-              </select>
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                Refresh Payroll
+              </button>
             </div>
-            <div className="flex-1 w-full">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Year</label>
-              <input
-                type="number" value={selectedYear}
-                onChange={e => setSelectedYear(Number(e.target.value))}
-                min={2020} max={2100}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-black font-bold"
-              />
+          </div>
+
+          {/* Quick Filter Badges for Staff Status (Active vs Hidden) */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-gray-500 uppercase tracking-wider">Staff Visibility:</span>
+              <button
+                onClick={() => setStaffStatusFilter('all')}
+                className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  staffStatusFilter === 'all' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                All Staff ({data?.allSalaryRows?.length || 0})
+              </button>
+              <button
+                onClick={() => setStaffStatusFilter('active')}
+                className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  staffStatusFilter === 'active' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                }`}
+              >
+                Active Only ({(data?.allSalaryRows || []).filter((r: any) => !r.isHidden).length})
+              </button>
+              <button
+                onClick={() => setStaffStatusFilter('hidden')}
+                className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  staffStatusFilter === 'hidden' ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
+                }`}
+              >
+                Hidden Staff ({hiddenStaffCount})
+              </button>
             </div>
-            <button
-              onClick={handleLoad} disabled={loading}
-              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-            >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
-              Refresh Payroll
-            </button>
+
+            <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+              <Info className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Previous month negative debt (e.g. -Rs. 3,000) automatically deducts from current month salary!</span>
+            </div>
           </div>
         </div>
 
@@ -1206,43 +766,46 @@ export default function ManagerPayrollPage() {
               </div>
             </div>
 
-            {/* Grand Summary */}
+            {/* Grand Summary Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
               <div className="bg-white border border-gray-100 rounded-2xl p-4 text-center shadow-sm">
                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Staff</div>
-                <div className="text-2xl font-black text-gray-900">{data.allSalaryRows.length}</div>
+                <div className="text-2xl font-black text-gray-900">{salaryRows.length}</div>
+                {hiddenStaffCount > 0 && (
+                  <div className="text-[9px] font-bold text-amber-600 mt-0.5">{hiddenStaffCount} hidden staff included</div>
+                )}
               </div>
               <div className="bg-teal-50 border border-teal-100 p-4 rounded-2xl text-center shadow-sm">
                 <div className="text-[10px] font-bold text-teal-600 uppercase tracking-wider mb-1">Gross Base</div>
-                <div className="text-sm font-black text-teal-800">{formatPKR(data.totalGross)}</div>
+                <div className="text-sm font-black text-teal-800">{formatPKR(filteredTotalGross)}</div>
               </div>
               <div className="bg-green-50 border border-green-100 p-4 rounded-2xl text-center shadow-sm">
                 <div className="text-[10px] font-bold text-green-700 uppercase tracking-wider mb-1">Additions (Rem/Bonus)</div>
-                <div className="text-sm font-black text-green-800">+{formatPKR(data.totalAdditions)}</div>
+                <div className="text-sm font-black text-green-800">+{formatPKR(filteredTotalAdditions)}</div>
               </div>
               <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl text-center shadow-sm">
-                <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Total Advances</div>
-                <div className="text-sm font-black text-amber-800">{formatPKR(data.totalAdvancesAmount)}</div>
+                <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Total Advances / Debt</div>
+                <div className="text-sm font-black text-amber-800">{formatPKR(filteredTotalAdvances)}</div>
               </div>
               <div className="bg-red-50 border border-red-100 p-4 rounded-2xl text-center shadow-sm">
                 <div className="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-1">Total Deductions</div>
-                <div className="text-sm font-black text-red-700">{formatPKR(data.totalDeductions)}</div>
+                <div className="text-sm font-black text-red-700">{formatPKR(filteredTotalDeductions)}</div>
               </div>
-              <div className={`p-4 rounded-2xl text-center shadow-sm col-span-2 sm:col-span-1 border ${data.totalNet < 0 ? 'bg-rose-100 border-rose-300' : 'bg-emerald-50 border-emerald-200'}`}>
-                <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${data.totalNet < 0 ? 'text-rose-800' : 'text-emerald-700'}`}>Total Net Payout</div>
-                <div className={`text-base font-black ${data.totalNet < 0 ? 'text-rose-900 font-extrabold' : 'text-emerald-900'}`}>{formatPKR(data.totalNet)}</div>
+              <div className={`p-4 rounded-2xl text-center shadow-sm col-span-2 sm:col-span-1 border ${filteredTotalNet < 0 ? 'bg-rose-100 border-rose-300' : 'bg-emerald-50 border-emerald-200'}`}>
+                <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${filteredTotalNet < 0 ? 'text-rose-800' : 'text-emerald-700'}`}>Total Net Payout</div>
+                <div className={`text-base font-black ${filteredTotalNet < 0 ? 'text-rose-900 font-extrabold' : 'text-emerald-900'}`}>{formatPKR(filteredTotalNet)}</div>
               </div>
             </div>
 
-            {/* Tabs */}
+            {/* Navigation Tabs */}
             <div className="flex bg-white rounded-2xl border border-gray-100 p-1 w-full no-print">
-              <button onClick={() => setTab('salary')} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === 'salary' ? 'bg-emerald-600 text-white shadow' : 'text-gray-500 hover:text-gray-800'}`}>
-                Salary Sheet ({data.allSalaryRows.length} staff)
+              <button onClick={() => setTab('salary')} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${tab === 'salary' ? 'bg-emerald-600 text-white shadow' : 'text-gray-500 hover:text-gray-800'}`}>
+                Salary Register ({salaryRows.length} staff)
               </button>
-              <button onClick={() => setTab('fines')} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === 'fines' ? 'bg-emerald-600 text-white shadow' : 'text-gray-500 hover:text-gray-800'}`}>
+              <button onClick={() => setTab('fines')} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${tab === 'fines' ? 'bg-emerald-600 text-white shadow' : 'text-gray-500 hover:text-gray-800'}`}>
                 Fines Ledger ({data.allFines.length} fines)
               </button>
-              <button onClick={() => setTab('holidays')} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === 'holidays' ? 'bg-emerald-600 text-white shadow' : 'text-gray-500 hover:text-gray-800'}`}>
+              <button onClick={() => setTab('holidays')} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${tab === 'holidays' ? 'bg-emerald-600 text-white shadow' : 'text-gray-500 hover:text-gray-800'}`}>
                 Office Holidays ({data.allHolidays?.length || 0} days)
               </button>
             </div>
@@ -1260,7 +823,7 @@ export default function ManagerPayrollPage() {
                       <button
                         key={d}
                         onClick={() => setDeptFilter(d)}
-                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${deptFilter === d ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${deptFilter === d ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                       >
                         {d === 'all' ? 'All Departments' : DEPT_LABELS[d] || d}
                       </button>
@@ -1269,57 +832,28 @@ export default function ManagerPayrollPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handlePrint}
-                      className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-xl text-xs font-black tracking-wider uppercase shadow-md transition-all transform hover:scale-105"
+                      className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-xl text-xs font-black tracking-wider uppercase shadow-md transition-all transform hover:scale-105 cursor-pointer"
                     >
                       <Printer className="w-3.5 h-3.5 text-emerald-300" /> Print Out Sheet
                     </button>
-                    <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 border border-emerald-100">
-                      <SlidersHorizontal className="w-3.5 h-3.5" /> Negative Net Salary (e.g. -Rs. 5,000) shows in red and syncs to staff profile!
-                    </div>
                   </div>
                 </div>
-
-                {/* Filtered summary */}
-                {deptFilter !== 'all' && (
-                  <div className="grid grid-cols-5 gap-3">
-                    <div className="bg-teal-50 border border-teal-100 p-3 rounded-xl text-center">
-                      <div className="text-[10px] font-bold text-teal-600 mb-0.5">Gross Base</div>
-                      <div className="text-sm font-black text-teal-800">{formatPKR(filteredTotalGross)}</div>
-                    </div>
-                    <div className="bg-green-50 border border-green-100 p-3 rounded-xl text-center">
-                      <div className="text-[10px] font-bold text-green-600 mb-0.5">Total Additions</div>
-                      <div className="text-sm font-black text-green-800">+{formatPKR(filteredTotalAdditions)}</div>
-                    </div>
-                    <div className="bg-amber-50 border border-amber-100 p-3 rounded-xl text-center">
-                      <div className="text-[10px] font-bold text-amber-600 mb-0.5">Total Advances</div>
-                      <div className="text-sm font-black text-amber-800">{formatPKR(filteredTotalAdvances)}</div>
-                    </div>
-                    <div className="bg-red-50 border border-red-100 p-3 rounded-xl text-center">
-                      <div className="text-[10px] font-bold text-red-500 mb-0.5">Total Deductions</div>
-                      <div className="text-sm font-black text-red-700">{formatPKR(filteredTotalDeductions)}</div>
-                    </div>
-                    <div className={`p-3 rounded-xl text-center border ${filteredTotalNet < 0 ? 'bg-rose-100 border-rose-300' : 'bg-emerald-50 border-emerald-200'}`}>
-                      <div className={`text-[10px] font-bold mb-0.5 ${filteredTotalNet < 0 ? 'text-rose-800' : 'text-emerald-700'}`}>Net Salary to Pay</div>
-                      <div className={`text-sm font-black ${filteredTotalNet < 0 ? 'text-rose-900' : 'text-emerald-900'}`}>{formatPKR(filteredTotalNet)}</div>
-                    </div>
-                  </div>
-                )}
 
                 <div className="overflow-x-auto rounded-xl border border-gray-200 print:border-none">
                   <table className="w-full text-sm border-collapse min-w-[1100px] print:min-w-0 print:table-fixed">
                     <colgroup>
                       <col className="w-[3%]" />
-                      <col className="w-[16%]" />
+                      <col className="w-[17%]" />
                       <col className="w-[6%]" />
-                      <col className="w-[9%]" />
-                      <col className="w-[11%]" />
-                      <col className="w-[7%]" />
                       <col className="w-[8%]" />
+                      <col className="w-[10%]" />
                       <col className="w-[7%]" />
+                      <col className="w-[7%]" />
+                      <col className="w-[6%]" />
+                      <col className="w-[8%]" />
+                      <col className="w-[8%]" />
                       <col className="w-[9%]" />
                       <col className="w-[11%]" />
-                      <col className="w-[13%]" />
-                      <col className="w-[0%] no-print no-print-col" />
                     </colgroup>
                     <thead className="bg-emerald-50">
                       <tr>
@@ -1332,23 +866,32 @@ export default function ManagerPayrollPage() {
                         <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200">Absent Ded.</th>
                         <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200">Fine Ded.</th>
                         <th className="px-2 py-2.5 text-right font-bold text-amber-800 border-b border-gray-200 bg-amber-50/70">Advance Ded.</th>
-                        <th className="px-2 py-2.5 text-right font-bold text-rose-800 border-b border-gray-200 bg-rose-50/70">Security / Custom Ded.</th>
-                        <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200 bg-emerald-100/70">Net Salary To Pay</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-rose-800 border-b border-gray-200 bg-rose-50/70">Prev Debt (-)</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200 bg-emerald-100/70">Net Salary</th>
                         <th className="px-2 py-2.5 text-center font-bold text-emerald-900 border-b border-gray-200 no-print no-print-col">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {salaryRows.length === 0 ? (
-                        <tr><td colSpan={12} className="px-4 py-10 text-center text-gray-400">No staff found for selected department.</td></tr>
+                        <tr><td colSpan={12} className="px-4 py-10 text-center text-gray-400">No staff found matching filter.</td></tr>
                       ) : salaryRows.map((r: any, i: number) => (
                         <tr
                           key={`${r.dept}-${r.id}`}
                           onClick={() => setSelectedStaffModal(r)}
-                          className="hover:bg-emerald-50/60 transition-colors border-b border-gray-100 cursor-pointer group"
+                          className={`hover:bg-emerald-50/60 transition-colors border-b border-gray-100 cursor-pointer group ${
+                            r.isHidden ? 'bg-amber-50/30' : ''
+                          }`}
                         >
-                          <td className="px-3 py-3.5 text-gray-400 font-mono text-xs">{i + 1}</td>
-                          <td className="px-3 py-3.5 font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">
-                            <div>{r.name}</div>
+                          <td className="px-3 py-3 text-gray-400 font-mono text-xs">{i + 1}</td>
+                          <td className="px-3 py-3 font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">
+                            <div className="flex items-center gap-1.5">
+                              <span>{r.name}</span>
+                              {r.isHidden && (
+                                <span className="bg-amber-100 text-amber-800 border border-amber-300 text-[9px] font-black px-1.5 py-0.2 rounded">
+                                  HIDDEN
+                                </span>
+                              )}
+                            </div>
                             <div className="text-[10px] text-gray-400 font-normal">{r.designation}</div>
                             <div className="flex items-center gap-1.5 mt-1 no-print">
                               <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Off:</span>
@@ -1357,7 +900,7 @@ export default function ManagerPayrollPage() {
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={(e) => handleUpdateStaffWeeklyOff(r, e.target.value)}
                                 disabled={updatingOffDayId === r.id}
-                                className="text-[9px] font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200 rounded px-1.5 py-0.5 outline-none hover:bg-emerald-100 transition-all cursor-pointer"
+                                className="text-[9px] font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200 rounded px-1 py-0.5 outline-none hover:bg-emerald-100 transition-all cursor-pointer"
                                 title="Set weekly paid off day"
                               >
                                 <option value="none">None</option>
@@ -1371,79 +914,72 @@ export default function ManagerPayrollPage() {
                               </select>
                             </div>
                           </td>
-                          <td className="px-3 py-3.5">
+                          <td className="px-3 py-3">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${DEPT_COLORS[r.dept] || 'bg-gray-100 text-gray-600'}`}>
                               {DEPT_LABELS[r.dept] || r.dept}
                             </span>
                           </td>
-                          <td className="px-3 py-3.5 text-right font-medium text-gray-700">{formatPKR(r.gross)}</td>
-                          <td className="px-3 py-3.5 text-center">
+                          <td className="px-3 py-3 text-right font-medium text-gray-700">{formatPKR(r.gross)}</td>
+                          <td className="px-3 py-3 text-center">
                             <span className="font-bold text-xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100 block">
-                              {r.payableDays} Days ({formatPKR(r.earnings)})
+                              {r.payableDays}d ({formatPKR(r.earnings)})
                             </span>
-                            {(r.weeklyOffDaysCount > 0 || r.holidayDaysCount > 0) && (
-                              <div className="flex items-center justify-center gap-1 mt-1 text-[9px] font-extrabold">
-                                {r.weeklyOffDaysCount > 0 && (
-                                  <span className="bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.2 rounded" title="Paid weekly off days">
-                                    Off: {r.weeklyOffDaysCount}d
-                                  </span>
-                                )}
-                                {r.holidayDaysCount > 0 && (
-                                  <span className="bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.2 rounded" title="Paid official holidays">
-                                    Holidays: {r.holidayDaysCount}d
-                                  </span>
-                                )}
-                              </div>
-                            )}
+                            <div className="flex items-center justify-center gap-1 mt-1 text-[9px] font-extrabold">
+                              {r.weeklyOffDaysCount > 0 && (
+                                <span className="bg-blue-50 text-blue-700 border border-blue-200 px-1 py-0.2 rounded" title="Paid weekly off days">
+                                  Off: {r.weeklyOffDaysCount}d
+                                </span>
+                              )}
+                              {r.holidayDaysCount > 0 && (
+                                <span className="bg-purple-50 text-purple-700 border border-purple-200 px-1 py-0.2 rounded" title="Paid official holidays">
+                                  Hol: {r.holidayDaysCount}d
+                                </span>
+                              )}
+                            </div>
                           </td>
 
-                          {/* Custom Additions Column */}
-                          <td className="px-3 py-3.5 text-right font-bold text-green-700 text-xs bg-green-50/40">
+                          {/* Custom Additions */}
+                          <td className="px-3 py-3 text-right font-bold text-green-700 text-xs bg-green-50/40">
                             {r.totalCustomAdditions > 0 ? (
                               <div className="space-y-0.5">
-                                <span className="inline-block bg-green-100 text-green-800 px-2 py-0.5 rounded border border-green-200">
+                                <span className="inline-block bg-green-100 text-green-800 px-1.5 py-0.5 rounded border border-green-200">
                                   +{formatPKR(r.totalCustomAdditions)}
                                 </span>
-                                {r.remainingBalance > 0 && (
-                                  <div className="text-[9px] text-green-600">Arrears: {formatPKR(r.remainingBalance)}</div>
-                                )}
                               </div>
                             ) : (
                               <span className="text-gray-300">—</span>
                             )}
                           </td>
 
-                          <td className="px-3 py-3.5 text-right text-orange-600 font-medium text-xs">
+                          <td className="px-3 py-3 text-right text-orange-600 font-medium text-xs">
                             {r.totalAbsentDeduction > 0 ? `${formatPKR(r.totalAbsentDeduction)} (${r.absentDays}d)` : '—'}
                           </td>
-                          <td className="px-3 py-3.5 text-right text-red-600 font-medium text-xs">
+                          <td className="px-3 py-3 text-right text-red-600 font-medium text-xs">
                             {r.totalFines > 0 ? formatPKR(r.totalFines) : '—'}
                           </td>
-                          <td className="px-3 py-3.5 text-right text-amber-700 font-bold text-xs bg-amber-50/40">
+                          <td className="px-3 py-3 text-right text-amber-700 font-bold text-xs bg-amber-50/40">
                             {r.totalAdvance > 0 ? formatPKR(r.totalAdvance) : '—'}
                           </td>
 
-                          {/* Security & Custom Deductions Column */}
-                          <td className="px-3 py-3.5 text-right text-rose-700 font-bold text-xs bg-rose-50/40">
-                            {r.totalCustomDeductions > 0 ? (
+                          {/* Previous Month Debt Carryover (e.g. -3000 from last month) */}
+                          <td className="px-3 py-3 text-right font-bold text-xs bg-rose-50/40">
+                            {r.previousMonthDebt > 0 ? (
                               <div className="space-y-0.5">
-                                <span className="inline-block bg-rose-100 text-rose-800 px-2 py-0.5 rounded border border-rose-200">
-                                  -{formatPKR(r.totalCustomDeductions)}
+                                <span className="inline-block bg-rose-100 text-rose-900 font-black px-1.5 py-0.5 rounded border border-rose-300">
+                                  -{formatPKR(r.previousMonthDebt)}
                                 </span>
-                                {r.securityFee > 0 && (
-                                  <div className="text-[9px] text-rose-600">Security: {formatPKR(r.securityFee)}</div>
-                                )}
+                                <div className="text-[8px] text-rose-600 font-extrabold uppercase">Last Month Debt</div>
                               </div>
                             ) : (
                               <span className="text-gray-300">—</span>
                             )}
                           </td>
 
-                          {/* Net Salary To Pay Column (Shows Negative in Red/Rose!) */}
-                          <td className="px-3 py-3.5 text-right font-black transition-colors">
+                          {/* Net Salary To Pay */}
+                          <td className="px-3 py-3 text-right font-black transition-colors">
                             <span className={`inline-block px-2.5 py-1 rounded-lg border ${
                               r.netPayable < 0
-                                ? 'bg-rose-100 text-rose-900 border-rose-300 font-black animate-pulse'
+                                ? 'bg-rose-100 text-rose-900 border-rose-300 font-black'
                                 : 'bg-emerald-100 text-emerald-800 border-emerald-200'
                             }`}>
                               {formatPKR(r.netPayable)}
@@ -1453,42 +989,50 @@ export default function ManagerPayrollPage() {
                             )}
                           </td>
 
+                          {/* Actions Column */}
                           <td className="px-2 py-2 text-center no-print no-print-col">
-                            <div className="flex items-center justify-center gap-1">
+                            <div className="flex items-center justify-center gap-1 flex-wrap">
+                              {/* Complete Attendance Button */}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleCompleteStaffAttendance(r); }}
+                                disabled={completingAttendanceId === r.id}
+                                className="p-1 bg-teal-50 hover:bg-teal-600 hover:text-white rounded-lg text-teal-700 transition-colors flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 border border-teal-200 cursor-pointer disabled:opacity-50"
+                                title="Mark all unmarked past workdays as Present"
+                              >
+                                {completingAttendanceId === r.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                                Attnd
+                              </button>
+
+                              {/* Customize Salary Modal */}
                               <button
                                 onClick={(e) => { e.stopPropagation(); openCustomizeModal(r); }}
-                                className="p-1.5 bg-emerald-100 hover:bg-emerald-600 hover:text-white rounded-lg text-emerald-700 transition-colors flex items-center gap-1 text-xs font-bold px-2 py-1"
-                                title="Customize salary (Add remaining balance, security fee, advance, etc.)"
+                                className="p-1 bg-emerald-50 hover:bg-emerald-600 hover:text-white rounded-lg text-emerald-700 transition-colors flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 border border-emerald-200 cursor-pointer"
+                                title="Customize salary (Add remaining balance, debt deduction, security fee, etc.)"
                               >
-                                <SlidersHorizontal className="w-3.5 h-3.5" /> Edit
+                                <SlidersHorizontal className="w-3 h-3" /> Edit
                               </button>
 
-                              {r.netPayable < 0 && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); syncStaffProfileBalance(r); }}
-                                  disabled={syncingProfileId === r.id}
-                                  className="p-1.5 bg-rose-100 hover:bg-rose-600 hover:text-white rounded-lg text-rose-700 transition-colors flex items-center gap-1 text-xs font-bold px-2 py-1 disabled:opacity-50"
-                                  title="Sync negative advance debt to staff profile document in Firestore"
-                                >
-                                  {syncingProfileId === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                                  Sync Profile
-                                </button>
-                              )}
-
+                              {/* Official Printable Salary Slip */}
                               <button
                                 onClick={(e) => { e.stopPropagation(); setSlipPaidDate(todayStr); setSlipStaffModal(r); }}
-                                className="p-1.5 bg-indigo-100 hover:bg-indigo-600 hover:text-white rounded-lg text-indigo-700 transition-colors flex items-center gap-1 text-xs font-bold px-2 py-1"
-                                title="View / Print Official SECP Letterhead Salary Slip"
+                                className="p-1 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-lg text-indigo-700 transition-colors flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 border border-indigo-200 cursor-pointer"
+                                title="View / Print SECP Letterhead Salary Slip"
                               >
-                                <FileText className="w-3.5 h-3.5" /> Slip
+                                <FileText className="w-3 h-3" /> Slip
                               </button>
 
+                              {/* Toggle Hide/Active */}
                               <button
-                                onClick={(e) => { e.stopPropagation(); setSelectedStaffModal(r); }}
-                                className="p-1.5 bg-gray-100 hover:bg-gray-700 hover:text-white rounded-lg text-gray-500 transition-colors"
-                                title="Click to view date-wise deduction breakdown"
+                                onClick={(e) => { e.stopPropagation(); handleToggleStaffHide(r); }}
+                                disabled={togglingStatusId === r.id}
+                                className={`p-1 rounded-lg transition-colors flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 border cursor-pointer ${
+                                  r.isHidden
+                                    ? 'bg-amber-100 hover:bg-amber-600 hover:text-white text-amber-800 border-amber-300'
+                                    : 'bg-gray-100 hover:bg-gray-600 hover:text-white text-gray-600 border-gray-200'
+                                }`}
+                                title={r.isHidden ? 'Unhide staff member' : 'Hide staff member from default lists'}
                               >
-                                <Eye className="w-4 h-4" />
+                                {r.isHidden ? <UserCheck className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                               </button>
                             </div>
                           </td>
@@ -1532,11 +1076,9 @@ export default function ManagerPayrollPage() {
               </div>
             )}
 
-
             {/* ── OFFICE HOLIDAYS CALENDAR ── */}
             {tab === 'holidays' && (
               <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
-
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 no-print">
                   <div>
                     <h3 className="font-bold text-gray-900 text-base flex items-center gap-2">
@@ -1583,7 +1125,7 @@ export default function ManagerPayrollPage() {
                           type="text"
                           value={holidayForm.label}
                           onChange={e => setHolidayForm(p => ({ ...p, label: e.target.value }))}
-                          placeholder="e.g. Eid-ul-Fitr, Pakistan Day, Labour Day..."
+                          placeholder="e.g. Pakistan Day, Labour Day..."
                           className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-black font-bold"
                         />
                       </div>
@@ -1600,71 +1142,6 @@ export default function ManagerPayrollPage() {
                           <option value="staff">Specific Staff Member(s)</option>
                         </select>
                       </div>
-
-                      {holidayForm.scope === 'department' && (
-                        <div className="sm:col-span-2 lg:col-span-3">
-                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Select Departments *</label>
-                          <div className="flex flex-wrap gap-2">
-                            {ALL_DEPTS.map(dept => {
-                              const isSelected = holidayForm.departments.includes(dept);
-                              return (
-                                <button
-                                  key={dept}
-                                  type="button"
-                                  onClick={() => {
-                                    setHolidayForm(p => ({
-                                      ...p,
-                                      departments: isSelected
-                                        ? p.departments.filter(d => d !== dept)
-                                        : [...p.departments, dept]
-                                    }));
-                                  }}
-                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                                    isSelected
-                                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                                  }`}
-                                >
-                                  {DEPT_LABELS[dept] || dept}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {holidayForm.scope === 'staff' && (
-                        <div className="sm:col-span-2 lg:col-span-3">
-                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Select Staff Members *</label>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 max-h-48 overflow-y-auto p-2 bg-white rounded-xl border border-gray-200">
-                            {(data?.allStaff || []).map((s: any) => {
-                              const isSelected = holidayForm.staffIds.includes(s.id);
-                              return (
-                                <button
-                                  key={s.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setHolidayForm(p => ({
-                                      ...p,
-                                      staffIds: isSelected
-                                        ? p.staffIds.filter(id => id !== s.id)
-                                        : [...p.staffIds, s.id]
-                                    }));
-                                  }}
-                                  className={`p-2 rounded-lg text-left text-xs font-bold border transition-all truncate cursor-pointer ${
-                                    isSelected
-                                      ? 'bg-emerald-600 text-white border-emerald-600'
-                                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                                  }`}
-                                >
-                                  <div className="truncate">{s.name || s.displayName}</div>
-                                  <div className="text-[9px] opacity-75">{DEPT_LABELS[s.dept] || s.dept}</div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
                     </div>
 
                     <button
@@ -1692,8 +1169,6 @@ export default function ManagerPayrollPage() {
                           <th className="px-4 py-2.5 text-left font-bold text-emerald-900">Date</th>
                           <th className="px-4 py-2.5 text-left font-bold text-emerald-900">Holiday Label</th>
                           <th className="px-4 py-2.5 text-left font-bold text-emerald-900">Scope</th>
-                          <th className="px-4 py-2.5 text-left font-bold text-emerald-900">Target Coverage</th>
-                          <th className="px-4 py-2.5 text-left font-bold text-emerald-900">Recorded By</th>
                           <th className="px-4 py-2.5 text-center font-bold text-emerald-900 no-print">Actions</th>
                         </tr>
                       </thead>
@@ -1704,32 +1179,10 @@ export default function ManagerPayrollPage() {
                             <td className="px-4 py-3 font-mono font-bold text-gray-900">{h.date}</td>
                             <td className="px-4 py-3 font-bold text-gray-900">{h.label}</td>
                             <td className="px-4 py-3">
-                              <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
-                                h.scope === 'all'
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                  : h.scope === 'department'
-                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                  : 'bg-purple-50 text-purple-700 border-purple-200'
-                              }`}>
-                                {h.scope === 'all' ? 'All Staff (Org)' : h.scope === 'department' ? 'Department(s)' : 'Specific Staff'}
+                              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                {h.scope === 'all' ? 'All Staff' : h.scope}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-xs text-gray-600">
-                              {h.scope === 'all' && <span className="font-bold text-emerald-700">All 9 Departments</span>}
-                              {h.scope === 'department' && (
-                                <div className="flex flex-wrap gap-1">
-                                  {(h.departments || []).map(d => (
-                                    <span key={d} className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                                      {DEPT_LABELS[d] || d}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                              {h.scope === 'staff' && (
-                                <span>{h.staffIds?.length || 0} Staff Members</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-xs text-gray-500">{h.createdBy || 'Manager'}</td>
                             <td className="px-4 py-3 text-center no-print">
                               <button
                                 onClick={() => handleDeleteHoliday(h)}
@@ -1746,14 +1199,12 @@ export default function ManagerPayrollPage() {
                     </table>
                   </div>
                 )}
-
               </div>
             )}
 
             {/* ── FINES LEDGER ── */}
             {tab === 'fines' && (
               <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
-
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 no-print">
                   <div className="flex flex-wrap items-center gap-2">
                     <select
@@ -1764,23 +1215,13 @@ export default function ManagerPayrollPage() {
                       <option value="all">All Departments</option>
                       {availableFineDepts.map(d => <option key={d} value={d}>{DEPT_LABELS[d] || d}</option>)}
                     </select>
-                    <select
-                      value={fineStaffFilter}
-                      onChange={e => setFineStaffFilter(e.target.value)}
-                      className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-black font-bold"
-                    >
-                      <option value="all">All Staff</option>
-                      {(fineDeptFilter === 'all' ? data.allStaff : data.byDept[fineDeptFilter]?.allStaff || []).map((s: any) => (
-                        <option key={s.id} value={s.id}>{s.name || s.displayName}</option>
-                      ))}
-                    </select>
                     <div className="bg-red-50 border border-red-100 px-4 py-2 rounded-xl text-sm font-bold text-red-700">
                       Total: {formatPKR(filteredFinesTotal)} ({filteredFines.length} fines)
                     </div>
                   </div>
                   <button
                     onClick={() => setShowFineForm(v => !v)}
-                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors"
+                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors cursor-pointer"
                   >
                     <Plus className="w-4 h-4" /> Add Fine
                   </button>
@@ -1791,7 +1232,7 @@ export default function ManagerPayrollPage() {
                   <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 space-y-4 no-print">
                     <div className="flex items-center justify-between">
                       <h3 className="font-bold text-emerald-800 flex items-center gap-2"><Receipt className="w-4 h-4" /> Add New Fine</h3>
-                      <button onClick={() => setShowFineForm(false)} className="text-gray-400 hover:text-gray-700"><X className="w-4 h-4" /></button>
+                      <button onClick={() => setShowFineForm(false)} className="text-gray-400 hover:text-gray-700 cursor-pointer"><X className="w-4 h-4" /></button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       <div>
@@ -1828,27 +1269,10 @@ export default function ManagerPayrollPage() {
                           className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-black font-bold"
                         />
                       </div>
-                      <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Date</label>
-                        <input
-                          type="date" value={fineForm.date}
-                          onChange={e => setFineForm(p => ({ ...p, date: e.target.value }))}
-                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-black font-bold"
-                        />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Reason *</label>
-                        <input
-                          type="text" value={fineForm.reason}
-                          onChange={e => setFineForm(p => ({ ...p, reason: e.target.value }))}
-                          placeholder="e.g. Late arrival, misconduct, uniform violation..."
-                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-black font-bold"
-                        />
-                      </div>
                     </div>
                     <button
                       onClick={handleAddFine} disabled={savingFine}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-colors disabled:opacity-60 flex items-center gap-2"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-colors disabled:opacity-60 flex items-center gap-2 cursor-pointer"
                     >
                       {savingFine ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                       Save Fine
@@ -1872,7 +1296,6 @@ export default function ManagerPayrollPage() {
                           <th className="px-4 py-3 text-left font-bold text-red-800 border-b border-gray-200">Date</th>
                           <th className="px-4 py-3 text-left font-bold text-red-800 border-b border-gray-200">Reason</th>
                           <th className="px-4 py-3 text-right font-bold text-red-800 border-b border-gray-200">Amount</th>
-                          <th className="px-4 py-3 text-left font-bold text-red-800 border-b border-gray-200">Recorded By</th>
                           <th className="px-4 py-3 border-b border-gray-200 no-print" />
                         </tr>
                       </thead>
@@ -1886,15 +1309,14 @@ export default function ManagerPayrollPage() {
                                 {DEPT_LABELS[f.dept] || f.dept}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{f.date || f.month || '—'}</td>
-                            <td className="px-4 py-3 text-gray-700 max-w-[180px]">{f.reason || '—'}</td>
+                            <td className="px-4 py-3 text-gray-500">{f.date || f.month || '—'}</td>
+                            <td className="px-4 py-3 text-gray-700">{f.reason || '—'}</td>
                             <td className="px-4 py-3 text-right font-black text-red-700">{formatPKR(Number(f.amount || 0))}</td>
-                            <td className="px-4 py-3 text-gray-400 text-xs font-mono">{f.recordedBy || '—'}</td>
                             <td className="px-4 py-3 no-print">
                               <button
                                 onClick={() => handleDeleteFine(f)}
                                 disabled={deletingId === f.id}
-                                className="text-red-400 hover:text-red-700 transition-colors disabled:opacity-40"
+                                className="text-red-400 hover:text-red-700 transition-colors cursor-pointer"
                                 title="Delete fine"
                               >
                                 {deletingId === f.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
@@ -1902,11 +1324,6 @@ export default function ManagerPayrollPage() {
                             </td>
                           </tr>
                         ))}
-                        <tr className="bg-red-50 font-black">
-                          <td colSpan={5} className="px-4 py-3 text-red-800">Total Fines ({filteredFines.length})</td>
-                          <td className="px-4 py-3 text-right text-red-800">{formatPKR(filteredFinesTotal)}</td>
-                          <td colSpan={2} />
-                        </tr>
                       </tbody>
                     </table>
                   </div>
@@ -1926,13 +1343,13 @@ export default function ManagerPayrollPage() {
             <div className="bg-emerald-800 text-white p-6 relative">
               <button
                 onClick={() => setCustomizeModalStaff(null)}
-                className="absolute top-5 right-5 text-emerald-200 hover:text-white bg-emerald-900/50 p-2 rounded-full transition-colors"
+                className="absolute top-5 right-5 text-emerald-200 hover:text-white bg-emerald-900/50 p-2 rounded-full transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-2 mb-1">
                 <SlidersHorizontal className="w-4 h-4 text-emerald-300" />
-                <span className="text-xs text-emerald-200 uppercase tracking-wider font-bold">Salary Customization</span>
+                <span className="text-xs text-emerald-200 uppercase tracking-wider font-bold">Salary Customization & Debt Control</span>
               </div>
               <h2 className="text-2xl font-black tracking-tight">{customizeModalStaff.name}</h2>
               <p className="text-xs text-emerald-200 mt-0.5">
@@ -1954,6 +1371,26 @@ export default function ManagerPayrollPage() {
                 </div>
               </div>
 
+              {/* Previous Month Negative Carryover Notification */}
+              {customizeModalStaff.detectedPrevMonthNegativeDebt > 0 && (
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3.5 flex items-center justify-between text-xs text-rose-900">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+                    <div>
+                      <div className="font-bold">Detected Previous Month Negative Debt: {formatPKR(customizeModalStaff.detectedPrevMonthNegativeDebt)}</div>
+                      <div className="text-[11px] text-rose-700">This debt is automatically queued to be deducted from this month&apos;s salary.</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCustomizeForm(p => ({ ...p, previousAdvance: String(customizeModalStaff.detectedPrevMonthNegativeDebt) }))}
+                    className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs cursor-pointer shrink-0"
+                  >
+                    Apply Rs. {customizeModalStaff.detectedPrevMonthNegativeDebt}
+                  </button>
+                </div>
+              )}
+
               {/* Section 1: Additions (+) */}
               <div className="space-y-3 bg-green-50/50 border border-green-100 rounded-2xl p-4">
                 <h3 className="font-bold text-green-900 text-sm flex items-center gap-2">
@@ -1971,7 +1408,6 @@ export default function ManagerPayrollPage() {
                       placeholder="e.g. 2500"
                       className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500 font-bold text-black"
                     />
-                    <span className="text-[10px] text-gray-400 mt-0.5 block">Previous unpaid balance</span>
                   </div>
                   <div>
                     <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
@@ -1984,7 +1420,6 @@ export default function ManagerPayrollPage() {
                       placeholder="e.g. 1000"
                       className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500 font-bold text-black"
                     />
-                    <span className="text-[10px] text-gray-400 mt-0.5 block">Reward / Incentive</span>
                   </div>
                   <div>
                     <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
@@ -1997,7 +1432,6 @@ export default function ManagerPayrollPage() {
                       placeholder="e.g. 1500"
                       className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-500 font-bold text-black"
                     />
-                    <span className="text-[10px] text-gray-400 mt-0.5 block">Special allowance</span>
                   </div>
                 </div>
 
@@ -2035,7 +1469,7 @@ export default function ManagerPayrollPage() {
                         ...p,
                         customAdditions: p.customAdditions.filter((_, i) => i !== idx)
                       }))}
-                      className="text-red-400 hover:text-red-600 p-1"
+                      className="text-red-400 hover:text-red-600 p-1 cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -2047,7 +1481,7 @@ export default function ManagerPayrollPage() {
                     ...p,
                     customAdditions: [...p.customAdditions, { id: String(Math.random()), label: '', amount: '' }]
                   }))}
-                  className="text-xs font-bold text-green-700 hover:text-green-900 flex items-center gap-1"
+                  className="text-xs font-bold text-green-700 hover:text-green-900 flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add Extra Addition Item
                 </button>
@@ -2056,9 +1490,22 @@ export default function ManagerPayrollPage() {
               {/* Section 2: Deductions (-) */}
               <div className="space-y-3 bg-rose-50/50 border border-rose-100 rounded-2xl p-4">
                 <h3 className="font-bold text-rose-900 text-sm flex items-center gap-2">
-                  <MinusCircle className="w-4 h-4 text-rose-600" /> Custom Salary Deductions (-)
+                  <MinusCircle className="w-4 h-4 text-rose-600" /> Custom Salary Deductions & Advance Debt (-)
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
+                      Previous Advance / Remaining Debt (e.g. -3000)
+                    </label>
+                    <input
+                      type="number"
+                      value={customizeForm.previousAdvance}
+                      onChange={e => setCustomizeForm(p => ({ ...p, previousAdvance: e.target.value }))}
+                      placeholder="e.g. 3000"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-500 font-bold text-black"
+                    />
+                    <span className="text-[10px] text-gray-400 mt-0.5 block">Deducts previous month&apos;s negative advance balance</span>
+                  </div>
                   <div>
                     <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
                       Security Fee Deduction
@@ -2071,19 +1518,6 @@ export default function ManagerPayrollPage() {
                       className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-500 font-bold text-black"
                     />
                     <span className="text-[10px] text-gray-400 mt-0.5 block">Staff security deposit fee</span>
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
-                      Previous Advance Salary Adjustment
-                    </label>
-                    <input
-                      type="number"
-                      value={customizeForm.previousAdvance}
-                      onChange={e => setCustomizeForm(p => ({ ...p, previousAdvance: e.target.value }))}
-                      placeholder="e.g. 3000"
-                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-500 font-bold text-black"
-                    />
-                    <span className="text-[10px] text-gray-400 mt-0.5 block">Advance salary taken before</span>
                   </div>
                 </div>
 
@@ -2121,7 +1555,7 @@ export default function ManagerPayrollPage() {
                         ...p,
                         customDeductions: p.customDeductions.filter((_, i) => i !== idx)
                       }))}
-                      className="text-red-400 hover:text-red-600 p-1"
+                      className="text-red-400 hover:text-red-600 p-1 cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -2133,7 +1567,7 @@ export default function ManagerPayrollPage() {
                     ...p,
                     customDeductions: [...p.customDeductions, { id: String(Math.random()), label: '', amount: '' }]
                   }))}
-                  className="text-xs font-bold text-rose-700 hover:text-rose-900 flex items-center gap-1"
+                  className="text-xs font-bold text-rose-700 hover:text-rose-900 flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add Extra Deduction Item
                 </button>
@@ -2159,14 +1593,14 @@ export default function ManagerPayrollPage() {
             <div className="bg-gray-50 border-t border-gray-100 px-6 py-4 flex items-center justify-between">
               <button
                 onClick={() => setCustomizeModalStaff(null)}
-                className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl text-xs transition-colors"
+                className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveCustomization}
                 disabled={savingCustomization}
-                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors disabled:opacity-60"
+                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors disabled:opacity-60 cursor-pointer"
               >
                 {savingCustomization ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Save & Sync to Profile
@@ -2186,12 +1620,12 @@ export default function ManagerPayrollPage() {
             <div className={`p-6 relative text-white ${selectedStaffModal.netPayable < 0 ? 'bg-rose-900' : 'bg-emerald-800'}`}>
               <button
                 onClick={() => setSelectedStaffModal(null)}
-                className="absolute top-5 right-5 text-emerald-200 hover:text-white bg-black/30 p-2 rounded-full transition-colors"
+                className="absolute top-5 right-5 text-emerald-200 hover:text-white bg-black/30 p-2 rounded-full transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-3 mb-1">
-                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border bg-white/10 text-white border-white/20`}>
+                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border bg-white/10 text-white border-white/20">
                   {DEPT_LABELS[selectedStaffModal.dept] || selectedStaffModal.dept}
                 </span>
                 <span className="text-xs text-white/80">{data?.monthLabel}</span>
@@ -2215,7 +1649,7 @@ export default function ManagerPayrollPage() {
                   <button
                     onClick={() => syncStaffProfileBalance(selectedStaffModal)}
                     disabled={syncingProfileId === selectedStaffModal.id}
-                    className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors shrink-0 flex items-center gap-1.5"
+                    className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer"
                   >
                     {syncingProfileId === selectedStaffModal.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                     Sync Debt to Profile
@@ -2223,55 +1657,38 @@ export default function ManagerPayrollPage() {
                 </div>
               )}
 
-              {/* Salary Summary Cards matching Staff Profile */}
+              {/* Salary Summary Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
                 <div className="bg-gray-50 border border-gray-100 p-2.5 rounded-2xl text-center">
                   <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Base Salary</div>
                   <div className="text-xs font-black text-gray-900">{formatPKR(selectedStaffModal.gross)}</div>
-                  <div className="text-[9px] text-gray-400 mt-0.5">Daily: {formatPKR(selectedStaffModal.dailyRate)}</div>
                 </div>
 
                 <div className="bg-emerald-50 border border-emerald-100 p-2.5 rounded-2xl text-center">
                   <div className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider mb-0.5">Earned Days</div>
                   <div className="text-xs font-black text-emerald-800">{selectedStaffModal.payableDays} Days</div>
-                  <div className="text-[9px] text-emerald-600 mt-0.5">
-                    {selectedStaffModal.weeklyOffDaysCount ? `Off: ${selectedStaffModal.weeklyOffDaysCount}d ` : ''}
-                    {selectedStaffModal.holidayDaysCount ? `Hol: ${selectedStaffModal.holidayDaysCount}d` : ''}
-                  </div>
                 </div>
 
                 <div className="bg-green-50 border border-green-100 p-2.5 rounded-2xl text-center">
                   <div className="text-[9px] font-bold text-green-700 uppercase tracking-wider mb-0.5">Additions</div>
                   <div className="text-xs font-black text-green-800">+{formatPKR(selectedStaffModal.totalCustomAdditions)}</div>
-                  <div className="text-[9px] text-green-600 mt-0.5">Rem / Bonus</div>
                 </div>
 
                 <div className="bg-red-50 border border-red-100 p-2.5 rounded-2xl text-center">
                   <div className="text-[9px] font-bold text-red-600 uppercase tracking-wider mb-0.5">Fines Ded.</div>
                   <div className="text-xs font-black text-red-700">{formatPKR(selectedStaffModal.totalFines)}</div>
-                  <div className="text-[9px] text-red-500 mt-0.5">{selectedStaffModal.staffFines?.length || 0} fines</div>
                 </div>
 
                 <div className="bg-amber-50 border border-amber-100 p-2.5 rounded-2xl text-center">
                   <div className="text-[9px] font-bold text-amber-700 uppercase tracking-wider mb-0.5">Advance Ded.</div>
                   <div className="text-xs font-black text-amber-800">{formatPKR(selectedStaffModal.totalAdvance)}</div>
-                  <div className="text-[9px] text-amber-600 mt-0.5">Salary Advance</div>
                 </div>
 
                 <div className={`p-2.5 rounded-2xl text-center col-span-2 sm:col-span-1 border ${selectedStaffModal.netPayable < 0 ? 'bg-rose-100 border-rose-300' : 'bg-emerald-50 border-emerald-200'}`}>
                   <div className={`text-[9px] font-bold uppercase tracking-wider mb-0.5 ${selectedStaffModal.netPayable < 0 ? 'text-rose-800' : 'text-emerald-700'}`}>Net To Pay</div>
                   <div className={`text-xs font-black ${selectedStaffModal.netPayable < 0 ? 'text-rose-900 font-extrabold' : 'text-emerald-900'}`}>{formatPKR(selectedStaffModal.netPayable)}</div>
-                  <div className={`text-[9px] font-bold mt-0.5 ${selectedStaffModal.netPayable < 0 ? 'text-rose-700' : 'text-emerald-600'}`}>{selectedStaffModal.netPayable < 0 ? 'Advance Debt' : 'Final Payout'}</div>
                 </div>
               </div>
-
-              {/* Customization Notes if any */}
-              {selectedStaffModal.notes && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
-                  <span className="font-bold">Manager Customization Note: </span>
-                  {selectedStaffModal.notes}
-                </div>
-              )}
 
               {/* Date-wise Itemized Deduction & Addition Log */}
               <div className="space-y-3">
@@ -2285,85 +1702,63 @@ export default function ManagerPayrollPage() {
                   </span>
                 </div>
 
-                {selectedStaffModal.breakdownItems.length === 0 ? (
-                  <div className="bg-green-50 border border-green-100 rounded-2xl p-6 text-center text-emerald-800 space-y-1">
-                    <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-600" />
-                    <p className="font-bold text-sm">Standard Full Payout!</p>
-                    <p className="text-xs text-emerald-600">
-                      This staff member has zero absences, zero fines, and zero advance salary taken for {data?.monthLabel}. Full base salary of {formatPKR(selectedStaffModal.gross)} will be paid.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="border border-gray-200 rounded-2xl overflow-hidden">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                          <th className="px-3.5 py-2.5 font-bold text-gray-600">Date</th>
-                          <th className="px-3.5 py-2.5 font-bold text-gray-600">Item Type</th>
-                          <th className="px-3.5 py-2.5 font-bold text-gray-600">Reason / Description</th>
-                          <th className="px-3.5 py-2.5 font-bold text-gray-600 text-right">Amount</th>
+                <div className="border border-gray-200 rounded-2xl overflow-hidden">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-3.5 py-2.5 font-bold text-gray-600">Date</th>
+                        <th className="px-3.5 py-2.5 font-bold text-gray-600">Item Type</th>
+                        <th className="px-3.5 py-2.5 font-bold text-gray-600">Reason / Description</th>
+                        <th className="px-3.5 py-2.5 font-bold text-gray-600 text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {selectedStaffModal.breakdownItems.map((item: any) => (
+                        <tr key={item.id} className="hover:bg-gray-50/80">
+                          <td className="px-3.5 py-3 font-mono font-bold text-gray-800 whitespace-nowrap">
+                            {item.date}
+                          </td>
+                          <td className="px-3.5 py-3">
+                            {item.category === 'addition' ? (
+                              <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                                + Addition ({item.type})
+                              </span>
+                            ) : item.type === 'prev_debt' ? (
+                              <span className="inline-flex items-center gap-1 bg-rose-200 text-rose-900 px-2 py-0.5 rounded-full font-black text-[10px]">
+                                Prev Month Debt Carryover
+                              </span>
+                            ) : item.type === 'absent' ? (
+                              <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                                Absent Deduction
+                              </span>
+                            ) : item.type === 'fine' ? (
+                              <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                                Fine Deduction
+                              </span>
+                            ) : item.type === 'security' ? (
+                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                                Security Fee
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                                <CreditCard className="w-3 h-3" /> Advance Salary
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3.5 py-3 text-gray-700">
+                            <div>{item.reason}</div>
+                          </td>
+                          <td className={`px-3.5 py-3 text-right font-bold whitespace-nowrap ${item.category === 'addition' ? 'text-green-700' : 'text-red-600'}`}>
+                            {item.category === 'addition' ? '+' : '-'}{formatPKR(item.amount)}
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {selectedStaffModal.breakdownItems.map((item: any) => (
-                          <tr key={item.id} className="hover:bg-gray-50/80">
-                            <td className="px-3.5 py-3 font-mono font-bold text-gray-800 whitespace-nowrap">
-                              {item.date}
-                            </td>
-                            <td className="px-3.5 py-3">
-                              {item.category === 'addition' ? (
-                                <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-bold text-[10px]">
-                                  + Addition ({item.type})
-                                </span>
-                              ) : item.type === 'absent' ? (
-                                <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold text-[10px]">
-                                  Absent Deduction
-                                </span>
-                              ) : item.type === 'fine' ? (
-                                <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold text-[10px]">
-                                  Fine Deduction
-                                </span>
-                              ) : item.type === 'security' ? (
-                                <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full font-bold text-[10px]">
-                                  Security Fee
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold text-[10px]">
-                                  <CreditCard className="w-3 h-3" /> Advance Salary
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-3.5 py-3 text-gray-700">
-                              <div>{item.reason}</div>
-                              {item.recordedBy && (
-                                <div className="text-[10px] text-gray-400 mt-0.5">By: {item.recordedBy}</div>
-                              )}
-                            </td>
-                            <td className={`px-3.5 py-3 text-right font-bold whitespace-nowrap ${item.category === 'addition' ? 'text-green-700' : 'text-red-600'}`}>
-                              {item.category === 'addition' ? '+' : '-'}{formatPKR(item.amount)}
-                            </td>
-                          </tr>
-                        ))}
-                        <tr className={`font-black ${selectedStaffModal.netPayable < 0 ? 'bg-rose-50' : 'bg-emerald-50/60'}`}>
-                          <td colSpan={3} className={`px-3.5 py-2.5 ${selectedStaffModal.netPayable < 0 ? 'text-rose-900' : 'text-emerald-950'}`}>NET PAYOUT AFTER ALL DEDUCTIONS & ADDITIONS</td>
-                          <td className={`px-3.5 py-2.5 text-right ${selectedStaffModal.netPayable < 0 ? 'text-rose-900 font-black' : 'text-emerald-900'}`}>{formatPKR(selectedStaffModal.netPayable)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* Net Payout Summary Banner in Modal */}
-              <div className={`rounded-2xl p-4 flex items-center justify-between text-white ${selectedStaffModal.netPayable < 0 ? 'bg-rose-900' : 'bg-emerald-900'}`}>
-                <div>
-                  <div className="text-[11px] font-medium text-white/80">
-                    {selectedStaffModal.netPayable < 0 ? 'Outstanding Advance Balance (Staff Owes Hub)' : 'Final Money To Pay Staff'}
-                  </div>
-                  <div className="text-xs text-white/70">(Gross Salary + Additions) - Total Deductions</div>
-                </div>
-                <div className="text-2xl font-black text-white">
-                  {formatPKR(selectedStaffModal.netPayable)}
+                      ))}
+                      <tr className={`font-black ${selectedStaffModal.netPayable < 0 ? 'bg-rose-50' : 'bg-emerald-50/60'}`}>
+                        <td colSpan={3} className={`px-3.5 py-2.5 ${selectedStaffModal.netPayable < 0 ? 'text-rose-900' : 'text-emerald-950'}`}>NET PAYOUT AFTER ALL DEDUCTIONS & ADDITIONS</td>
+                        <td className={`px-3.5 py-2.5 text-right ${selectedStaffModal.netPayable < 0 ? 'text-rose-900 font-black' : 'text-emerald-900'}`}>{formatPKR(selectedStaffModal.netPayable)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -2373,20 +1768,20 @@ export default function ManagerPayrollPage() {
             <div className="bg-gray-50 border-t border-gray-100 px-6 py-4 flex items-center justify-between">
               <button
                 onClick={() => setSelectedStaffModal(null)}
-                className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl text-xs transition-colors"
+                className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
               >
                 Close
               </button>
               <div className="flex gap-2">
                 <button
                   onClick={() => { const s = selectedStaffModal; setSelectedStaffModal(null); openCustomizeModal(s); }}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 font-bold rounded-xl text-xs transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 font-bold rounded-xl text-xs transition-colors cursor-pointer"
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" /> Customize Salary
                 </button>
                 <button
                   onClick={() => window.print()}
-                  className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors"
+                  className="flex items-center gap-1.5 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5" /> Print Statement
                 </button>
@@ -2425,21 +1820,21 @@ export default function ManagerPayrollPage() {
                 
                 <button
                   onClick={handleDownloadSingleSlip}
-                  className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+                  className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
                 >
                   <Download className="w-4 h-4" /> Download PNG
                 </button>
                 
                 <button
                   onClick={handlePrintSingleSlip}
-                  className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+                  className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
                 >
                   <Printer className="w-4 h-4" /> Print Slip
                 </button>
                 
                 <button
                   onClick={() => setSlipStaffModal(null)}
-                  className="text-gray-400 hover:text-white bg-slate-800 p-2 rounded-full transition-colors ml-1"
+                  className="text-gray-400 hover:text-white bg-slate-800 p-2 rounded-full transition-colors ml-1 cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
