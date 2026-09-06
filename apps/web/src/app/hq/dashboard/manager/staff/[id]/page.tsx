@@ -4404,9 +4404,38 @@ export default function StaffProfilePage() {
                 {/* Danger Zone */}
                 <div className="mt-16 pt-12 border-t-2 border-dashed border-rose-500/20">
                   <div className={`p-8 rounded-[2.5rem] border transition-all bg-rose-50/50 border-rose-100/80`}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 divide-y md:divide-y-0 md:divide-x divide-rose-200/50">
-                      {/* Vacate Position Slot */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 divide-y md:divide-y-0 md:divide-x divide-rose-200/50">
+                      {/* Generate Official Letters */}
                       <div className="flex flex-col justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 shrink-0 mt-1">
+                            <FileText size={24} />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-black uppercase tracking-widest text-indigo-600 mb-1">Disciplinary Letters</h4>
+                            <p className="text-xs font-bold leading-relaxed text-slate-600">
+                              Generate print-ready fine warning notices or formal contract termination letters with official stamp and signatures.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2 md:ml-16 mt-2">
+                          <Link
+                            href={`/hq/dashboard/manager/reports/fine-letter?staffId=${encodeURIComponent(staff?.id || staffId)}`}
+                            className="px-4 py-3 rounded-2xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all hover:scale-105 shadow-md flex items-center gap-1.5"
+                          >
+                            <FileText size={14} /> Fine Notice
+                          </Link>
+                          <Link
+                            href={`/hq/dashboard/manager/reports/termination-letter?staffId=${encodeURIComponent(staff?.id || staffId)}`}
+                            className="px-4 py-3 rounded-2xl bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all hover:scale-105 shadow-md flex items-center gap-1.5"
+                          >
+                            <UserMinus size={14} /> Termination Letter
+                          </Link>
+                        </div>
+                      </div>
+
+                      {/* Vacate Position Slot */}
+                      <div className="flex flex-col justify-between gap-4 pt-6 md:pt-0 md:pl-8">
                         <div className="flex items-start gap-4">
                           <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0 mt-1">
                             <UserMinus size={24} />
@@ -4414,7 +4443,7 @@ export default function StaffProfilePage() {
                           <div>
                             <h4 className="text-sm font-black uppercase tracking-widest text-amber-600 mb-1">Vacate Position</h4>
                             <p className="text-xs font-bold leading-relaxed text-slate-600">
-                              Clear all personal details (Name, CNIC, Phone, Photo, Address) but keep the professional designation, Employee ID, salary, uniform/duty configurations and active slots.
+                              Clear personal details but keep designation, Employee ID, salary, and configs for incoming replacement.
                             </p>
                           </div>
                         </div>
@@ -4437,7 +4466,7 @@ export default function StaffProfilePage() {
                           <div>
                             <h4 className="text-sm font-black uppercase tracking-widest text-rose-500 mb-1">Permanent Deletion</h4>
                             <p className="text-xs font-bold leading-relaxed text-slate-600">
-                              Permanently delete this staff profile and all associated data records. This action cannot be undone and will revoke all access immediately.
+                              Permanently delete this staff profile and all associated data records. This action cannot be undone.
                             </p>
                           </div>
                         </div>
@@ -5129,36 +5158,60 @@ export default function StaffProfilePage() {
               <FileText size={14} className="text-teal-500" /> Uploaded Documents
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {staff?.documents?.length ? staff.documents.map((doc: { title: string; url: string }, idx: number) => (
-                <div key={idx} className="group relative rounded-2xl overflow-hidden border border-gray-200 bg-white hover:border-teal-500 hover:shadow-md transition-all duration-300 flex flex-col w-full">
-                  <div className="aspect-[4/3] w-full bg-gray-50 relative overflow-hidden flex items-center justify-center border-b border-gray-100">
-                    {doc.url.toLowerCase().endsWith('.pdf') ? (
-                      <div className="flex flex-col items-center justify-center gap-2 p-4">
-                        <FileText size={36} className="text-red-500 animate-pulse" />
-                        <span className="text-[8px] font-black uppercase text-red-600 tracking-wider bg-red-50 px-2 py-1 rounded">PDF Document</span>
+              {staff?.documents?.length ? staff.documents.map((doc: { title: string; url: string; date?: string; type?: string }, idx: number) => {
+                const titleLower = (doc.title || '').toLowerCase();
+                const isTermination = titleLower.includes('termination') || doc.type === 'termination';
+                const isFine = titleLower.includes('fine') || doc.type === 'fine';
+
+                return (
+                  <div key={idx} className="group relative rounded-2xl overflow-hidden border border-gray-200 bg-white hover:border-teal-500 hover:shadow-md transition-all duration-300 flex flex-col w-full">
+                    <div className="aspect-[4/3] w-full bg-gray-50 relative overflow-hidden flex items-center justify-center border-b border-gray-100">
+                      {doc.url.toLowerCase().endsWith('.pdf') ? (
+                        <div className="flex flex-col items-center justify-center gap-2 p-4">
+                          <FileText size={36} className="text-red-500 animate-pulse" />
+                          <span className="text-[8px] font-black uppercase text-red-600 tracking-wider bg-red-50 px-2 py-1 rounded">PDF Document</span>
+                        </div>
+                      ) : (
+                        <img 
+                          src={doc.url} 
+                          alt={doc.title} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                        <a href={doc.url} target="_blank" rel="noreferrer" className="bg-white text-black font-black text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-md">
+                          View Fullscreen
+                        </a>
                       </div>
-                    ) : (
-                      <img 
-                        src={doc.url} 
-                        alt={doc.title} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                      <a href={doc.url} target="_blank" rel="noreferrer" className="bg-white text-black font-black text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-md">
-                        View Fullscreen
-                      </a>
+                    </div>
+                    <div className="p-4 bg-white border-t border-gray-100 flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Document Title</label>
+                        {isTermination ? (
+                          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-rose-100 text-rose-700 rounded-md">
+                            Termination Letter
+                          </span>
+                        ) : isFine ? (
+                          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md">
+                            Fine Notice
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md">
+                            Document
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs font-black text-black uppercase tracking-widest leading-snug">{doc.title}</span>
+                      {doc.date && (
+                        <span className="text-[9px] font-bold text-slate-400 font-mono">Date: {doc.date}</span>
+                      )}
                     </div>
                   </div>
-                  <div className="p-4 bg-white border-t border-gray-100 flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Document Title</label>
-                    <span className="text-xs font-black text-black uppercase tracking-widest leading-snug">{doc.title}</span>
-                  </div>
-                </div>
-              )) : (
+                );
+              }) : (
                 <div className="col-span-full py-8 text-center text-gray-400 font-bold uppercase tracking-wider text-[10px]">
                   No documents available
                 </div>

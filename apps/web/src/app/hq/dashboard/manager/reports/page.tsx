@@ -1000,6 +1000,10 @@ export default function ManagerReportsPage() {
                 <Link href="/hq/dashboard/manager/reports/fine-letter" className="text-indigo-600 font-bold hover:underline flex items-center gap-1 hover:text-indigo-700 transition-colors mt-1 md:mt-0">
                   Fine Letter Generator <ArrowRight size={14} />
                 </Link>
+                <span className="hidden md:inline w-1.5 h-1.5 rounded-full bg-slate-300" />
+                <Link href="/hq/dashboard/manager/reports/termination-letter" className="text-rose-600 font-bold hover:underline flex items-center gap-1 hover:text-rose-700 transition-colors mt-1 md:mt-0">
+                  Termination Letter Generator <ArrowRight size={14} />
+                </Link>
               </div>
             </div>
           </div>

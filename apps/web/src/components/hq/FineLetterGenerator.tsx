@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
-import { listStaffCards, getDeptPrefix, type StaffCardRow } from '@/lib/hq/superadmin/staff';
+import { collection, addDoc, doc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
+import { listStaffCards, getDeptPrefix, getDeptCollection, type StaffCardRow, type StaffDept } from '@/lib/hq/superadmin/staff';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { toast } from 'react-hot-toast';
-import { Loader2, Plus, Trash2, Download, Search, CheckCircle, AlertCircle, Receipt, CheckCircle2 } from 'lucide-react';
+import { Loader2, Plus, Trash2, Download, Search, CheckCircle, AlertCircle, Receipt, CheckCircle2, UserMinus, ArrowRight } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
+import Link from 'next/link';
 
 // Department Display Name Mapping
 const DEPT_DISPLAY_NAME: Record<string, string> = {
@@ -77,6 +79,36 @@ export default function FineLetterGenerator() {
         });
         unified.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         setStaffList(unified);
+
+        // Check if there are query parameters in URL
+        if (typeof window !== 'undefined') {
+          const urlParams = new URLSearchParams(window.location.search);
+          const targetStaffId = urlParams.get('staffId');
+          const targetAmount = urlParams.get('amount');
+          const targetReason = urlParams.get('reason');
+
+          if (targetStaffId) {
+            const found = unified.find(s => 
+              s.id === targetStaffId || 
+              s.staffId === targetStaffId || 
+              s.employeeId === targetStaffId ||
+              s.id.endsWith(`_${targetStaffId}`)
+            );
+            if (found) {
+              handleSelectStaff(found);
+
+              if (targetReason || targetAmount) {
+                const amt = targetAmount ? parseInt(targetAmount, 10) : 500;
+                const reason = targetReason || 'Disciplinary violation';
+                setViolations([{ description: reason, amount: isNaN(amt) ? 500 : amt }]);
+                setForm(prev => ({
+                  ...prev,
+                  subject: `Fine Notice regarding: ${reason}`,
+                }));
+              }
+            }
+          }
+        }
       } catch (err) {
         console.error('Error fetching staff cards:', err);
         toast.error('Failed to load staff list');
@@ -160,7 +192,7 @@ export default function FineLetterGenerator() {
     return true;
   }, [selectedStaff, form, violations]);
 
-  // Record Fine to Staff Profile in Firestore
+  // Record Fine & Attach Letter to Staff Profile in Firestore
   const handleRecordFineToProfile = async () => {
     if (!isValid || !selectedStaff) return;
 
@@ -174,7 +206,8 @@ export default function FineLetterGenerator() {
 
     try {
       setRecordingFine(true);
-      const prefix = getDeptPrefix(selectedStaff.dept);
+      const prefix = getDeptPrefix(selectedStaff.dept as StaffDept);
+      const userCol = getDeptCollection(selectedStaff.dept as StaffDept);
 
       // Clean simple staff ID
       let cleanStaffId = selectedStaff.staffId || selectedStaff.id;
@@ -182,6 +215,43 @@ export default function FineLetterGenerator() {
         cleanStaffId = cleanStaffId.split('_').pop() || cleanStaffId;
       }
 
+      // Generate Letter Image via html2canvas and upload to attach to profile
+      let uploadedLetterUrl = '';
+      const element = document.getElementById('fine-letter-preview');
+      if (element) {
+        try {
+          const canvas = await html2canvas(element, {
+            scale: 2.2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+          });
+
+          const blob = await new Promise<Blob | null>((resolve) => 
+            canvas.toBlob((b) => resolve(b), 'image/png', 0.95)
+          );
+
+          if (blob) {
+            const fileName = `fine_${form.referenceNumber}_${form.date}.png`;
+            const file = new File([blob], fileName, { type: 'image/png' });
+            try {
+              uploadedLetterUrl = await uploadToCloudinary(
+                file, 
+                `khanhub/staff/${selectedStaff.dept}/documents`,
+                undefined,
+                'image'
+              );
+            } catch (cloudErr) {
+              console.warn('Cloudinary fine letter upload fallback:', cloudErr);
+              uploadedLetterUrl = canvas.toDataURL('image/png');
+            }
+          }
+        } catch (canvasErr) {
+          console.error('Fine letter canvas capture warning:', canvasErr);
+        }
+      }
+
+      // 1. Record in department fines collection
       const finePayload = {
         staffId: cleanStaffId,
         staffName: selectedStaff.name,
@@ -194,12 +264,28 @@ export default function FineLetterGenerator() {
         status: 'unpaid',
         source: 'fine_letter_generator',
         referenceNumber: form.referenceNumber,
+        letterUrl: uploadedLetterUrl || null,
         createdAt: Timestamp.now(),
       };
 
       const docRef = await addDoc(collection(db, `${prefix}_fines`), finePayload);
       setFineRecordedDocId(docRef.id);
-      toast.success(`Fine of Rs. ${totalFinePayable.toLocaleString('en-PK')} recorded to ${selectedStaff.name}'s profile!`);
+
+      // 2. Attach letter to staff user doc documents array if generated
+      if (uploadedLetterUrl) {
+        const userDocRef = doc(db, userCol, cleanStaffId);
+        await updateDoc(userDocRef, {
+          documents: arrayUnion({
+            title: `Fine Notice (Rs. ${totalFinePayable.toLocaleString('en-PK')}) - Ref #${form.referenceNumber}`,
+            url: uploadedLetterUrl,
+            type: 'fine',
+            date: form.date,
+            createdAt: new Date().toISOString()
+          })
+        }).catch(err => console.warn('Could not update documents array on user doc:', err));
+      }
+
+      toast.success(`Fine of Rs. ${totalFinePayable.toLocaleString('en-PK')} recorded and letter attached to ${selectedStaff.name}'s profile!`);
     } catch (err: any) {
       console.error('Error recording fine to profile:', err);
       toast.error('Failed to record fine to profile: ' + err.message);
@@ -246,9 +332,18 @@ export default function FineLetterGenerator() {
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
       {/* LEFT SIDE: FORM */}
       <div className="xl:col-span-5 bg-white border border-slate-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] rounded-3xl p-6 space-y-6">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Letter Details</h2>
-          <p className="text-xs text-slate-400 mt-1">Fill out the disciplinary fine letter parameters</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">Letter Details</h2>
+            <p className="text-xs text-slate-400 mt-1">Fill out the disciplinary fine letter parameters</p>
+          </div>
+          <Link
+            href="/hq/dashboard/manager/reports/termination-letter"
+            className="text-[11px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100/70 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1"
+          >
+            <UserMinus className="w-3.5 h-3.5" />
+            <span>Termination Letter</span>
+          </Link>
         </div>
 
         {/* Employee Selector Dropdown */}
@@ -462,9 +557,19 @@ export default function FineLetterGenerator() {
 
           {/* Confirm & Record Fine to Staff Profile Button */}
           {fineRecordedDocId ? (
-            <div className="w-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold py-3 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-sm">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Fine of Rs. {totalFinePayable.toLocaleString('en-PK')} Recorded to {selectedStaff?.name}&apos;s Profile!</span>
+            <div className="w-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold py-3.5 px-4 rounded-2xl text-xs flex flex-col items-center justify-center gap-2 shadow-sm">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Fine of Rs. {totalFinePayable.toLocaleString('en-PK')} Recorded &amp; Letter Attached to {selectedStaff?.name}&apos;s Profile!</span>
+              </div>
+              {selectedStaff && (
+                <Link
+                  href={`/hq/dashboard/manager/staff/${selectedStaff.id}`}
+                  className="text-xs underline font-bold text-emerald-700 hover:text-emerald-900"
+                >
+                  View {selectedStaff.name}&apos;s Profile &amp; Documents →
+                </Link>
+              )}
             </div>
           ) : (
             <button
@@ -476,12 +581,12 @@ export default function FineLetterGenerator() {
               {recordingFine ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Recording Fine to Profile...
+                  Recording Fine &amp; Attaching Letter...
                 </>
               ) : (
                 <>
                   <Receipt className="w-4 h-4" />
-                  Confirm & Add Fine to {selectedStaff?.name || 'Staff'}&apos;s Profile
+                  Confirm &amp; Add Fine to {selectedStaff?.name || 'Staff'}&apos;s Profile
                 </>
               )}
             </button>

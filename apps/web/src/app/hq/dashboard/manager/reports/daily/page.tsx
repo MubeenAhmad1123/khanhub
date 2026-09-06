@@ -1183,6 +1183,19 @@ export default function DailyReportPage() {
               <p className="text-gray-500 text-sm font-medium mt-0.5 flex items-center gap-2">
                 <Shield size={16} className="text-indigo-500" /> Operational Assessment & Audit Log
               </p>
+              <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs">
+                <Link href="/hq/dashboard/manager/reports" className="text-indigo-600 font-bold hover:underline">
+                  Monthly Report
+                </Link>
+                <span className="text-gray-300">•</span>
+                <Link href="/hq/dashboard/manager/reports/fine-letter" className="text-indigo-600 font-bold hover:underline">
+                  Fine Letter
+                </Link>
+                <span className="text-gray-300">•</span>
+                <Link href="/hq/dashboard/manager/reports/termination-letter" className="text-rose-600 font-bold hover:underline">
+                  Termination Letter
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -2056,16 +2069,26 @@ export default function DailyReportPage() {
                                   className="w-20 px-2 py-1.5 text-xs text-center border border-gray-200 rounded-xl focus:border-indigo-500 font-bold outline-none bg-white select-none transition-all duration-200"
                                 />
                                 {row.fines > 0 && (
-                                  <button
-                                    onClick={() => {
-                                      handleInlineUpdate(row.id, 'fines', 0);
-                                      handleInlineUpdate(row.id, 'fineReason', '');
-                                    }}
-                                    className="text-rose-500 hover:text-rose-700 transition-colors"
-                                    title="Remove fine"
-                                  >
-                                    <XCircle size={16} />
-                                  </button>
+                                  <div className="flex items-center gap-1.5">
+                                    <Link
+                                      href={`/hq/dashboard/manager/reports/fine-letter?staffId=${encodeURIComponent(row.id)}&amount=${row.fines}&reason=${encodeURIComponent(row.fineReason || '')}`}
+                                      target="_blank"
+                                      className="text-[9px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded transition-all"
+                                      title="Generate Fine Disciplinary Letter"
+                                    >
+                                      Letter ↗
+                                    </Link>
+                                    <button
+                                      onClick={() => {
+                                        handleInlineUpdate(row.id, 'fines', 0);
+                                        handleInlineUpdate(row.id, 'fineReason', '');
+                                      }}
+                                      className="text-rose-500 hover:text-rose-700 transition-colors"
+                                      title="Remove fine"
+                                    >
+                                      <XCircle size={16} />
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                             ) : (
@@ -2361,16 +2384,26 @@ export default function DailyReportPage() {
                                 className="flex-1 px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500 bg-white"
                               />
                               {row.fines > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleInlineUpdate(row.id, 'fines', 0);
-                                    handleInlineUpdate(row.id, 'fineReason', '');
-                                  }}
-                                  className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 shrink-0"
-                                >
-                                  <XCircle size={14} /> Clear
-                                </button>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <Link
+                                    href={`/hq/dashboard/manager/reports/fine-letter?staffId=${encodeURIComponent(row.id)}&amount=${row.fines}&reason=${encodeURIComponent(row.fineReason || '')}`}
+                                    target="_blank"
+                                    className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl text-xs font-bold transition-colors flex items-center gap-1"
+                                    title="Generate Fine Disciplinary Letter"
+                                  >
+                                    Letter ↗
+                                  </Link>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleInlineUpdate(row.id, 'fines', 0);
+                                      handleInlineUpdate(row.id, 'fineReason', '');
+                                    }}
+                                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 shrink-0"
+                                  >
+                                    <XCircle size={14} /> Clear
+                                  </button>
+                                </div>
                               )}
                             </div>
                           ) : (
