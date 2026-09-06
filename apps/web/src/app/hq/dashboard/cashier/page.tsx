@@ -641,11 +641,10 @@ export default function CashierStationPage() {
       setCustomTargetName(last.patientName || last.receiverName || last.customTargetName || '');
       if (last.description) setDescription(last.description);
 
-      // Reset amount, date to today, proof to empty
+      // Reset amount and proof, preserve cashier's selected date
       setAmount('');
       setDiscount('');
       setReturnAmount('');
-      setTxDate(getLocalDateString(new Date()));
       setProofFile(null);
       setProofReason('');
 
@@ -2425,7 +2424,7 @@ export default function CashierStationPage() {
       setHospitalMedicineItems([]);
       setNewMedItemName('');
       setNewMedItemPrice('');
-      setTxDate(getLocalDateString(new Date()));
+      // Preserve cashier's selected txDate for consecutive backdated entries
       setHospitalExpenseTime(getCurrentTimeString());
       setHospitalFeeTime(getCurrentTimeString());
       setHospitalMedicineTime(getCurrentTimeString());
@@ -3901,6 +3900,15 @@ export default function CashierStationPage() {
                     <div className="space-y-6">
                       <div className="flex items-center justify-between px-4">
                         <label className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Date</label>
+                        {txDate !== getLocalDateString(new Date()) && (
+                          <button
+                            type="button"
+                            onClick={() => setTxDate(getLocalDateString(new Date()))}
+                            className="text-[9px] font-black text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-full uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+                          >
+                            Reset to Today
+                          </button>
+                        )}
                       </div>
                       <BrutalistCalendar
                         value={txDate}

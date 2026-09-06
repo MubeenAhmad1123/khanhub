@@ -11,16 +11,30 @@ interface BrutalistCalendarProps {
   className?: string;
 }
 
+const parseLocalDateStr = (dateStr?: string) => {
+  if (!dateStr) return new Date();
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length === 3 && !parts.some(isNaN)) {
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+  return new Date();
+};
+
 export function BrutalistCalendar({ value, onChange, label, className }: BrutalistCalendarProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [currentDate, setCurrentDate] = useState(value ? new Date(value) : new Date());
+  const [currentDate, setCurrentDate] = useState(() => parseLocalDateStr(value));
+
+  React.useEffect(() => {
+    if (value) {
+      setCurrentDate(parseLocalDateStr(value));
+    }
+  }, [value]);
 
   const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
   const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
 
   const handleDateClick = (day: number) => {
     const selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    // Use local time for ISO string to avoid timezone shifts
     const y = selectedDate.getFullYear();
     const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
     const d = String(selectedDate.getDate()).padStart(2, '0');
@@ -107,7 +121,7 @@ export function BrutalistCalendar({ value, onChange, label, className }: Brutali
         <div className="flex items-center gap-3">
           <CalendarIcon size={16} className="text-zinc-400 group-hover:text-black transition-colors" />
           <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-900">
-            {value ? new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Select Date'}
+            {value ? parseLocalDateStr(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Select Date'}
           </span>
         </div>
         <ChevronRight size={14} className={cn("text-zinc-300 group-hover:text-black transition-transform", isOpen && "rotate-90")} />
