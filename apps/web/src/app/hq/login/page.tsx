@@ -132,9 +132,6 @@ export default function HqLoginPage() {
     setError('');
     try {
       const provider = new GoogleAuthProvider();
-      provider.addScope('email');
-      provider.addScope('profile');
-      provider.addScope('openid');
       provider.setCustomParameters({ prompt: 'select_account' });
       const result = await signInWithPopup(auth, provider);
       const user = result.user;

@@ -182,8 +182,22 @@ export async function loginHqUser({
     }
 
     const uid = userDoc.id;
-    
     const auth = getAdminAuth();
+    
+    // Auto-create Firebase Auth account if user exists in Firestore but missing from Firebase Auth
+    try {
+      await auth.getUser(uid);
+    } catch {
+      try {
+        await auth.createUser({
+          uid,
+          displayName: userData.name || userData.displayName || customId,
+          email: userData.email || `${customId.toLowerCase().replace(/[^a-z0-9]/g, '')}@khanhub.internal`,
+        });
+      } catch (createErr) {
+        console.warn('[loginHqUser] Could not auto-create auth user:', createErr);
+      }
+    }
     
     await auth.setCustomUserClaims(uid, {
       role: userData.role,
