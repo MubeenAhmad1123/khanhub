@@ -10,7 +10,8 @@ import Link from 'next/link';
 import {
   Users, Search, Shield, ArrowRight,
   Filter, Plus, Download, LayoutGrid, List as ListIcon,
-  Activity, Clock, Star, Loader2, AlertCircle, Printer
+  Activity, Clock, Star, Loader2, AlertCircle, Printer,
+  FileText, UserMinus
 } from 'lucide-react';
 import { listStaffCards, type StaffCardRow, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
@@ -283,7 +284,21 @@ export default function ManagerStaffPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              <Link
+                href="/hq/dashboard/manager/reports/fine-letter"
+                className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/60 font-black text-xs uppercase tracking-wider active:scale-95 transition-all whitespace-nowrap"
+              >
+                <FileText size={16} className="text-amber-600" />
+                <span>Fine Letter</span>
+              </Link>
+              <Link
+                href="/hq/dashboard/manager/reports/termination-letter"
+                className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/60 font-black text-xs uppercase tracking-wider active:scale-95 transition-all whitespace-nowrap"
+              >
+                <UserMinus size={16} className="text-rose-600" />
+                <span>Termination Letter</span>
+              </Link>
               <Link
                 href="/hq/dashboard/manager/staff/report"
                 className="flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-500/25 active:scale-95 transition-all whitespace-nowrap"

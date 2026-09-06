@@ -9,7 +9,8 @@ import Link from 'next/link';
 import {
   Users, CheckCircle, XCircle, Clock, FileText,
   ArrowRight, Loader2, AlertTriangle, TrendingUp,
-  ChevronRight, KeyRound, Calendar, Send, Activity, Lock
+  ChevronRight, KeyRound, Calendar, Send, Activity, Lock,
+  UserMinus, Receipt
 } from 'lucide-react';
 import { getDeptCollection, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -490,11 +491,14 @@ export default function ManagerOverviewPage() {
             <h3 className="text-xl font-bold text-gray-900 mb-6">Quick Links</h3>
             <div className="grid grid-cols-1 gap-3">
               {[
+                { href: '/hq/dashboard/manager/reports/termination-letter', label: 'Termination Letter Generator', icon: <UserMinus className="text-rose-600" /> },
+                { href: '/hq/dashboard/manager/reports/fine-letter', label: 'Fine Letter Generator', icon: <Receipt className="text-amber-600" /> },
+                { href: '/hq/dashboard/manager/reports/daily', label: 'Daily Performance Log', icon: <FileText className="text-indigo-600" /> },
                 { href: '/hq/dashboard/manager/staff/attendance', label: 'Attendance Logs', icon: <CheckCircle className="text-indigo-600" /> },
                 { href: '/hq/dashboard/manager/approvals', label: 'Contributions', icon: <FileText className="text-emerald-600" /> },
                 { href: '/hq/dashboard/manager/staff', label: 'Staff Records', icon: <Users className="text-blue-600" /> },
                 { href: '/hq/dashboard/manager/users', label: 'ID Management', icon: <KeyRound className="text-amber-600" /> },
-                { href: '/hq/dashboard/manager/passwords', label: 'Login & Access', icon: <Lock className="text-rose-600" /> }
+                { href: '/hq/dashboard/manager/passwords', label: 'Login & Access', icon: <Lock className="text-slate-600" /> }
               ].map((op, i) => (
                 <Link key={i} href={op.href} className="flex items-center justify-between p-4 min-h-[48px] rounded-2xl border border-gray-100 hover:border-indigo-100 hover:bg-indigo-50/50 transition-all group w-full gap-2">
                   <div className="flex items-center gap-4">
