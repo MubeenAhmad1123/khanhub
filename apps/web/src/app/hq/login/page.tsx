@@ -123,6 +123,7 @@ export default function HqLoginPage() {
   const SUPERADMIN_EMAILS = [
     'mk.rana.0301@gmail.com',
     'mubeenahma1123@gmail.com',
+    'mubeenahmad1123@gmail.com',
     'khanhubnetwork@gmail.com',
     'dilshad4408@gmail.com',
   ];
@@ -132,6 +133,9 @@ export default function HqLoginPage() {
     setError('');
     try {
       const provider = new GoogleAuthProvider();
+      provider.addScope('email');
+      provider.addScope('profile');
+      provider.addScope('openid');
       provider.setCustomParameters({ prompt: 'select_account' });
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
@@ -163,7 +167,15 @@ export default function HqLoginPage() {
       window.location.href = '/hq/dashboard/superadmin';
     } catch (err: any) {
       console.error('[HQ Google Login] Error:', err);
-      setError(err.message || 'Google Sign-in failed.');
+      if (err.code === 'auth/invalid-credential') {
+        setError('Google Authentication credential error. Please check Google OAuth settings in Firebase Console.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError('This domain is not authorized in Firebase Auth settings.');
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        setError('Sign-in cancelled. Please try again.');
+      } else {
+        setError(err.message || 'Google Sign-in failed.');
+      }
       setLoading(false);
     }
   };
