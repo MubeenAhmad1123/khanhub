@@ -92,12 +92,14 @@ export default function ManagerAttendancePage() {
       setAttendance(attendanceMap);
 
       // 3. Calculate stats
-      let p = 0, a = 0;
+      let p = 0, a = 0, l = 0;
       staffList.forEach(s => {
-        if (attendanceMap[s.id]?.status === 'present') p++;
-        else if (attendanceMap[s.id]?.status === 'absent') a++;
+        const st = attendanceMap[s.id]?.status;
+        if (st === 'present') p++;
+        else if (st === 'paid_leave') l++;
+        else if (st === 'absent') a++;
       });
-      setStats({ present: p, absent: a, unmarked: staffList.length - (p + a) });
+      setStats({ present: p, absent: a, unmarked: staffList.length - (p + a + l) });
 
     } catch (err) {
       console.error('Error fetching attendance:', err);
@@ -106,11 +108,10 @@ export default function ManagerAttendancePage() {
     }
   };
 
-  const toggleAttendance = async (staffId: string, currentStatus: string | undefined) => {
+  const setStaffAttendanceStatus = async (staffId: string, newStatus: 'present' | 'absent' | 'paid_leave') => {
     const staffMember = staff.find(s => s.id === staffId);
     if (!staffMember) return;
     
-    const newStatus = currentStatus === 'present' ? 'absent' : 'present';
     const attendanceId = `${selectedDate}_${staffId}`;
     const deptPrefix = getDeptPrefix(staffMember.department as StaffDept);
     
@@ -124,24 +125,28 @@ export default function ManagerAttendancePage() {
         updatedAt: Timestamp.now()
       }, { merge: true });
 
-      // Update local state for instant feedback
+      // Update local state
       setAttendance(prev => ({
         ...prev,
-        [staffId]: { status: newStatus }
+        [staffId]: { ...prev[staffId], status: newStatus }
       }));
 
-      // Re-calculate stats locally
+      // Refresh stats
       setStats(prev => {
-        const wasPresent = currentStatus === 'present';
-        const wasAbsent = currentStatus === 'absent';
-        
-        return {
-          present: newStatus === 'present' ? prev.present + 1 : (wasPresent ? prev.present - 1 : prev.present),
-          absent: newStatus === 'absent' ? prev.absent + 1 : (wasAbsent ? prev.absent - 1 : prev.absent),
-          unmarked: currentStatus === undefined ? prev.unmarked - 1 : prev.unmarked
-        };
-      });
+        const prevStatus = attendance[staffId]?.status;
+        let p = prev.present;
+        let a = prev.absent;
+        let u = prev.unmarked;
 
+        if (prevStatus === 'present') p--;
+        else if (prevStatus === 'absent') a--;
+        else if (prevStatus === undefined) u--;
+
+        if (newStatus === 'present') p++;
+        else if (newStatus === 'absent') a++;
+
+        return { present: Math.max(0, p), absent: Math.max(0, a), unmarked: Math.max(0, u) };
+      });
     } catch (err) {
       console.error('Error updating attendance:', err);
     }
@@ -309,6 +314,10 @@ export default function ManagerAttendancePage() {
                           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100">
                             <CheckCircle2 size={12} /> Present
                           </span>
+                        ) : att.status === 'paid_leave' ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">
+                            <CheckCircle2 size={12} /> Paid Leave
+                          </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-100">
                             <XCircle size={12} /> Absent
@@ -316,17 +325,39 @@ export default function ManagerAttendancePage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-3">
+                        <div className="flex items-center justify-end gap-2">
                           <button 
-                            onClick={() => toggleAttendance(s.id, att?.status)}
+                            onClick={() => setStaffAttendanceStatus(s.id, 'present')}
                             className={cn(
-                              "px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition-all border",
+                              "px-3 py-1.5 rounded-xl text-[11px] font-bold tracking-wide transition-all border",
                               att?.status === 'present' 
-                                ? "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                                : "bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 shadow-sm"
+                                ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                                : "bg-white text-gray-700 border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200"
                             )}
                           >
-                            {att?.status === 'present' ? 'Mark Absent' : 'Mark Present'}
+                            Present
+                          </button>
+                          <button 
+                            onClick={() => setStaffAttendanceStatus(s.id, 'paid_leave')}
+                            className={cn(
+                              "px-3 py-1.5 rounded-xl text-[11px] font-bold tracking-wide transition-all border",
+                              att?.status === 'paid_leave' 
+                                ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                                : "bg-white text-gray-700 border-gray-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
+                            )}
+                          >
+                            Paid Leave
+                          </button>
+                          <button 
+                            onClick={() => setStaffAttendanceStatus(s.id, 'absent')}
+                            className={cn(
+                              "px-3 py-1.5 rounded-xl text-[11px] font-bold tracking-wide transition-all border",
+                              att?.status === 'absent' 
+                                ? "bg-rose-600 text-white border-rose-600 shadow-sm"
+                                : "bg-white text-gray-700 border-gray-200 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200"
+                            )}
+                          >
+                            Absent
                           </button>
                         </div>
                       </td>
