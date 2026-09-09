@@ -1314,7 +1314,131 @@ export default function ManagerPayrollPage() {
     }
   };
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    const styleId = 'payroll-sheet-main-print-style';
+    let style = document.getElementById(styleId);
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    style.innerHTML = `
+      @media print {
+        @page {
+          size: A4 landscape;
+          margin: 8mm 6mm;
+        }
+        html, body {
+          width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #ffffff !important;
+          color: #0f172a !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        body * {
+          visibility: hidden !important;
+        }
+        #hq-payroll-print, #hq-payroll-print * {
+          visibility: visible !important;
+        }
+        #hq-payroll-print {
+          position: absolute !important;
+          left: 0 !important;
+          top: 0 !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #ffffff !important;
+          overflow: visible !important;
+        }
+        .no-print, .no-print *, .no-print-col, button, select, input {
+          display: none !important;
+          visibility: hidden !important;
+        }
+        #hq-payroll-print table {
+          width: 100% !important;
+          min-width: 100% !important;
+          max-width: 100% !important;
+          table-layout: fixed !important;
+          border-collapse: collapse !important;
+          font-size: 9px !important;
+          border: 1.5px solid #0f172a !important;
+          margin-top: 6px !important;
+        }
+        #hq-payroll-print thead {
+          display: table-header-group !important;
+        }
+        #hq-payroll-print thead th {
+          background-color: #064e3b !important;
+          color: #ffffff !important;
+          border: 1px solid #042f2e !important;
+          padding: 5px 3px !important;
+          font-size: 9px !important;
+          font-weight: 800 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.02em !important;
+          text-align: center !important;
+          word-break: break-word !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        #hq-payroll-print tbody tr {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          border-bottom: 1px solid #cbd5e1 !important;
+        }
+        #hq-payroll-print tbody tr:nth-child(even) {
+          background-color: #f8fafc !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        #hq-payroll-print tbody td {
+          border: 1px solid #cbd5e1 !important;
+          padding: 4px 3px !important;
+          font-size: 9px !important;
+          vertical-align: middle !important;
+        }
+        #hq-payroll-print tr.print-total-row td {
+          background-color: #ecfdf5 !important;
+          border-top: 2px solid #0f172a !important;
+          border-bottom: 2px solid #0f172a !important;
+          padding: 5px 3px !important;
+          font-weight: 900 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        #hq-payroll-print .print-header-box {
+          border: 2px solid #0f172a !important;
+          border-radius: 6px !important;
+          padding: 8px 12px !important;
+          margin-bottom: 8px !important;
+          background: #ffffff !important;
+        }
+        #hq-payroll-print .print-signatures {
+          display: grid !important;
+          grid-template-columns: repeat(3, 1fr) !important;
+          gap: 20px !important;
+          margin-top: 25px !important;
+          padding-top: 15px !important;
+          border-top: 1.5px solid #0f172a !important;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+      }
+    `;
+    document.body.classList.add('printing-payroll-sheet');
+
+    const cleanup = () => {
+      document.body.classList.remove('printing-payroll-sheet');
+      window.removeEventListener('afterprint', cleanup);
+    };
+
+    window.addEventListener('afterprint', cleanup);
+    window.print();
+  };
   const handleDownload = async () => {
     if (!printRef.current) return;
     await downloadElementAsPng(printRef.current, `hq-payroll-all-depts-${monthStr}.png`, {
@@ -1468,12 +1592,12 @@ export default function ManagerPayrollPage() {
                 </div>
               </div>
               <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-700">
-                <span>All Departments Included</span> • <span>Verified Record</span> • <span>KhanHub HQ System</span>
+                <span>{deptFilter === 'all' ? 'All Departments Included' : `Department: ${DEPT_LABELS[deptFilter] || deptFilter}`}</span> • <span>Verified Record</span> • <span>KhanHub HQ System</span>
               </div>
             </div>
 
             {/* Grand Summary */}
-            <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+            <div className={`grid grid-cols-2 sm:grid-cols-6 gap-3 ${deptFilter !== 'all' ? 'print:hidden' : ''}`}>
               <div className="bg-white border border-gray-100 rounded-2xl p-4 text-center shadow-sm">
                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Staff</div>
                 <div className="text-2xl font-black text-gray-900">{data.allSalaryRows.length}</div>
@@ -1571,62 +1695,62 @@ export default function ManagerPayrollPage() {
 
                 {/* Filtered summary */}
                 {deptFilter !== 'all' && (
-                  <div className="grid grid-cols-5 gap-3">
-                    <div className="bg-teal-50 border border-teal-100 p-3 rounded-xl text-center">
-                      <div className="text-[10px] font-bold text-teal-600 mb-0.5">Gross Base</div>
-                      <div className="text-sm font-black text-teal-800">{formatPKR(filteredTotalGross)}</div>
+                  <div className="grid grid-cols-5 gap-3 print:grid print:grid-cols-5 print:gap-2 print:mb-4">
+                    <div className="bg-teal-50 border border-teal-100 p-3 rounded-xl text-center print:border-slate-300 print:bg-slate-50 print:p-2">
+                      <div className="text-[10px] font-bold text-teal-600 mb-0.5 print:text-[9px]">Gross Base</div>
+                      <div className="text-sm font-black text-teal-800 print:text-xs">{formatPKR(filteredTotalGross)}</div>
                     </div>
-                    <div className="bg-green-50 border border-green-100 p-3 rounded-xl text-center">
-                      <div className="text-[10px] font-bold text-green-600 mb-0.5">Total Additions</div>
-                      <div className="text-sm font-black text-green-800">+{formatPKR(filteredTotalAdditions)}</div>
+                    <div className="bg-green-50 border border-green-100 p-3 rounded-xl text-center print:border-slate-300 print:bg-slate-50 print:p-2">
+                      <div className="text-[10px] font-bold text-green-600 mb-0.5 print:text-[9px]">Total Additions</div>
+                      <div className="text-sm font-black text-green-800 print:text-xs">+{formatPKR(filteredTotalAdditions)}</div>
                     </div>
-                    <div className="bg-amber-50 border border-amber-100 p-3 rounded-xl text-center">
-                      <div className="text-[10px] font-bold text-amber-600 mb-0.5">Advances & Prev Due</div>
-                      <div className="text-sm font-black text-amber-800">{formatPKR(filteredTotalAdvances + filteredTotalPreviousDebt)}</div>
+                    <div className="bg-amber-50 border border-amber-100 p-3 rounded-xl text-center print:border-slate-300 print:bg-slate-50 print:p-2">
+                      <div className="text-[10px] font-bold text-amber-600 mb-0.5 print:text-[9px]">Advances & Prev Due</div>
+                      <div className="text-sm font-black text-amber-800 print:text-xs">{formatPKR(filteredTotalAdvances + filteredTotalPreviousDebt)}</div>
                       {filteredTotalPreviousDebt > 0 && (
                         <div className="text-[9px] text-rose-600 font-bold mt-0.5">Prev Due: {formatPKR(filteredTotalPreviousDebt)}</div>
                       )}
                     </div>
-                    <div className="bg-red-50 border border-red-100 p-3 rounded-xl text-center">
-                      <div className="text-[10px] font-bold text-red-500 mb-0.5">Total Deductions</div>
-                      <div className="text-sm font-black text-red-700">{formatPKR(filteredTotalDeductions)}</div>
+                    <div className="bg-red-50 border border-red-100 p-3 rounded-xl text-center print:border-slate-300 print:bg-slate-50 print:p-2">
+                      <div className="text-[10px] font-bold text-red-500 mb-0.5 print:text-[9px]">Total Deductions</div>
+                      <div className="text-sm font-black text-red-700 print:text-xs">{formatPKR(filteredTotalDeductions)}</div>
                     </div>
-                    <div className={`p-3 rounded-xl text-center border ${filteredTotalNet < 0 ? 'bg-rose-100 border-rose-300' : 'bg-emerald-50 border-emerald-200'}`}>
-                      <div className={`text-[10px] font-bold mb-0.5 ${filteredTotalNet < 0 ? 'text-rose-800' : 'text-emerald-700'}`}>Net Salary to Pay</div>
-                      <div className={`text-sm font-black ${filteredTotalNet < 0 ? 'text-rose-900' : 'text-emerald-900'}`}>{formatPKR(filteredTotalNet)}</div>
+                    <div className={`p-3 rounded-xl text-center border print:border-slate-300 print:p-2 ${filteredTotalNet < 0 ? 'bg-rose-100 border-rose-300' : 'bg-emerald-50 border-emerald-200'}`}>
+                      <div className={`text-[10px] font-bold mb-0.5 print:text-[9px] ${filteredTotalNet < 0 ? 'text-rose-800' : 'text-emerald-700'}`}>Net Salary to Pay</div>
+                      <div className={`text-sm font-black print:text-xs ${filteredTotalNet < 0 ? 'text-rose-900' : 'text-emerald-900'}`}>{formatPKR(filteredTotalNet)}</div>
                     </div>
                   </div>
                 )}
 
-                <div className="overflow-x-auto rounded-xl border border-gray-200 print:border-none">
-                  <table className="w-full text-sm border-collapse min-w-[1100px] print:min-w-0 print:table-fixed">
+                <div className="overflow-x-auto rounded-xl border border-gray-200 print:border-none print:overflow-visible">
+                  <table className="w-full text-sm border-collapse min-w-[1100px] print:min-w-0 print:w-full print:table-fixed">
                     <colgroup>
-                      <col className="w-[3%]" />
-                      <col className="w-[16%]" />
-                      <col className="w-[6%]" />
-                      <col className="w-[9%]" />
-                      <col className="w-[11%]" />
-                      <col className="w-[7%]" />
-                      <col className="w-[8%]" />
-                      <col className="w-[7%]" />
-                      <col className="w-[10%]" />
-                      <col className="w-[10%]" />
-                      <col className="w-[13%]" />
-                      <col className="w-[0%] no-print no-print-col" />
+                      <col className="w-[3%] print:w-[3%]" />
+                      <col className="w-[17%] print:w-[17%]" />
+                      <col className="w-[6%] print:w-[6%]" />
+                      <col className="w-[9%] print:w-[9%]" />
+                      <col className="w-[9%] print:w-[9%]" />
+                      <col className="w-[8%] print:w-[8%]" />
+                      <col className="w-[8%] print:w-[8%]" />
+                      <col className="w-[7%] print:w-[7%]" />
+                      <col className="w-[11%] print:w-[11%]" />
+                      <col className="w-[9%] print:w-[9%]" />
+                      <col className="w-[13%] print:w-[13%]" />
+                      <col className="w-[0%] no-print no-print-col hidden print:hidden" />
                     </colgroup>
                     <thead className="bg-emerald-50">
                       <tr>
-                        <th className="px-2 py-2.5 text-left font-bold text-emerald-900 border-b border-gray-200">#</th>
-                        <th className="px-2 py-2.5 text-left font-bold text-emerald-900 border-b border-gray-200">Staff Member</th>
-                        <th className="px-2 py-2.5 text-left font-bold text-emerald-900 border-b border-gray-200">Dept</th>
-                        <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200">Gross Salary</th>
-                        <th className="px-2 py-2.5 text-center font-bold text-emerald-900 border-b border-gray-200">Earned Days</th>
-                        <th className="px-2 py-2.5 text-right font-bold text-green-800 border-b border-gray-200 bg-green-50/80">Additions (+)</th>
-                        <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200">Absent Ded.</th>
-                        <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200">Fine Ded.</th>
-                        <th className="px-2 py-2.5 text-right font-bold text-amber-800 border-b border-gray-200 bg-amber-50/70">Advance & Prev Due</th>
-                        <th className="px-2 py-2.5 text-right font-bold text-rose-800 border-b border-gray-200 bg-rose-50/70">Security / Custom Ded.</th>
-                        <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200 bg-emerald-100/70">Net Salary To Pay</th>
+                        <th className="px-2 py-2.5 text-center font-bold text-emerald-900 border-b border-gray-200 print:text-center print:text-[9px] print:px-1 print:py-1.5">#</th>
+                        <th className="px-2 py-2.5 text-left font-bold text-emerald-900 border-b border-gray-200 print:text-left print:text-[9px] print:px-1 print:py-1.5">Staff Member</th>
+                        <th className="px-2 py-2.5 text-center font-bold text-emerald-900 border-b border-gray-200 print:text-center print:text-[9px] print:px-1 print:py-1.5">Dept</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200 print:text-right print:text-[9px] print:px-1 print:py-1.5">Gross Salary</th>
+                        <th className="px-2 py-2.5 text-center font-bold text-emerald-900 border-b border-gray-200 print:text-center print:text-[9px] print:px-1 print:py-1.5">Earned Days</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-green-800 border-b border-gray-200 bg-green-50/80 print:text-right print:text-[9px] print:px-1 print:py-1.5">Additions (+)</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200 print:text-right print:text-[9px] print:px-1 print:py-1.5">Absent Ded.</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200 print:text-right print:text-[9px] print:px-1 print:py-1.5">Fine Ded.</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-amber-800 border-b border-gray-200 bg-amber-50/70 print:text-right print:text-[9px] print:px-1 print:py-1.5">Advance & Prev</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-rose-800 border-b border-gray-200 bg-rose-50/70 print:text-right print:text-[9px] print:px-1 print:py-1.5">Custom Ded.</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200 bg-emerald-100/70 print:text-right print:text-[9px] print:px-1 print:py-1.5">Net Salary</th>
                         <th className="px-2 py-2.5 text-center font-bold text-emerald-900 border-b border-gray-200 no-print no-print-col">Actions</th>
                       </tr>
                     </thead>
@@ -1825,23 +1949,34 @@ export default function ManagerPayrollPage() {
                         </tr>
                       ))}
                       {salaryRows.length > 0 && (
-                        <tr className="bg-emerald-50 font-black text-xs">
-                          <td colSpan={3} className="px-3.5 py-3.5 text-emerald-900 uppercase tracking-wider">
+                        <tr className="bg-emerald-50 font-black text-xs print-total-row">
+                          <td colSpan={3} className="px-3 py-3 text-emerald-900 uppercase tracking-wider print:px-1.5 print:py-1.5 print:text-[9px]">
                             TOTAL ({salaryRows.length} STAFF MEMBERS)
                           </td>
-                          <td className="px-3.5 py-3.5 text-right text-emerald-900">{formatPKR(filteredTotalGross)}</td>
-                          <td />
-                          <td className="px-3.5 py-3.5 text-right text-green-800 bg-green-100/60">+{formatPKR(filteredTotalAdditions)}</td>
-                          <td colSpan={2} />
-                          <td className="px-3.5 py-3.5 text-right text-amber-800 bg-amber-100/60">
+                          <td className="px-3 py-3 text-right text-emerald-900 print:px-1.5 print:py-1.5 print:text-[9px]">{formatPKR(filteredTotalGross)}</td>
+                          <td className="px-3 py-3 text-center text-emerald-900 print:px-1.5 print:py-1.5 print:text-[9px]">
+                            {salaryRows.reduce((s: number, r: any) => s + (r.payableDays || 0), 0)} Days
+                          </td>
+                          <td className="px-3 py-3 text-right text-green-800 bg-green-100/60 print:px-1.5 print:py-1.5 print:text-[9px]">+{formatPKR(filteredTotalAdditions)}</td>
+                          <td className="px-3 py-3 text-right text-orange-700 print:px-1.5 print:py-1.5 print:text-[9px]">
+                            {formatPKR(salaryRows.reduce((s: number, r: any) => s + (r.totalAbsentDeduction || 0), 0))}
+                          </td>
+                          <td className="px-3 py-3 text-right text-red-700 print:px-1.5 print:py-1.5 print:text-[9px]">
+                            {formatPKR(salaryRows.reduce((s: number, r: any) => s + (r.totalFines || 0), 0))}
+                          </td>
+                          <td className="px-3 py-3 text-right text-amber-800 bg-amber-100/60 print:px-1.5 print:py-1.5 print:text-[9px]">
                             {formatPKR(filteredTotalAdvances + filteredTotalPreviousDebt)}
                             {filteredTotalPreviousDebt > 0 && (
                               <div className="text-[9px] text-rose-600 font-bold">Prev: {formatPKR(filteredTotalPreviousDebt)}</div>
                             )}
                           </td>
-                          <td className="px-3.5 py-3.5 text-right text-red-700">{formatPKR(filteredTotalDeductions)}</td>
-                          <td className={`px-3.5 py-3.5 text-right font-black text-sm ${filteredTotalNet < 0 ? 'text-rose-900 bg-rose-100' : 'text-emerald-950 bg-emerald-100/90'}`}>{formatPKR(filteredTotalNet)}</td>
-                          <td className="no-print no-print-col" />
+                          <td className="px-3 py-3 text-right text-rose-700 print:px-1.5 print:py-1.5 print:text-[9px]">
+                            {formatPKR(salaryRows.reduce((s: number, r: any) => s + (r.totalCustomDeductions || 0), 0))}
+                          </td>
+                          <td className={`px-3 py-3 text-right font-black text-sm print:px-1.5 print:py-1.5 print:text-[10px] ${filteredTotalNet < 0 ? 'text-rose-900 bg-rose-100' : 'text-emerald-950 bg-emerald-100/90'}`}>
+                            {formatPKR(filteredTotalNet)}
+                          </td>
+                          <td className="no-print no-print-col hidden print:hidden" />
                         </tr>
                       )}
                     </tbody>
@@ -1849,18 +1984,18 @@ export default function ManagerPayrollPage() {
                 </div>
 
                 {/* Print-Only Official Signature Footer Box */}
-                <div className="hidden print:grid grid-cols-3 gap-6 pt-12 mt-8 border-t-2 border-slate-900 text-center text-xs font-bold text-slate-800">
-                  <div className="space-y-10">
-                    <div className="border-b-2 border-slate-400 pb-1">PREPARED BY (HR / MANAGER)</div>
-                    <div className="text-[10px] text-slate-400 font-bold uppercase">Signature & Date</div>
+                <div className="hidden print:grid grid-cols-3 gap-6 pt-10 mt-8 border-t-2 border-slate-900 text-center text-xs font-bold text-slate-800 print-signatures">
+                  <div className="space-y-8">
+                    <div className="border-b-2 border-slate-400 pb-1 uppercase tracking-wider">PREPARED BY (HR / MANAGER)</div>
+                    <div className="text-[10px] text-slate-500 font-bold uppercase">Signature & Date: ___________________</div>
                   </div>
-                  <div className="space-y-10">
-                    <div className="border-b-2 border-slate-400 pb-1">CHECKED BY (CASHIER / FINANCE)</div>
-                    <div className="text-[10px] text-slate-400 font-bold uppercase">Signature & Date</div>
+                  <div className="space-y-8">
+                    <div className="border-b-2 border-slate-400 pb-1 uppercase tracking-wider">CHECKED BY (CASHIER / FINANCE)</div>
+                    <div className="text-[10px] text-slate-500 font-bold uppercase">Signature & Date: ___________________</div>
                   </div>
-                  <div className="space-y-10">
-                    <div className="border-b-2 border-slate-400 pb-1">APPROVED BY (SUPER ADMIN)</div>
-                    <div className="text-[10px] text-slate-400 font-bold uppercase">Official Stamp & Signature</div>
+                  <div className="space-y-8">
+                    <div className="border-b-2 border-slate-400 pb-1 uppercase tracking-wider">APPROVED BY (SUPER ADMIN / CEO)</div>
+                    <div className="text-[10px] text-slate-500 font-bold uppercase">Official Stamp & Signature</div>
                   </div>
                 </div>
 
