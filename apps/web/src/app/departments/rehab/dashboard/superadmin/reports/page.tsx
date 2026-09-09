@@ -9,7 +9,7 @@ import {
   FileBarChart, Printer, Calendar,
   TrendingUp, TrendingDown, DollarSign, Loader2, BarChart3,
   Users, UserCog, AlertTriangle,
-  ArrowUpDown, ArrowUp, ArrowDown, Download
+  ArrowUpDown, ArrowUp, ArrowDown, Download, Search
 } from 'lucide-react';
 
 const MONTHS = [
@@ -145,15 +145,19 @@ export default function SuperAdminReportsPage() {
   const [session, setSession] = useState<any>(null);
 
   const now = new Date();
-  const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly' | 'custom'>('monthly');
   const [selectedDate, setSelectedDate] = useState(now.toISOString().split('T')[0]); // YYYY-MM-DD
   const [selectedWeek, setSelectedWeek] = useState(1); // 1-5
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-indexed
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [startDate, setStartDate] = useState(`${now.getFullYear()}-01-01`);
+  const [endDate, setEndDate] = useState(now.toISOString().split('T')[0]);
 
   const [reportFocus, setReportFocus] = useState<'income' | 'remaining' | 'patients'>('income');
   const [patientGroup, setPatientGroup] = useState<'all' | 'active' | 'discharged'>('all');
-  const [filterByDateType, setFilterByDateType] = useState<'none' | 'admission' | 'discharge'>('none');
+  const [filterByDateType, setFilterByDateType] = useState<'none' | 'admission' | 'discharge' | 'active_in_range'>('admission');
+  const [patientSearch, setPatientSearch] = useState('');
+
   const [selectedColumns, setSelectedColumns] = useState<Record<string, boolean>>({
     name: true,
     inpatientNumber: true,
@@ -250,6 +254,19 @@ export default function SuperAdminReportsPage() {
   const getSortedPatients = () => {
     if (!reportData?.patients) return [];
     let list = [...reportData.patients];
+
+    if (patientSearch.trim()) {
+      const q = patientSearch.toLowerCase().trim();
+      list = list.filter((p: any) =>
+        String(p.name || '').toLowerCase().includes(q) ||
+        String(p.inpatientNumber || '').toLowerCase().includes(q) ||
+        String(p.fatherName || '').toLowerCase().includes(q) ||
+        String(p.guardianPhone || '').toLowerCase().includes(q) ||
+        String(p.address || '').toLowerCase().includes(q) ||
+        String(p.substanceOfAddiction || '').toLowerCase().includes(q)
+      );
+    }
+
     if (sortField) {
       list.sort((a: any, b: any) => {
         let valA = a[sortField];
@@ -304,6 +321,17 @@ export default function SuperAdminReportsPage() {
         firstDay = new Date(selectedYear, selectedMonth, startDay, 0, 0, 0);
         lastDay = new Date(selectedYear, selectedMonth, endDay, 23, 59, 59);
         label = `Weekly Report — Week ${selectedWeek} (${startDay} ${MONTHS[selectedMonth]} - ${endDay} ${MONTHS[selectedMonth]} ${selectedYear})`;
+      } else if (reportType === 'custom') {
+        const sParts = (startDate || `${selectedYear}-01-01`).split('-').map(Number);
+        const eParts = (endDate || `${selectedYear}-12-31`).split('-').map(Number);
+        firstDay = new Date(sParts[0], sParts[1] - 1, sParts[2], 0, 0, 0);
+        lastDay = new Date(eParts[0], eParts[1] - 1, eParts[2], 23, 59, 59);
+        if (firstDay > lastDay) {
+          alert('Start date cannot be after end date.');
+          setGenerating(false);
+          return;
+        }
+        label = `Date Range Report (${formatDateDMY(firstDay)} – ${formatDateDMY(lastDay)})`;
       } else {
         firstDay = new Date(selectedYear, selectedMonth, 1, 0, 0, 0);
         lastDay = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
@@ -348,12 +376,29 @@ export default function SuperAdminReportsPage() {
         }
 
         // 2. Filter by date if filterByDateType is not 'none'
-        if (filterByDateType !== 'none') {
+        if (filterByDateType === 'admission') {
           patients = patients.filter(p => {
-            const dateVal = filterByDateType === 'admission' ? p.admissionDate : p.dischargeDate;
-            if (!dateVal) return false;
-            const dateObj = toDate(dateVal);
+            if (!p.admissionDate) return false;
+            const dateObj = toDate(p.admissionDate);
             return dateObj >= firstDay && dateObj <= lastDay;
+          });
+        } else if (filterByDateType === 'discharge') {
+          patients = patients.filter(p => {
+            if (!p.dischargeDate) return false;
+            const dateObj = toDate(p.dischargeDate);
+            return dateObj >= firstDay && dateObj <= lastDay;
+          });
+        } else if (filterByDateType === 'active_in_range') {
+          patients = patients.filter(p => {
+            if (!p.admissionDate) return false;
+            const adm = toDate(p.admissionDate);
+            if (adm > lastDay) return false;
+            if (p.isActive) return true;
+            if (p.dischargeDate) {
+              const dis = toDate(p.dischargeDate);
+              return dis >= firstDay;
+            }
+            return true;
           });
         }
 
@@ -534,7 +579,7 @@ export default function SuperAdminReportsPage() {
         totalPatientFeesCollectedInPeriod,
         totalPatientOutstandingDues,
         reportLabel: label,
-        monthLabel: `${MONTHS[selectedMonth]} ${selectedYear}`,
+        monthLabel: reportType === 'custom' ? `${formatDateDMY(firstDay)} – ${formatDateDMY(lastDay)}` : `${MONTHS[selectedMonth]} ${selectedYear}`,
         generatedAt: new Date().toLocaleString(),
         reportFocus,
       });
@@ -618,10 +663,10 @@ export default function SuperAdminReportsPage() {
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <FileBarChart className="w-6 h-6 text-purple-600" /> Super Admin Reports
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Generate approved transaction reports for any day, week, or month</p>
+            <p className="text-sm text-gray-500 mt-1">Generate approved transaction reports and patient lists for any date range, day, week, or month</p>
           </div>
           {generated && (
-            <div className="flex gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <button onClick={handleDownloadImage} className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-purple-700 transition-colors">
                 <Download className="w-4 h-4" /> Download as Image
               </button>
@@ -637,16 +682,22 @@ export default function SuperAdminReportsPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h2 className="font-bold text-gray-800 flex items-center gap-2"><Calendar className="w-5 h-5 text-purple-500" /> Select Period</h2>
             {/* View Toggle */}
-            <div className="flex bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
-              {(['daily', 'weekly', 'monthly'] as const).map(t => (
+            <div className="flex flex-wrap bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
+              {[
+                { key: 'daily', label: 'Daily' },
+                { key: 'weekly', label: 'Weekly' },
+                { key: 'monthly', label: 'Monthly' },
+                { key: 'custom', label: 'Date Range' }
+              ].map(t => (
                 <button
-                  key={t}
-                  onClick={() => setReportType(t)}
-                  className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                    reportType === t ? 'bg-white shadow-sm text-purple-600 font-bold' : 'text-gray-400 hover:text-gray-750'
+                  key={t.key}
+                  type="button"
+                  onClick={() => setReportType(t.key as any)}
+                  className={`flex-1 sm:flex-none px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                    reportType === t.key ? 'bg-white shadow-sm text-purple-600 font-bold' : 'text-gray-400 hover:text-gray-700'
                   }`}
                 >
-                  {t}
+                  {t.label}
                 </button>
               ))}
             </div>
@@ -658,8 +709,9 @@ export default function SuperAdminReportsPage() {
               <h3 className="font-bold text-gray-800 text-sm">Report Category</h3>
               <p className="text-xs text-gray-400">Choose the type of report you want to generate</p>
             </div>
-            <div className="flex bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
+            <div className="flex flex-wrap bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
               <button
+                type="button"
                 onClick={() => setReportFocus('income')}
                 className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
                   reportFocus === 'income' ? 'bg-white shadow-sm text-purple-600 font-bold' : 'text-gray-400 hover:text-gray-700'
@@ -668,6 +720,7 @@ export default function SuperAdminReportsPage() {
                 Income Report
               </button>
               <button
+                type="button"
                 onClick={() => setReportFocus('remaining')}
                 className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
                   reportFocus === 'remaining' ? 'bg-white shadow-sm text-purple-600 font-bold' : 'text-gray-400 hover:text-gray-700'
@@ -676,6 +729,7 @@ export default function SuperAdminReportsPage() {
                 Remaining Dues Report
               </button>
               <button
+                type="button"
                 onClick={() => setReportFocus('patients')}
                 className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
                   reportFocus === 'patients' ? 'bg-white shadow-sm text-purple-600 font-bold' : 'text-gray-400 hover:text-gray-700'
@@ -692,7 +746,7 @@ export default function SuperAdminReportsPage() {
                 {/* Patient Status Group Filter */}
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Patient Status Filter</label>
-                  <div className="flex bg-gray-150 p-1 rounded-xl w-full">
+                  <div className="flex bg-gray-100 p-1 rounded-xl w-full">
                     {(['all', 'active', 'discharged'] as const).map(group => (
                       <button
                         key={group}
@@ -710,15 +764,16 @@ export default function SuperAdminReportsPage() {
 
                 {/* Filter by Date Range Selector */}
                 <div>
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Date Range Filter Type</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Date Filter Criteria</label>
                   <select
                     value={filterByDateType}
                     onChange={e => setFilterByDateType(e.target.value as any)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-505 text-black font-bold"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-black font-bold"
                   >
-                    <option value="none">Show All Matching Patients (No Date Filter)</option>
-                    <option value="admission">Filter by Admission Date falling in Selected Period</option>
-                    <option value="discharge">Filter by Discharge Date falling in Selected Period</option>
+                    <option value="admission">Admitted in Selected Period (Admission Date)</option>
+                    <option value="active_in_range">Active / Stayed in Selected Period (Admitted on or before End Date)</option>
+                    <option value="discharge">Discharged in Selected Period (Discharge Date)</option>
+                    <option value="none">All Patients (No Date Filter)</option>
                   </select>
                 </div>
               </div>
@@ -743,7 +798,7 @@ export default function SuperAdminReportsPage() {
                         type="checkbox"
                         checked={selectedColumns[col.key] || false}
                         onChange={e => setSelectedColumns(prev => ({ ...prev, [col.key]: e.target.checked }))}
-                        className="rounded border-gray-300 text-purple-650 focus:ring-purple-500 w-4 h-4 cursor-pointer"
+                        className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer"
                       />
                       {col.label}
                     </label>
@@ -753,70 +808,162 @@ export default function SuperAdminReportsPage() {
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-4 items-end">
-            {reportType === 'daily' && (
-              <div className="flex-1 w-full">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Date</label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={e => setSelectedDate(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-black font-bold"
-                />
-              </div>
-            )}
-
-            {reportType === 'weekly' && (
-              <div className="w-full sm:w-1/4">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Week</label>
-                <select
-                  value={selectedWeek}
-                  onChange={e => setSelectedWeek(Number(e.target.value))}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-black font-bold"
-                >
-                  <option value={1}>Week 1 (1st - 7th)</option>
-                  <option value={2}>Week 2 (8th - 14th)</option>
-                  <option value={3}>Week 3 (15th - 21st)</option>
-                  <option value={4}>Week 4 (22nd - 28th)</option>
-                  <option value={5}>Week 5 (29th - End)</option>
-                </select>
-              </div>
-            )}
-
-            {reportType !== 'daily' && (
-              <>
-                <div className="flex-1 w-full">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Month</label>
-                  <select
-                    value={selectedMonth}
-                    onChange={e => setSelectedMonth(Number(e.target.value))}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-black font-bold"
-                  >
-                    {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
-                  </select>
+          {/* Date Period Inputs */}
+          <div className="space-y-4">
+            {reportType === 'custom' && (
+              <div className="space-y-3 bg-purple-50/50 p-4 rounded-xl border border-purple-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="w-full">
+                    <label className="text-xs font-bold text-gray-600 uppercase tracking-wider block mb-1.5">
+                      From Date (Start)
+                    </label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={e => setStartDate(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-black font-bold"
+                    />
+                  </div>
+                  <div className="w-full">
+                    <label className="text-xs font-bold text-gray-600 uppercase tracking-wider block mb-1.5">
+                      To Date (End)
+                    </label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={e => setEndDate(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-black font-bold"
+                    />
+                  </div>
                 </div>
+                {/* Quick Presets */}
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mr-1">Quick Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStartDate('2026-01-01');
+                      setEndDate('2026-08-31');
+                    }}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors border border-purple-200"
+                  >
+                    Jan – Aug 2026
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStartDate('2026-01-01');
+                      setEndDate('2026-09-30');
+                    }}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors border border-purple-200"
+                  >
+                    Jan – Sep 2026
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const y = new Date().getFullYear();
+                      setStartDate(`${y}-01-01`);
+                      setEndDate(`${y}-12-31`);
+                    }}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white text-gray-700 hover:bg-gray-100 transition-colors border border-gray-200"
+                  >
+                    Year {new Date().getFullYear()}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const d = new Date();
+                      d.setMonth(d.getMonth() - 6);
+                      setStartDate(d.toISOString().split('T')[0]);
+                      setEndDate(new Date().toISOString().split('T')[0]);
+                    }}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white text-gray-700 hover:bg-gray-100 transition-colors border border-gray-200"
+                  >
+                    Last 6 Months
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const d = new Date();
+                      d.setDate(d.getDate() - 30);
+                      setStartDate(d.toISOString().split('T')[0]);
+                      setEndDate(new Date().toISOString().split('T')[0]);
+                    }}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white text-gray-700 hover:bg-gray-100 transition-colors border border-gray-200"
+                  >
+                    Last 30 Days
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-4 items-end">
+              {reportType === 'daily' && (
                 <div className="flex-1 w-full">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Year</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Date</label>
                   <input
-                    type="number"
-                    value={selectedYear}
-                    onChange={e => setSelectedYear(Number(e.target.value))}
-                    min={2020}
-                    max={2100}
+                    type="date"
+                    value={selectedDate}
+                    onChange={e => setSelectedDate(e.target.value)}
                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-black font-bold"
                   />
                 </div>
-              </>
-            )}
+              )}
 
-            <button
-              onClick={handleGenerate}
-              disabled={generating}
-              className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-8 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-            >
-              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
-              Generate Report
-            </button>
+              {reportType === 'weekly' && (
+                <div className="w-full sm:w-1/4">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Week</label>
+                  <select
+                    value={selectedWeek}
+                    onChange={e => setSelectedWeek(Number(e.target.value))}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-black font-bold"
+                  >
+                    <option value={1}>Week 1 (1st - 7th)</option>
+                    <option value={2}>Week 2 (8th - 14th)</option>
+                    <option value={3}>Week 3 (15th - 21st)</option>
+                    <option value={4}>Week 4 (22nd - 28th)</option>
+                    <option value={5}>Week 5 (29th - End)</option>
+                  </select>
+                </div>
+              )}
+
+              {reportType !== 'daily' && reportType !== 'custom' && (
+                <>
+                  <div className="flex-1 w-full">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Month</label>
+                    <select
+                      value={selectedMonth}
+                      onChange={e => setSelectedMonth(Number(e.target.value))}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-black font-bold"
+                    >
+                      {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex-1 w-full">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Year</label>
+                    <input
+                      type="number"
+                      value={selectedYear}
+                      onChange={e => setSelectedYear(Number(e.target.value))}
+                      min={2020}
+                      max={2100}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-black font-bold"
+                    />
+                  </div>
+                </>
+              )}
+
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={generating}
+                className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-8 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
+                Generate Report
+              </button>
+            </div>
           </div>
         </div>
 
@@ -852,7 +999,7 @@ export default function SuperAdminReportsPage() {
             {/* Patients Summary */}
             {reportFocus !== 'patients' && (
               <div>
-                <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><Users className="w-5 h-5 text-teal-505" /> Patient Summary</h3>
+                <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><Users className="w-5 h-5 text-teal-600" /> Patient Summary</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
                     <div className="text-3xl font-black text-teal-800">{reportData.totalActivePatients}</div>
@@ -869,7 +1016,7 @@ export default function SuperAdminReportsPage() {
             {/* Financial Summary */}
             {reportFocus !== 'patients' && (
               <div>
-                <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><DollarSign className="w-5 h-5 text-teal-505" /> Financial Summary</h3>
+                <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><DollarSign className="w-5 h-5 text-teal-600" /> Financial Summary</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
                     <TrendingUp className="w-6 h-6 text-teal-600 mx-auto mb-2" />
@@ -882,9 +1029,9 @@ export default function SuperAdminReportsPage() {
                     <div className="text-2xl font-black text-red-700">{formatPKR(reportData.totalExpenses)}</div>
                   </div>
                   <div className={`border p-5 rounded-2xl text-center ${reportData.netBalance >= 0 ? 'bg-green-50 border-green-100' : 'bg-orange-50 border-orange-100'}`}>
-                    <DollarSign className={`w-6 h-6 mx-auto mb-2 ${reportData.netBalance >= 0 ? 'text-green-600' : 'text-orange-552'}`} />
-                    <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${reportData.netBalance >= 0 ? 'text-green-700' : 'text-orange-755'}`}>Net Balance</div>
-                    <div className={`text-2xl font-black ${reportData.netBalance >= 0 ? 'text-green-800' : 'text-orange-755'}`}>{formatPKR(reportData.netBalance)}</div>
+                    <DollarSign className={`w-6 h-6 mx-auto mb-2 ${reportData.netBalance >= 0 ? 'text-green-600' : 'text-orange-500'}`} />
+                    <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${reportData.netBalance >= 0 ? 'text-green-700' : 'text-orange-700'}`}>Net Balance</div>
+                    <div className={`text-2xl font-black ${reportData.netBalance >= 0 ? 'text-green-800' : 'text-orange-700'}`}>{formatPKR(reportData.netBalance)}</div>
                   </div>
                 </div>
               </div>
@@ -892,7 +1039,7 @@ export default function SuperAdminReportsPage() {
 
             {/* Patients Report Summary (Only when reportFocus === 'patients') */}
             {reportData.reportFocus === 'patients' && (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-purple-50 border border-purple-100 p-5 rounded-2xl text-center">
                   <Users className="w-6 h-6 text-purple-600 mx-auto mb-2" />
                   <div className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-1">Total Matching</div>
@@ -906,12 +1053,12 @@ export default function SuperAdminReportsPage() {
                 <div className="bg-red-50 border border-red-100 p-5 rounded-2xl text-center">
                   <TrendingDown className="w-6 h-6 text-red-500 mx-auto mb-2" />
                   <div className="text-xs font-bold text-red-500 uppercase tracking-wider mb-1">Discharged</div>
-                  <div className="text-2xl font-black text-red-750">{reportData.totalDischargedCount}</div>
+                  <div className="text-2xl font-black text-red-700">{reportData.totalDischargedCount}</div>
                 </div>
                 <div className="bg-orange-50 border border-orange-100 p-5 rounded-2xl text-center">
                   <DollarSign className="w-6 h-6 text-orange-600 mx-auto mb-2" />
                   <div className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Total Dues</div>
-                  <div className="text-2xl font-black text-orange-850">{formatPKR(reportData.totalOutstandingDues)}</div>
+                  <div className="text-2xl font-black text-orange-800">{formatPKR(reportData.totalOutstandingDues)}</div>
                 </div>
               </div>
             )}
@@ -919,12 +1066,24 @@ export default function SuperAdminReportsPage() {
             {reportData.reportFocus === 'patients' ? (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-                    <Users className="w-5 h-5 text-purple-605" /> Patient List Details
-                  </h3>
-                  <div className="overflow-x-auto rounded-xl border border-gray-200">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
+                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                      <Users className="w-5 h-5 text-purple-600" /> Patient List Details ({getSortedPatients().length} patients)
+                    </h3>
+                    <div className="relative w-full sm:w-72 no-print">
+                      <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search name, inpatient #, phone..."
+                        value={patientSearch}
+                        onChange={e => setPatientSearch(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-xs outline-none focus:ring-2 focus:ring-purple-500 text-black"
+                      />
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto w-full rounded-xl border border-gray-200">
                     <table className="w-full text-xs border-collapse min-w-[300px]">
-                      <thead className="bg-gray-50 text-gray-650 border-b border-gray-200 select-none">
+                      <thead className="bg-gray-50 text-gray-600 border-b border-gray-200 select-none">
                         <tr>
                           {selectedColumns.name && (
                             <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('name')}>
@@ -1029,28 +1188,28 @@ export default function SuperAdminReportsPage() {
                                 {sortField === 'overallRemaining' ? (
                                   sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
                                 ) : (
-                                  <ArrowUpDown className="w-3.5 h-3.5 text-rose-450" />
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-rose-400" />
                                 )}
                               </div>
                             </th>
                           )}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-150">
+                      <tbody className="divide-y divide-gray-100">
                         {getSortedPatients().map((p: any) => (
                           <tr key={p.id} className="hover:bg-gray-50 transition-colors">
                             {selectedColumns.name && (
-                              <td className="px-3 py-2.5 text-gray-850 font-bold">
+                              <td className="px-3 py-2.5 text-gray-800 font-bold">
                                 {p.name}
                                 {!p.isActive && <span className="ml-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">Discharged</span>}
                               </td>
                             )}
-                            {selectedColumns.inpatientNumber && <td className="px-3 py-2.5 text-gray-550 font-mono">{p.inpatientNumber}</td>}
+                            {selectedColumns.inpatientNumber && <td className="px-3 py-2.5 text-gray-500 font-mono">{p.inpatientNumber}</td>}
                             {selectedColumns.address && <td className="px-3 py-2.5 text-gray-600">{p.address}</td>}
                             {selectedColumns.guardianPhone && <td className="px-3 py-2.5 text-gray-600">{p.guardianPhone}</td>}
-                            {selectedColumns.admissionDate && <td className="px-3 py-2.5 text-gray-650">{formatDateDMY(p.admissionDate)}</td>}
+                            {selectedColumns.admissionDate && <td className="px-3 py-2.5 text-gray-600">{formatDateDMY(p.admissionDate)}</td>}
                             {selectedColumns.dischargeDate && (
-                              <td className="px-3 py-2.5 text-gray-650">
+                              <td className="px-3 py-2.5 text-gray-600">
                                 {p.dischargeDate ? formatDateDMY(p.dischargeDate) : '—'}
                               </td>
                             )}
@@ -1083,7 +1242,7 @@ export default function SuperAdminReportsPage() {
                 {reportData.reportFocus === 'income' && Object.keys(reportData.incomeByCategory).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-teal-500" /> Income Breakdown</h3>
-                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                    <div className="overflow-x-auto w-full rounded-xl border border-gray-200">
                       <table className="w-full text-sm border-collapse min-w-[300px]">
                         <thead className="bg-teal-50">
                           <tr>
@@ -1112,7 +1271,7 @@ export default function SuperAdminReportsPage() {
                 {reportData.reportFocus === 'income' && Object.keys(reportData.expenseByCategory).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingDown className="w-5 h-5 text-red-500" /> Expense Breakdown</h3>
-                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                    <div className="overflow-x-auto w-full rounded-xl border border-gray-200">
                       <table className="w-full text-sm border-collapse min-w-[300px]">
                         <thead className="bg-red-50">
                           <tr>
@@ -1150,12 +1309,12 @@ export default function SuperAdminReportsPage() {
                       </div>
                       <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl text-center">
                         <div className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Total Outstanding Remaining Dues</div>
-                        <div className="text-xl font-black text-orange-850">{formatPKR(reportData.totalPatientOutstandingDues)}</div>
+                        <div className="text-xl font-black text-orange-800">{formatPKR(reportData.totalPatientOutstandingDues)}</div>
                       </div>
                     </div>
-                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                    <div className="overflow-x-auto w-full rounded-xl border border-gray-200">
                       <table className="w-full text-xs border-collapse">
-                        <thead className="bg-gray-50 text-gray-650 border-b border-gray-200 select-none">
+                        <thead className="bg-gray-50 text-gray-600 border-b border-gray-200 select-none">
                           <tr>
                             <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('name')}>
                               <div className="flex items-center gap-1">
@@ -1213,18 +1372,18 @@ export default function SuperAdminReportsPage() {
                                 {sortField === 'overallRemaining' ? (
                                   sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
                                 ) : (
-                                  <ArrowUpDown className="w-3.5 h-3.5 text-rose-450" />
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-rose-400" />
                                 )}
                               </div>
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-150">
+                        <tbody className="divide-y divide-gray-100">
                           {getSortedPatientFees().map((p: any) => (
                             <tr key={p.id} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
-                              <td className="px-3 py-2.5 text-gray-850 font-bold">{p.name}</td>
-                              <td className="px-3 py-2.5 text-gray-555 font-mono">{p.inpatientNumber}</td>
-                              <td className="px-3 py-2.5 text-right text-gray-850">{formatPKR(p.expectedFee)}</td>
+                              <td className="px-3 py-2.5 text-gray-800 font-bold">{p.name}</td>
+                              <td className="px-3 py-2.5 text-gray-550 font-mono">{p.inpatientNumber}</td>
+                              <td className="px-3 py-2.5 text-right text-gray-800">{formatPKR(p.expectedFee)}</td>
                               <td className="px-3 py-2.5 text-right text-teal-800 font-bold bg-teal-50/20">{formatPKR(p.paidInPeriod)}</td>
                               <td className="px-3 py-2.5 text-right text-indigo-700 font-black bg-indigo-50/30">{formatPKR(p.amountPaidThisMonth)}</td>
                               <td className={`px-3 py-2.5 text-right font-black ${p.overallRemaining > 0 ? 'text-rose-600 bg-rose-50/20' : 'text-blue-700 bg-blue-50/20'}`}>{formatPKR(p.overallRemaining)}</td>
@@ -1247,7 +1406,7 @@ export default function SuperAdminReportsPage() {
                 {reportData.reportFocus === 'income' && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 mb-3">Transaction Details</h3>
-                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                    <div className="overflow-x-auto w-full rounded-xl border border-gray-200">
                       <table className="w-full text-xs border-collapse">
                         <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
@@ -1264,7 +1423,7 @@ export default function SuperAdminReportsPage() {
                           {reportData.txns.map((t: any) => (
                             <tr key={t.id} className="hover:bg-gray-50 border-b border-gray-100">
                               <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{formatDateDMY(t.date?.toDate?.() ? t.date.toDate() : t.date)}</td>
-                              <td className="px-3 py-2.5 text-gray-850 font-bold whitespace-nowrap">{t.patientName || '—'}</td>
+                              <td className="px-3 py-2.5 text-gray-800 font-bold whitespace-nowrap">{t.patientName || '—'}</td>
                               <td className="px-3 py-2.5">
                                 <span className={`font-bold uppercase text-[9px] px-2 py-0.5 rounded-full ${t.type === 'income' ? 'bg-teal-50 text-teal-700' : 'bg-red-50 text-red-700'}`}>{t.type}</span>
                               </td>
@@ -1286,7 +1445,7 @@ export default function SuperAdminReportsPage() {
             {reportData.reportFocus !== 'patients' && reportData.staffSalaries && reportData.staffSalaries.length > 0 && (
               <div>
                 <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><UserCog className="w-5 h-5 text-purple-500" /> Staff Payroll Summary ({reportData.monthLabel})</h3>
-                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                <div className="overflow-x-auto w-full rounded-xl border border-gray-200">
                   <table className="w-full text-sm border-collapse min-w-[600px]">
                     <thead className="bg-purple-50">
                       <tr>
