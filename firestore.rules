@@ -2178,6 +2178,20 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.token.email == 'mubeenahma1123@gmail.com';
     }
 
+    // ── Cashier Quick Templates (Department Fast Buttons) ──
+    match /hospital_quick_templates/{docId} { allow read, write: if true; }
+    match /rehab_quick_templates/{docId} { allow read, write: if true; }
+    match /spims_quick_templates/{docId} { allow read, write: if true; }
+    match /sukoon_quick_templates/{docId} { allow read, write: if true; }
+    match /sukoon-center_quick_templates/{docId} { allow read, write: if true; }
+    match /welfare_quick_templates/{docId} { allow read, write: if true; }
+    match /jobcenter_quick_templates/{docId} { allow read, write: if true; }
+    match /job-center_quick_templates/{docId} { allow read, write: if true; }
+    match /media_quick_templates/{docId} { allow read, write: if true; }
+    match /social-media_quick_templates/{docId} { allow read, write: if true; }
+    match /it_quick_templates/{docId} { allow read, write: if true; }
+    match /hq_quick_templates/{docId} { allow read, write: if true; }
+
     // ── AI Voice Assistant System Awareness collections ──
     match /erp_system_knowledge/{moduleId} {
       allow read: if isAuth();

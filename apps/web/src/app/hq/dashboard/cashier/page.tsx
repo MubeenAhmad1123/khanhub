@@ -464,8 +464,8 @@ export default function CashierStationPage() {
         });
 
         if (isMounted) setQuickTemplates(combined);
-      } catch (err) {
-        console.error('[Cashier] Error loading templates:', err);
+      } catch (err: any) {
+        // Silently fallback to built-in department starter templates when custom collection permissions are restricted
         const defaults = (DEFAULT_STARTER_TEMPLATES[activeDepartment.code] || DEFAULT_STARTER_TEMPLATES['hospital'] || []).map((t, i) => ({
           id: `default-${activeDepartment.code}-${i}`,
           ...t,
@@ -1547,135 +1547,6 @@ export default function CashierStationPage() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Fetch Quick Templates (No orderBy+where combo: sort client-side)
-  useEffect(() => {
-    let isMounted = true;
-    async function fetchTemplates() {
-      setTemplatesLoading(true);
-      try {
-        const colName = `${activeDepartment.code}_quick_templates`;
-        const snap = await getDocs(collection(db, colName));
-        const dbList: QuickTemplate[] = snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as any),
-        }));
-
-        // Client-side filter: createdBy current user OR shared == true OR no creator (org-wide)
-        const userUid = session?.uid;
-        const userCustomId = session?.customId;
-        const filtered = dbList.filter((t) => 
-          t.shared === true || 
-          (userUid && t.createdBy === userUid) || 
-          (userCustomId && t.createdBy === userCustomId) || 
-          !t.createdBy
-        );
-
-        // Get starter defaults for this department
-        const defaults = (DEFAULT_STARTER_TEMPLATES[activeDepartment.code] || DEFAULT_STARTER_TEMPLATES['hospital'] || []).map((t, i) => ({
-          id: `default-${activeDepartment.code}-${i}`,
-          ...t,
-        }));
-
-        // Combine custom and default without label duplicates
-        const combined = [...filtered];
-        for (const def of defaults) {
-          if (!combined.some((c) => c.label.toLowerCase() === def.label.toLowerCase())) {
-            combined.push(def as any);
-          }
-        }
-
-        // Sort client-side: usageCount desc, then lastUsedAt desc
-        combined.sort((a, b) => {
-          const countDiff = (b.usageCount || 0) - (a.usageCount || 0);
-          if (countDiff !== 0) return countDiff;
-          const timeA = toDate(a.lastUsedAt || a.createdAt)?.getTime() || 0;
-          const timeB = toDate(b.lastUsedAt || b.createdAt)?.getTime() || 0;
-          return timeB - timeA;
-        });
-
-        if (isMounted) setQuickTemplates(combined);
-      } catch (err) {
-        console.error('[Cashier] Error loading templates:', err);
-        const defaults = (DEFAULT_STARTER_TEMPLATES[activeDepartment.code] || DEFAULT_STARTER_TEMPLATES['hospital'] || []).map((t, i) => ({
-          id: `default-${activeDepartment.code}-${i}`,
-          ...t,
-        }));
-        if (isMounted) setQuickTemplates(defaults as any);
-      } finally {
-        if (isMounted) setTemplatesLoading(false);
-      }
-    }
-    fetchTemplates();
-    return () => { isMounted = false; };
-  }, [activeDepartment.code, session?.uid, session?.customId]);
-
-  // Fetch recent distinct receiver names + staff profiles (fetch once on mount/dept change)
-  useEffect(() => {
-    let isMounted = true;
-    async function fetchReceiversAndStaff() {
-      try {
-        // 1. Fetch recent transactions without composite index
-        const txSnap = await getDocs(query(collection(db, activeDepartment.txCollection), limit(50)));
-        const distinct = new Set<string>();
-        txSnap.docs.forEach((d) => {
-          const data = d.data() as any;
-          const val = data.receiverName || data.hospitalExpenseReceiver || data.receiver || data.patientName || data.staffName || data.customTargetName;
-          if (val && typeof val === 'string' && val.trim().length > 1) {
-            distinct.add(val.trim());
-          }
-        });
-
-        // 2. Fetch staff profiles
-        const staff: { id: string; name: string; role?: string }[] = [];
-        try {
-          const sSnap = await getDocs(collection(db, `${activeDepartment.code}_staff`));
-          sSnap.docs.forEach((docItem) => {
-            const data = docItem.data() as any;
-            const sName = data.name || data.fullName || data.displayName;
-            if (sName) {
-              staff.push({ id: docItem.id, name: sName.trim(), role: data.designation || data.role || 'Staff' });
-            }
-          });
-        } catch (_) {}
-
-        if (isMounted) {
-          setRecentReceivers(Array.from(distinct).slice(0, 20));
-          setStaffList(staff);
-        }
-      } catch (err) {
-        console.error('[Cashier] Error fetching recent receivers/staff:', err);
-      }
-    }
-    fetchReceiversAndStaff();
-    return () => { isMounted = false; };
-  }, [activeDepartment.code, activeDepartment.txCollection]);
-
-  // Debounced 200ms suggestions filter for receiver name
-  useEffect(() => {
-    const term = (hospitalExpenseReceiver || '').trim().toLowerCase();
-    const timer = setTimeout(() => {
-      const allEntries = [
-        ...staffList.map((s) => ({ name: s.name, type: 'staff' as const, role: s.role || 'Staff' })),
-        ...recentReceivers.map((r) => ({ name: r, type: 'recent' as const, role: 'Recent Receiver' })),
-      ];
-      const seen = new Set<string>();
-      const deduped = allEntries.filter((item) => {
-        const key = item.name.toLowerCase();
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-
-      if (!term) {
-        setReceiverSuggestions(deduped.slice(0, 10));
-      } else {
-        setReceiverSuggestions(deduped.filter((i) => i.name.toLowerCase().includes(term)).slice(0, 8));
-      }
-    }, 200);
-
-    return () => clearTimeout(timer);
-  }, [hospitalExpenseReceiver, staffList, recentReceivers]);
 
   async function submitTx(e: React.FormEvent) {
     e.preventDefault();
