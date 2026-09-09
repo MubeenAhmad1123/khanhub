@@ -10,8 +10,8 @@ import { toDate, downloadElementAsPng } from '@/lib/utils';
 import {
   UserCog, Printer, Calendar, DollarSign, Loader2, Download,
   Plus, X, Receipt, Trash2, Building2, Eye, CheckCircle2,
-  Info, CreditCard, SlidersHorizontal, PlusCircle, MinusCircle,
-  Save, AlertTriangle, RefreshCw, FileText, Check, Sparkles, Sun, Heart
+  SlidersHorizontal, PlusCircle, MinusCircle,
+  Save, AlertTriangle, RefreshCw, FileText, Sun, CreditCard
 } from 'lucide-react';
 import { SalarySlipPrintable } from '@/components/hq/SalarySlipPrintable';
 
@@ -89,6 +89,351 @@ export interface HqHoliday {
   createdAt?: any;
 }
 
+function calculateStaffMonthPayroll(
+  staff: any,
+  dept: StaffDept,
+  targetYear: number,
+  targetMonthZeroIndexed: number,
+  allStaffAttDocs: any[],
+  allDeptFines: any[],
+  allDeptAdjustments: any[],
+  allDeptSalarySlips: any[],
+  allHqHolidaysList: HqHoliday[],
+  globalTxns: any[],
+  currentDateObj: Date,
+  isAdvanceTxInMonthFn: (tx: any, mStr: string) => boolean,
+) {
+  const tMonthStr = `${targetYear}-${String(targetMonthZeroIndexed + 1).padStart(2, '0')}`;
+  const tMonthDays = getDaysInMonth(targetYear, targetMonthZeroIndexed);
+  const tMonthHolidays = allHqHolidaysList.filter(h => h.date && h.date.startsWith(tMonthStr));
+
+  const gross = Number(staff.monthlySalary || staff.salary || 0);
+  const dailyRate = gross / 30;
+
+  const uid = staff.staffId || staff.id;
+  const loginId = staff.loginUserId || staff.uid || staff.userId || '';
+
+  const candidateIds = new Set<string>();
+  const rawIds = [uid, loginId, staff.customId, staff.employeeId, staff.userId, staff.staffId].filter(Boolean);
+
+  rawIds.forEach(idStr => {
+    const id = String(idStr);
+    candidateIds.add(id);
+    const stripped = id.replace(/^(hq|rehab|spims|hospital|sukoon|welfare|jobcenter|media|it)_/, '');
+    candidateIds.add(stripped);
+    ALL_PREFIXES.forEach(p => {
+      if (p) {
+        candidateIds.add(`${p}_${stripped}`);
+      }
+    });
+  });
+
+  const staffNameLower = String(staff.name || staff.displayName || '').toLowerCase();
+
+  const daysInThisTargetMonth = new Date(targetYear, targetMonthZeroIndexed + 1, 0).getDate();
+  const targetMonthEndStr = `${tMonthStr}-${String(daysInThisTargetMonth).padStart(2, '0')}`;
+
+  const joiningRaw = staff.joiningDate || staff.startDate || staff.dateJoined || staff.createdAt;
+  const joiningDateStr = formatDateString(joiningRaw);
+
+  if (joiningDateStr && joiningDateStr > targetMonthEndStr) {
+    return {
+      gross: 0,
+      dailyRate: 0,
+      payableDays: 0,
+      baseEarnedSalary: 0,
+      totalAbsentDays: 0,
+      totalAbsentDeduction: 0,
+      totalFines: 0,
+      actualAdvance: 0,
+      totalCustomAdditions: 0,
+      totalCustomDeductions: 0,
+      totalEarningsWithAdditions: 0,
+      totalDeductions: 0,
+      netPayable: 0,
+      staffAdvanceTxns: [],
+      staffFines: [],
+      absences: [],
+      weeklyOffDaysCount: 0,
+      holidayDaysCount: 0,
+      remainingBalance: 0,
+      bonus: 0,
+      allowance: 0,
+      securityFee: 0,
+      customAdditionsList: [],
+      customDeductionsList: [],
+      customAdj: null,
+      slip: null,
+      candidateIds,
+      staffNameLower,
+      joiningDateStr,
+    };
+  }
+
+  let joiningDay = 1;
+  let joinedMidMonth = false;
+
+  if (joiningDateStr && joiningDateStr.startsWith(tMonthStr)) {
+    joiningDay = parseInt(joiningDateStr.substring(8, 10), 10) || 1;
+    if (joiningDay > 1) {
+      joinedMidMonth = true;
+    }
+  }
+
+  let totalBaseDaysForStaff = 30;
+  if (joinedMidMonth) {
+    totalBaseDaysForStaff = Math.max(0, 30 - joiningDay + 1);
+  }
+
+  const currentMonthStr = `${currentDateObj.getFullYear()}-${String(currentDateObj.getMonth() + 1).padStart(2, '0')}`;
+  const todayStr = `${currentMonthStr}-${String(currentDateObj.getDate()).padStart(2, '0')}`;
+
+  let daysPassed = totalBaseDaysForStaff;
+  if (tMonthStr === currentMonthStr) {
+    const currentDay = currentDateObj.getDate();
+    if (joinedMidMonth) {
+      if (currentDay < joiningDay) {
+        daysPassed = 0;
+      } else {
+        const elapsedDays = currentDay - joiningDay + 1;
+        daysPassed = Math.min(elapsedDays, totalBaseDaysForStaff);
+      }
+    } else {
+      daysPassed = Math.min(currentDay, 30);
+    }
+  } else if (tMonthStr > currentMonthStr) {
+    daysPassed = 0;
+  } else {
+    daysPassed = totalBaseDaysForStaff;
+  }
+
+  // Filter attendance docs for this staff member
+  const staffAtt = allStaffAttDocs.filter((a: any) => {
+    const aStaffId = String(a.staffId || a.userId || a.customId || a.employeeId || '');
+    if (aStaffId && candidateIds.has(aStaffId)) return true;
+    if (staffNameLower && a.staffName && String(a.staffName).toLowerCase() === staffNameLower) return true;
+    return false;
+  });
+
+  const getAttPriority = (statusVal?: string) => {
+    if (!statusVal) return 0;
+    const s = String(statusVal).toLowerCase();
+    if (s === 'present') return 4;
+    if (s === 'late') return 3;
+    if (s === 'leave' || s === 'paid_leave' || s === 'unpaid_leave') return 2;
+    if (s === 'absent') return 1;
+    return 0;
+  };
+
+  const attMapByDate: Record<string, any> = {};
+  staffAtt.forEach((a: any) => {
+    const dStr = formatDateString(a.date);
+    if (dStr && dStr.startsWith(tMonthStr)) {
+      const existing = attMapByDate[dStr];
+      const existingPriority = getAttPriority(existing?.status || existing?.state);
+      const currentPriority = getAttPriority(a.status || a.state);
+      if (!existing || currentPriority >= existingPriority) {
+        attMapByDate[dStr] = a;
+      }
+    }
+  });
+
+  const absences: Array<{ date: string; reason: string; isUnmarked: boolean }> = [];
+  let absentDaysCount = 0;
+  let unmarkedDaysCount = 0;
+  let paidLeaveCount = 0;
+  let unpaidLeaveCount = 0;
+  let weeklyOffDaysCount = 0;
+  let holidayDaysCount = 0;
+
+  tMonthDays.forEach(dayStr => {
+    if (joiningDateStr && dayStr < joiningDateStr) {
+      return;
+    }
+
+    const dayOfWeekName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date(`${dayStr}T00:00:00`).getDay()];
+    const isWeeklyOff = staff.weeklyOffDay && staff.weeklyOffDay !== 'none' && staff.weeklyOffDay === dayOfWeekName;
+
+    const matchingHoliday = tMonthHolidays.find(h =>
+      h.date === dayStr &&
+      (h.scope === 'all' ||
+       (h.scope === 'department' && h.departments?.includes(dept)) ||
+       (h.scope === 'staff' && (
+         h.staffIds?.includes(uid) ||
+         (loginId && h.staffIds?.includes(loginId)) ||
+         (staff.id && h.staffIds?.includes(staff.id)) ||
+         (staff.employeeId && h.staffIds?.includes(staff.employeeId))
+       )))
+    );
+
+    if (matchingHoliday) {
+      holidayDaysCount++;
+      return;
+    }
+    if (isWeeklyOff) {
+      weeklyOffDaysCount++;
+      return;
+    }
+
+    const att = attMapByDate[dayStr];
+    const status = att ? String(att.status || att.state || '').toLowerCase() : 'unmarked';
+    const isPast = dayStr < todayStr;
+
+    if (status === 'absent') {
+      absentDaysCount++;
+      if (dayStr <= todayStr) {
+        absences.push({
+          date: dayStr,
+          reason: att?.reason || `Absent from duty (Daily rate: ${formatPKR(dailyRate)})`,
+          isUnmarked: false,
+        });
+      }
+    } else if (status === 'unpaid_leave') {
+      unpaidLeaveCount++;
+      if (dayStr <= todayStr) {
+        absences.push({
+          date: dayStr,
+          reason: att?.reason || `Unpaid Leave (Daily rate: ${formatPKR(dailyRate)})`,
+          isUnmarked: false,
+        });
+      }
+    } else if (status === 'leave') {
+      if (paidLeaveCount < 2) {
+        paidLeaveCount++;
+      } else {
+        unpaidLeaveCount++;
+        if (dayStr <= todayStr) {
+          absences.push({
+            date: dayStr,
+            reason: att?.reason || `Unpaid Leave (Daily rate: ${formatPKR(dailyRate)})`,
+            isUnmarked: false,
+          });
+        }
+      }
+    } else if (status === 'paid_leave') {
+      paidLeaveCount++;
+    } else if (status === 'unmarked') {
+      if (isPast) {
+        unmarkedDaysCount++;
+        absences.push({
+          date: dayStr,
+          reason: `Unmarked Attendance (Past Day) (Daily rate: ${formatPKR(dailyRate)})`,
+          isUnmarked: true,
+        });
+      }
+    }
+  });
+
+  const totalAbsentDays = absentDaysCount + unmarkedDaysCount + unpaidLeaveCount;
+  const payableDays = Math.max(0, daysPassed - totalAbsentDays);
+
+  const baseEarnedSalary = payableDays * dailyRate;
+  const totalAbsentDeduction = totalAbsentDays * dailyRate;
+
+  // Filter fines
+  const staffFines = allDeptFines.filter((f: any) => {
+    const fDateStr = formatDateString(f.date || f.month);
+    if (!fDateStr || !fDateStr.startsWith(tMonthStr)) return false;
+
+    if (candidateIds.has(String(f.staffId))) return true;
+    if (f.staffName && String(f.staffName).toLowerCase() === staffNameLower) return true;
+    return false;
+  });
+  const totalFines = staffFines.reduce((s: number, f: any) => s + (Number(f.amount) || 0), 0);
+
+  // Advances from global transactions
+  const staffAdvanceTxns = globalTxns.filter((tx: any) => {
+    if (!isAdvanceTxInMonthFn(tx, tMonthStr)) return false;
+    const txStaffId = String(tx.staffId || tx.patientId || tx.userId || tx.customId || tx.employeeId || tx.memberId || '');
+    if (txStaffId && candidateIds.has(txStaffId)) return true;
+
+    if (staffNameLower) {
+      if (tx.staffName && String(tx.staffName).toLowerCase() === staffNameLower) return true;
+      if (tx.userName && String(tx.userName).toLowerCase() === staffNameLower) return true;
+      if (tx.name && String(tx.name).toLowerCase() === staffNameLower) return true;
+      if (tx.description && String(tx.description).toLowerCase().includes(staffNameLower)) return true;
+    }
+    return false;
+  });
+
+  const approvedAdvancesForMonth = staffAdvanceTxns.reduce((s: number, t: any) => s + (Number(t.amount) || 0), 0);
+
+  // Salary slip
+  const slip = allDeptSalarySlips.find((s: any) => {
+    if (s.month !== tMonthStr) return false;
+    if (candidateIds.has(String(s.staffId))) return true;
+    if (s.staffName && String(s.staffName).toLowerCase() === staffNameLower) return true;
+    return false;
+  });
+
+  // Custom Adjustment Doc
+  const customAdj = allDeptAdjustments.find((a: any) => {
+    if (a.month !== tMonthStr) return false;
+    if (candidateIds.has(String(a.staffId))) return true;
+    if (a.staffName && String(a.staffName).toLowerCase() === staffNameLower) return true;
+    return false;
+  });
+
+  const customAdvanceVal = Number(customAdj?.previousAdvance || 0);
+  const actualAdvance = (slip && slip.advance !== undefined && slip.advance !== null)
+    ? Number(slip.advance)
+    : (approvedAdvancesForMonth > 0 ? approvedAdvancesForMonth : customAdvanceVal);
+
+  const remainingBalance = Number(customAdj?.remainingBalance || 0);
+  const bonus = Number(customAdj?.bonus || 0);
+  const allowance = Number(customAdj?.allowance || 0);
+  const customAdditionsList: Array<{ label: string; amount: number }> = (customAdj?.customAdditions || []).map((ca: any) => ({
+    label: ca.label || 'Custom Addition',
+    amount: Number(ca.amount || 0)
+  }));
+  const totalCustomAdditions = remainingBalance + bonus + allowance + customAdditionsList.reduce((acc, c) => acc + c.amount, 0);
+
+  const securityFee = Number(customAdj?.securityFee || 0);
+  const customDeductionsList: Array<{ label: string; amount: number }> = (customAdj?.customDeductions || []).map((cd: any) => ({
+    label: cd.label || 'Custom Deduction',
+    amount: Number(cd.amount || 0)
+  }));
+  const totalCustomDeductions = securityFee + customDeductionsList.reduce((acc, c) => acc + c.amount, 0);
+
+  const totalEarningsWithAdditions = gross + totalCustomAdditions;
+  const totalDeductions = Math.round(totalAbsentDeduction + totalFines + actualAdvance + totalCustomDeductions);
+  const netPayable = Math.floor(totalEarningsWithAdditions - totalDeductions);
+
+  return {
+    gross,
+    dailyRate: Math.round(dailyRate),
+    payableDays,
+    baseEarnedSalary: Math.round(baseEarnedSalary),
+    totalAbsentDays,
+    weeklyOffDaysCount,
+    holidayDaysCount,
+    absences,
+    totalAbsentDeduction: Math.round(totalAbsentDeduction),
+    staffFines,
+    totalFines,
+    actualAdvance,
+    approvedAdvancesForMonth,
+    staffAdvanceTxns,
+    slip,
+    customAdj,
+    customAdvanceVal,
+    remainingBalance,
+    bonus,
+    allowance,
+    customAdditionsList,
+    totalCustomAdditions,
+    securityFee,
+    customDeductionsList,
+    totalCustomDeductions,
+    totalEarningsWithAdditions,
+    totalDeductions,
+    netPayable,
+    candidateIds,
+    staffNameLower,
+    joiningDateStr,
+  };
+}
+
 export default function ManagerPayrollPage() {
   const router = useRouter();
   const { session, loading: sessionLoading } = useHqSession();
@@ -162,7 +507,10 @@ export default function ManagerPayrollPage() {
   const printRef = useRef<HTMLDivElement>(null);
 
   const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
-  const monthDays = getDaysInMonth(selectedYear, selectedMonth);
+  const prevDate = new Date(selectedYear, selectedMonth - 1, 1);
+  const prevYear = prevDate.getFullYear();
+  const prevMonth = prevDate.getMonth();
+  const prevMonthStr = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}`;
 
   const fetchGlobalTransactionsForMonth = async () => {
     const txMap = new Map<string, any>();
@@ -251,7 +599,7 @@ export default function ManagerPayrollPage() {
 
       const globalTxns = await fetchGlobalTransactionsForMonth();
 
-      // Fetch all HQ holidays once (no where+orderBy composite index; filter client-side)
+      // Fetch all HQ holidays once (no composite index; filter client-side)
       const holidaysSnap = await getDocs(collection(db, 'hq_holidays')).catch(() => ({ docs: [] } as any));
       const allHolidaysList: HqHoliday[] = holidaysSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
       const monthHolidays = allHolidaysList.filter((h) => h.date && h.date.startsWith(monthStr));
@@ -310,20 +658,28 @@ export default function ManagerPayrollPage() {
           const adjSnap = await getDocs(collection(db, adjCol)).catch(() => ({ docs: [] } as any));
           const allAdjustments = adjSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
 
-          // Attendance for selected month across all department prefix collections
+          // Attendance for current month AND previous month
           const attMapDocs = new Map<string, any>();
           await Promise.all(ALL_PREFIXES.map(async (p) => {
             const attColName = p ? `${p}_attendance` : 'attendance';
             try {
-              const attSnap = await getDocs(query(
-                collection(db, attColName),
-                where('date', '>=', `${monthStr}-01`),
-                where('date', '<=', `${monthStr}-31`)
-              )).catch(() => ({ docs: [] } as any));
-              attSnap.docs.forEach((d: any) => {
-                if (d && d.id) {
-                  attMapDocs.set(`${attColName}-${d.id}`, { id: d.id, _collection: attColName, ...d.data() });
-                }
+              const [currSnap, prevSnap] = await Promise.all([
+                getDocs(query(
+                  collection(db, attColName),
+                  where('date', '>=', `${monthStr}-01`),
+                  where('date', '<=', `${monthStr}-31`)
+                )).catch(() => ({ docs: [] } as any)),
+                getDocs(query(
+                  collection(db, attColName),
+                  where('date', '>=', `${prevMonthStr}-01`),
+                  where('date', '<=', `${prevMonthStr}-31`)
+                )).catch(() => ({ docs: [] } as any)),
+              ]);
+              currSnap.docs.forEach((d: any) => {
+                if (d && d.id) attMapDocs.set(`${attColName}-${d.id}`, { id: d.id, _collection: attColName, ...d.data() });
+              });
+              prevSnap.docs.forEach((d: any) => {
+                if (d && d.id) attMapDocs.set(`${attColName}-${d.id}`, { id: d.id, _collection: attColName, ...d.data() });
               });
             } catch (e) {}
           }));
@@ -337,263 +693,71 @@ export default function ManagerPayrollPage() {
 
           // Build salary rows
           const salaryRows = allStaff.map((staff: any) => {
-            const gross = Number(staff.monthlySalary || staff.salary || 0);
-            const dailyRate = gross / 30;
+            // 1. Calculate previous month payroll dynamically
+            const prevCalc = calculateStaffMonthPayroll(
+              staff,
+              dept,
+              prevYear,
+              prevMonth,
+              allAttDocs,
+              allFines,
+              allAdjustments,
+              allSalarySlips,
+              allHolidaysList,
+              globalTxns,
+              today,
+              isAdvanceTxInSelectedMonth
+            );
 
-            const uid = staff.staffId || staff.id;
-            const loginId = staff.loginUserId || staff.uid || staff.userId || '';
-
-            const candidateIds = new Set<string>();
-            const rawIds = [uid, loginId, staff.customId, staff.employeeId, staff.userId, staff.staffId].filter(Boolean);
-
-            rawIds.forEach(idStr => {
-              const id = String(idStr);
-              candidateIds.add(id);
-              const stripped = id.replace(/^(hq|rehab|spims|hospital|sukoon|welfare|jobcenter|media|it)_/, '');
-              candidateIds.add(stripped);
-              ALL_PREFIXES.forEach(p => {
-                if (p) {
-                  candidateIds.add(`${p}_${stripped}`);
-                }
-              });
-            });
-
-            const staffNameLower = String(staff.name || staff.displayName || '').toLowerCase();
-
-            // Match advances from globalTxns array
-            const staffAdvanceTxns = globalTxns.filter((tx: any) => {
-              if (!isAdvanceTxInSelectedMonth(tx, monthStr)) return false;
-              const txStaffId = String(tx.staffId || tx.patientId || tx.userId || tx.customId || tx.employeeId || tx.memberId || '');
-              if (txStaffId && candidateIds.has(txStaffId)) return true;
-
-              if (staffNameLower) {
-                if (tx.staffName && String(tx.staffName).toLowerCase() === staffNameLower) return true;
-                if (tx.userName && String(tx.userName).toLowerCase() === staffNameLower) return true;
-                if (tx.name && String(tx.name).toLowerCase() === staffNameLower) return true;
-                if (tx.description && String(tx.description).toLowerCase().includes(staffNameLower)) return true;
-              }
-              return false;
-            });
-
-            const approvedAdvancesForMonth = staffAdvanceTxns.reduce((s: number, t: any) => s + (Number(t.amount) || 0), 0);
-
-            // Salary Slip check
-            const slip = allSalarySlips.find((s: any) => {
-              if (s.month !== monthStr) return false;
-              if (candidateIds.has(String(s.staffId))) return true;
-              if (s.staffName && String(s.staffName).toLowerCase() === staffNameLower) return true;
-              return false;
-            });
-
-            // Find Custom Adjustment Doc for staff
-            const customAdj = allAdjustments.find((a: any) => {
-              if (a.month !== monthStr) return false;
-              if (candidateIds.has(String(a.staffId))) return true;
-              if (a.staffName && String(a.staffName).toLowerCase() === staffNameLower) return true;
-              return false;
-            });
-
-            const customAdvanceVal = Number(customAdj?.previousAdvance || 0);
-            const actualAdvance = (slip && slip.advance !== undefined && slip.advance !== null)
-              ? Number(slip.advance)
-              : (approvedAdvancesForMonth > 0 ? approvedAdvancesForMonth : customAdvanceVal);
-
-            // Additional Custom Additions
-            const remainingBalance = Number(customAdj?.remainingBalance || 0);
-            const bonus = Number(customAdj?.bonus || 0);
-            const allowance = Number(customAdj?.allowance || 0);
-            const customAdditionsList: Array<{ label: string; amount: number }> = (customAdj?.customAdditions || []).map((ca: any) => ({
-              label: ca.label || 'Custom Addition',
-              amount: Number(ca.amount || 0)
-            }));
-
-            const totalCustomAdditions = remainingBalance + bonus + allowance + customAdditionsList.reduce((acc, c) => acc + c.amount, 0);
-
-            // Additional Custom Deductions
-            const securityFee = Number(customAdj?.securityFee || 0);
-            const customDeductionsList: Array<{ label: string; amount: number }> = (customAdj?.customDeductions || []).map((cd: any) => ({
-              label: cd.label || 'Custom Deduction',
-              amount: Number(cd.amount || 0)
-            }));
-
-            const totalCustomDeductions = securityFee + customDeductionsList.reduce((acc, c) => acc + c.amount, 0);
-
-            // Filter attendance docs for this staff member
-            const staffAtt = allAttDocs.filter((a: any) => {
-              const aStaffId = String(a.staffId || a.userId || a.customId || a.employeeId || '');
-              if (aStaffId && candidateIds.has(aStaffId)) return true;
-              if (staffNameLower && a.staffName && String(a.staffName).toLowerCase() === staffNameLower) return true;
-              return false;
-            });
-
-            const getAttPriority = (statusVal?: string) => {
-              if (!statusVal) return 0;
-              const s = String(statusVal).toLowerCase();
-              if (s === 'present') return 4;
-              if (s === 'late') return 3;
-              if (s === 'leave' || s === 'paid_leave' || s === 'unpaid_leave') return 2;
-              if (s === 'absent') return 1;
-              return 0;
-            };
-
-            const attMapByDate: Record<string, any> = {};
-            staffAtt.forEach((a: any) => {
-              const dStr = formatDateString(a.date);
-              if (dStr) {
-                const existing = attMapByDate[dStr];
-                const existingPriority = getAttPriority(existing?.status || existing?.state);
-                const currentPriority = getAttPriority(a.status || a.state);
-                if (!existing || currentPriority >= existingPriority) {
-                  attMapByDate[dStr] = a;
-                }
-              }
-            });
-
-            // Joining Date calculation
-            const joiningRaw = staff.joiningDate || staff.startDate || staff.dateJoined || staff.createdAt;
-            const joiningDateStr = formatDateString(joiningRaw);
-
-            let joiningDay = 1;
-            let joinedMidMonth = false;
-
-            if (joiningDateStr && joiningDateStr.startsWith(monthStr)) {
-              joiningDay = parseInt(joiningDateStr.substring(8, 10), 10) || 1;
-              if (joiningDay > 1) {
-                joinedMidMonth = true;
-              }
+            // Determine if previous month ended with negative salary / deficit
+            let calculatedPrevDebt = 0;
+            if (prevCalc.netPayable < 0) {
+              calculatedPrevDebt = Math.abs(prevCalc.netPayable);
+            }
+            if (prevCalc.slip && typeof prevCalc.slip.netSalary === 'number' && prevCalc.slip.netSalary < 0) {
+              calculatedPrevDebt = Math.max(calculatedPrevDebt, Math.abs(prevCalc.slip.netSalary));
+            }
+            if (staff.lastPayrollMonth === prevMonthStr && Number(staff.outstandingBalance) > 0) {
+              calculatedPrevDebt = Math.max(calculatedPrevDebt, Number(staff.outstandingBalance));
+            }
+            if (staff.lastPayrollMonth === prevMonthStr && Number(staff.salaryBalance) < 0) {
+              calculatedPrevDebt = Math.max(calculatedPrevDebt, Math.abs(Number(staff.salaryBalance)));
             }
 
-            let totalBaseDaysForStaff = 30;
-            if (joinedMidMonth) {
-              totalBaseDaysForStaff = Math.max(0, 30 - joiningDay + 1);
-            }
+            // 2. Calculate current month payroll
+            const currCalc = calculateStaffMonthPayroll(
+              staff,
+              dept,
+              selectedYear,
+              selectedMonth,
+              allAttDocs,
+              allFines,
+              allAdjustments,
+              allSalarySlips,
+              allHolidaysList,
+              globalTxns,
+              today,
+              isAdvanceTxInSelectedMonth
+            );
 
-            let daysPassed = totalBaseDaysForStaff;
-            if (monthStr === currentMonthStr) {
-              const currentDay = today.getDate();
-              if (joinedMidMonth) {
-                if (currentDay < joiningDay) {
-                  daysPassed = 0;
-                } else {
-                  const elapsedDays = currentDay - joiningDay + 1;
-                  daysPassed = Math.min(elapsedDays, totalBaseDaysForStaff);
-                }
-              } else {
-                daysPassed = Math.min(currentDay, 30);
-              }
-            } else if (monthStr > currentMonthStr) {
-              daysPassed = 0;
-            }
+            // Check if manager explicitly entered custom previousAdvance in current month
+            const manualPrevAdvance = currCalc.customAdj?.previousAdvance !== undefined &&
+              currCalc.customAdj?.previousAdvance !== null &&
+              currCalc.customAdj?.previousAdvance !== ''
+                ? Number(currCalc.customAdj.previousAdvance)
+                : 0;
 
-            const absences: Array<{ date: string; reason: string; isUnmarked: boolean }> = [];
-            let absentDaysCount = 0;
-            let unmarkedDaysCount = 0;
-            let paidLeaveCount = 0;
-            let unpaidLeaveCount = 0;
-            let weeklyOffDaysCount = 0;
-            let holidayDaysCount = 0;
+            const previousMonthDebt = manualPrevAdvance > 0 ? manualPrevAdvance : calculatedPrevDebt;
 
-            monthDays.forEach(dayStr => {
-              if (joiningDateStr && dayStr < joiningDateStr) {
-                return;
-              }
-
-              const dayOfWeekName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date(`${dayStr}T00:00:00`).getDay()];
-              const isWeeklyOff = staff.weeklyOffDay && staff.weeklyOffDay !== 'none' && staff.weeklyOffDay === dayOfWeekName;
-              
-              // Check if day is an official holiday or paid leave
-              const matchingHoliday = monthHolidays.find(h => 
-                h.date === dayStr && 
-                (h.scope === 'all' || 
-                 (h.scope === 'department' && h.departments?.includes(dept)) ||
-                 (h.scope === 'staff' && (
-                   h.staffIds?.includes(uid) ||
-                   (loginId && h.staffIds?.includes(loginId)) ||
-                   (staff.id && h.staffIds?.includes(staff.id)) ||
-                   (staff.employeeId && h.staffIds?.includes(staff.employeeId))
-                 )))
-              );
-
-              if (matchingHoliday) {
-                holidayDaysCount++;
-                return; // FULLY PAID - 100% EXEMPT FROM ANY DEDUCTION!
-              }
-              if (isWeeklyOff) {
-                weeklyOffDaysCount++;
-                return; // FULLY PAID - Weekly off day exempt
-              }
-
-              const att = attMapByDate[dayStr];
-              const status = att ? String(att.status || att.state || '').toLowerCase() : 'unmarked';
-              const isPast = dayStr < todayStr;
-
-              if (status === 'absent') {
-                absentDaysCount++;
-                if (dayStr <= todayStr) {
-                  absences.push({
-                    date: dayStr,
-                    reason: att?.reason || `Absent from duty (Daily rate: ${formatPKR(dailyRate)})`,
-                    isUnmarked: false,
-                  });
-                }
-              } else if (status === 'unpaid_leave') {
-                unpaidLeaveCount++;
-                if (dayStr <= todayStr) {
-                  absences.push({
-                    date: dayStr,
-                    reason: att?.reason || `Unpaid Leave (Daily rate: ${formatPKR(dailyRate)})`,
-                    isUnmarked: false,
-                  });
-                }
-              } else if (status === 'leave') {
-                if (paidLeaveCount < 2) {
-                  paidLeaveCount++;
-                } else {
-                  unpaidLeaveCount++;
-                  if (dayStr <= todayStr) {
-                    absences.push({
-                      date: dayStr,
-                      reason: att?.reason || `Unpaid Leave (Daily rate: ${formatPKR(dailyRate)})`,
-                      isUnmarked: false,
-                    });
-                  }
-                }
-              } else if (status === 'paid_leave') {
-                paidLeaveCount++;
-              } else if (status === 'unmarked') {
-                if (isPast) {
-                  unmarkedDaysCount++;
-                  absences.push({
-                    date: dayStr,
-                    reason: `Unmarked Attendance (Past Day) (Daily rate: ${formatPKR(dailyRate)})`,
-                    isUnmarked: true,
-                  });
-                }
-              }
-            });
-
-            const totalAbsentDays = absentDaysCount + unmarkedDaysCount + unpaidLeaveCount;
-            const payableDays = Math.max(0, daysPassed - totalAbsentDays);
-
-            const baseEarnedSalary = payableDays * dailyRate;
-            const totalAbsentDeduction = totalAbsentDays * dailyRate;
-
-            // Filter fines for this staff member
-            const staffFines = allFines.filter((f: any) => {
-              const fDateStr = formatDateString(f.date || f.month);
-              if (!fDateStr || !fDateStr.startsWith(monthStr)) return false;
-
-              if (candidateIds.has(String(f.staffId))) return true;
-              if (f.staffName && String(f.staffName).toLowerCase() === staffNameLower) return true;
-              return false;
-            });
-
-            const totalFines = staffFines.reduce((s: number, f: any) => s + (Number(f.amount) || 0), 0);
-
-            // Total Gross & Net formula
-            const totalEarningsWithAdditions = gross + totalCustomAdditions;
-            const totalDeductions = Math.round(totalAbsentDeduction + totalFines + actualAdvance + totalCustomDeductions);
-            const netPayable = Math.floor(totalEarningsWithAdditions - totalDeductions);
+            const totalAdvance = currCalc.actualAdvance;
+            const totalDeductions = Math.round(
+              currCalc.totalAbsentDeduction +
+              currCalc.totalFines +
+              totalAdvance +
+              previousMonthDebt +
+              currCalc.totalCustomDeductions
+            );
+            const netPayable = Math.floor(currCalc.totalEarningsWithAdditions - totalDeductions);
 
             // Itemized date-wise deduction & addition breakdown
             const breakdownItems: Array<{
@@ -607,41 +771,41 @@ export default function ManagerPayrollPage() {
               isExempt?: boolean;
             }> = [];
 
-            // Additions to breakdown
-            if (remainingBalance > 0) {
+            // Additions
+            if (currCalc.remainingBalance > 0) {
               breakdownItems.push({
                 id: `rem-${staff.id}`,
                 date: monthStr,
                 category: 'addition',
                 type: 'remaining',
-                amount: remainingBalance,
+                amount: currCalc.remainingBalance,
                 reason: 'Remaining Salary / Previous Arrears Added',
-                recordedBy: customAdj?.updatedBy || 'Manager',
+                recordedBy: currCalc.customAdj?.updatedBy || 'Manager',
               });
             }
-            if (bonus > 0) {
+            if (currCalc.bonus > 0) {
               breakdownItems.push({
                 id: `bonus-${staff.id}`,
                 date: monthStr,
                 category: 'addition',
                 type: 'bonus',
-                amount: bonus,
+                amount: currCalc.bonus,
                 reason: 'Performance Bonus / Reward',
-                recordedBy: customAdj?.updatedBy || 'Manager',
+                recordedBy: currCalc.customAdj?.updatedBy || 'Manager',
               });
             }
-            if (allowance > 0) {
+            if (currCalc.allowance > 0) {
               breakdownItems.push({
                 id: `allow-${staff.id}`,
                 date: monthStr,
                 category: 'addition',
                 type: 'allowance',
-                amount: allowance,
+                amount: currCalc.allowance,
                 reason: 'Overtime / Special Allowance',
-                recordedBy: customAdj?.updatedBy || 'Manager',
+                recordedBy: currCalc.customAdj?.updatedBy || 'Manager',
               });
             }
-            customAdditionsList.forEach((ca, idx) => {
+            currCalc.customAdditionsList.forEach((ca, idx) => {
               breakdownItems.push({
                 id: `cadd-${staff.id}-${idx}`,
                 date: monthStr,
@@ -649,23 +813,23 @@ export default function ManagerPayrollPage() {
                 type: 'custom_add',
                 amount: ca.amount,
                 reason: ca.label || 'Custom Salary Addition',
-                recordedBy: customAdj?.updatedBy || 'Manager',
+                recordedBy: currCalc.customAdj?.updatedBy || 'Manager',
               });
             });
 
-            // Deductions to breakdown
-            absences.forEach((a: any, idx: number) => {
+            // Deductions
+            currCalc.absences.forEach((a: any, idx: number) => {
               breakdownItems.push({
                 id: `absent-${a.date}-${idx}`,
                 date: String(a.date),
                 category: 'deduction',
                 type: 'absent',
-                amount: Math.round(dailyRate),
+                amount: Math.round(currCalc.dailyRate),
                 reason: a.reason,
               });
             });
 
-            staffFines.forEach((f: any) => {
+            currCalc.staffFines.forEach((f: any) => {
               const dStr = formatDateString(f.date || f.month) || '—';
               breakdownItems.push({
                 id: f.id || `fine-${dStr}`,
@@ -678,7 +842,7 @@ export default function ManagerPayrollPage() {
               });
             });
 
-            staffAdvanceTxns.forEach((tx: any) => {
+            currCalc.staffAdvanceTxns.forEach((tx: any) => {
               const dateStr = formatDateString(tx.transactionDate || tx.date || tx.createdAt) || String(tx.month || monthStr);
               breakdownItems.push({
                 id: tx.id || `adv-${dateStr}`,
@@ -691,31 +855,44 @@ export default function ManagerPayrollPage() {
               });
             });
 
-            if (staffAdvanceTxns.length === 0 && actualAdvance > 0) {
+            if (currCalc.staffAdvanceTxns.length === 0 && totalAdvance > 0) {
               breakdownItems.push({
                 id: `doc-adv-${staff.id}`,
                 date: monthStr,
                 category: 'deduction',
                 type: 'advance',
-                amount: actualAdvance,
-                reason: customAdvanceVal > 0 ? 'Previous Advance Salary Adjustment' : 'Monthly Advance Salary Record',
-                recordedBy: customAdj?.updatedBy || 'System Record',
+                amount: totalAdvance,
+                reason: 'Monthly Advance Salary Record',
+                recordedBy: currCalc.customAdj?.updatedBy || 'System Record',
               });
             }
 
-            if (securityFee > 0) {
+            // Previous Month Negative Salary Cut Item
+            if (previousMonthDebt > 0) {
+              breakdownItems.push({
+                id: `prev-debt-${staff.id}`,
+                date: `${prevMonthStr}`,
+                category: 'deduction',
+                type: 'advance',
+                amount: previousMonthDebt,
+                reason: `Previous Month (${MONTHS[prevMonth]} ${prevYear}) Negative Salary Cut / Deficit`,
+                recordedBy: 'Automatic Payroll Carryover',
+              });
+            }
+
+            if (currCalc.securityFee > 0) {
               breakdownItems.push({
                 id: `sec-${staff.id}`,
                 date: monthStr,
                 category: 'deduction',
                 type: 'security',
-                amount: securityFee,
+                amount: currCalc.securityFee,
                 reason: 'Security Fee Deduction',
-                recordedBy: customAdj?.updatedBy || 'Manager',
+                recordedBy: currCalc.customAdj?.updatedBy || 'Manager',
               });
             }
 
-            customDeductionsList.forEach((cd, idx) => {
+            currCalc.customDeductionsList.forEach((cd, idx) => {
               breakdownItems.push({
                 id: `cded-${staff.id}-${idx}`,
                 date: monthStr,
@@ -723,7 +900,7 @@ export default function ManagerPayrollPage() {
                 type: 'custom_ded',
                 amount: cd.amount,
                 reason: cd.label || 'Custom Salary Deduction',
-                recordedBy: customAdj?.updatedBy || 'Manager',
+                recordedBy: currCalc.customAdj?.updatedBy || 'Manager',
               });
             });
 
@@ -735,32 +912,34 @@ export default function ManagerPayrollPage() {
               name: staff.name || staff.displayName || '—',
               designation: staff.designation || staff.role || '—',
               employeeCode: staff.employeeId || staff.customId || staff.id,
-              joiningDate: joiningDateStr,
+              joiningDate: currCalc.joiningDateStr,
               dept,
               weeklyOffDay: staff.weeklyOffDay || 'none',
-              gross,
-              dailyRate: Math.round(dailyRate),
-              payableDays,
-              earnings: Math.round(baseEarnedSalary),
-              absentDays: totalAbsentDays,
-              weeklyOffDaysCount,
-              holidayDaysCount,
-              absences,
-              totalAbsentDeduction: Math.round(totalAbsentDeduction),
-              staffFines,
-              totalFines,
-              totalAdvance: actualAdvance,
-              staffAdvanceTxns,
-              customAdj,
-              remainingBalance,
-              bonus,
-              allowance,
-              customAdditionsList,
-              totalCustomAdditions,
-              securityFee,
-              customDeductionsList,
-              totalCustomDeductions,
-              notes: customAdj?.notes || '',
+              gross: currCalc.gross,
+              dailyRate: currCalc.dailyRate,
+              payableDays: currCalc.payableDays,
+              earnings: currCalc.baseEarnedSalary,
+              absentDays: currCalc.totalAbsentDays,
+              weeklyOffDaysCount: currCalc.weeklyOffDaysCount,
+              holidayDaysCount: currCalc.holidayDaysCount,
+              absences: currCalc.absences,
+              totalAbsentDeduction: currCalc.totalAbsentDeduction,
+              staffFines: currCalc.staffFines,
+              totalFines: currCalc.totalFines,
+              totalAdvance,
+              previousMonthDebt,
+              previousMonthLabel: `${MONTHS[prevMonth]} ${prevYear}`,
+              staffAdvanceTxns: currCalc.staffAdvanceTxns,
+              customAdj: currCalc.customAdj,
+              remainingBalance: currCalc.remainingBalance,
+              bonus: currCalc.bonus,
+              allowance: currCalc.allowance,
+              customAdditionsList: currCalc.customAdditionsList,
+              totalCustomAdditions: currCalc.totalCustomAdditions,
+              securityFee: currCalc.securityFee,
+              customDeductionsList: currCalc.customDeductionsList,
+              totalCustomDeductions: currCalc.totalCustomDeductions,
+              notes: currCalc.customAdj?.notes || '',
               deductions: totalDeductions,
               netPayable,
               breakdownItems,
@@ -801,6 +980,7 @@ export default function ManagerPayrollPage() {
         totalAbsentDeductions: allSalaryRows.reduce((s, r) => s + r.totalAbsentDeduction, 0),
         totalFinesAmount: allFines.reduce((s: number, f: any) => s + Number(f.amount || 0), 0),
         totalAdvancesAmount: allSalaryRows.reduce((s, r) => s + r.totalAdvance, 0),
+        totalPreviousDebtAmount: allSalaryRows.reduce((s, r) => s + (r.previousMonthDebt || 0), 0),
         monthLabel: `${MONTHS[selectedMonth]} ${selectedYear}`,
       });
 
@@ -816,7 +996,7 @@ export default function ManagerPayrollPage() {
     } finally {
       setLoading(false);
     }
-  }, [monthStr, monthDays, currentMonthStr, todayStr, today, selectedMonth, selectedYear]);
+  }, [monthStr, prevMonthStr, prevMonth, prevYear, selectedMonth, selectedYear, today]);
 
   // Auto-load on mount & month/year change
   useEffect(() => {
@@ -837,7 +1017,7 @@ export default function ManagerPayrollPage() {
       bonus: adj.bonus ? String(adj.bonus) : '',
       allowance: adj.allowance ? String(adj.allowance) : '',
       securityFee: adj.securityFee ? String(adj.securityFee) : '',
-      previousAdvance: adj.previousAdvance ? String(adj.previousAdvance) : (staffRow.totalAdvance ? String(staffRow.totalAdvance) : ''),
+      previousAdvance: adj.previousAdvance ? String(adj.previousAdvance) : (staffRow.previousMonthDebt ? String(staffRow.previousMonthDebt) : ''),
       notes: adj.notes || '',
       customAdditions: adj.customAdditions ? adj.customAdditions.map((ca: any) => ({
         id: ca.id || String(Math.random()),
@@ -900,11 +1080,11 @@ export default function ManagerPayrollPage() {
         : `${prefix}_users`;
 
       const staffDocRef = doc(db, staffCol, customizeModalStaff.id);
-      
+
       const grossSalary = customizeModalStaff.gross || 0;
       const totalCustomAdd = remainingBalNum + bonusNum + allowanceNum + parsedAdditions.reduce((s, a) => s + a.amount, 0);
       const totalCustomDed = secFeeNum + parsedDeductions.reduce((s, d) => s + d.amount, 0);
-      const totalDed = (customizeModalStaff.totalAbsentDeduction || 0) + (customizeModalStaff.totalFines || 0) + Math.max(customizeModalStaff.totalAdvance || 0, prevAdvNum) + totalCustomDed;
+      const totalDed = (customizeModalStaff.totalAbsentDeduction || 0) + (customizeModalStaff.totalFines || 0) + (customizeModalStaff.totalAdvance || 0) + prevAdvNum + totalCustomDed;
       const calcNetPayable = Math.floor((grossSalary + totalCustomAdd) - totalDed);
 
       const outstandingDebt = calcNetPayable < 0 ? Math.abs(calcNetPayable) : (prevAdvNum > 0 ? prevAdvNum : (customizeModalStaff.totalAdvance || 0));
@@ -971,7 +1151,6 @@ export default function ManagerPayrollPage() {
     }
   };
 
-  // Open Quick Paid Leave / Holiday Modal prefilled
   const openHolidayModalWithParams = (params?: { date?: string; scope?: 'all' | 'department' | 'staff'; dept?: StaffDept; staffId?: string; staffName?: string; type?: 'holiday' | 'paid_leave' }) => {
     setHolidayForm({
       date: params?.date || todayStr,
@@ -999,7 +1178,6 @@ export default function ManagerPayrollPage() {
     }
     setSavingHoliday(true);
     try {
-      // 1. Add to global hq_holidays
       await addDoc(collection(db, 'hq_holidays'), {
         date: holidayForm.date,
         label: holidayForm.label.trim(),
@@ -1011,7 +1189,6 @@ export default function ManagerPayrollPage() {
         createdAt: Timestamp.now(),
       });
 
-      // 2. If staff scope, also synchronize attendance record as paid_leave
       if (holidayForm.scope === 'staff' && holidayForm.staffIds?.length > 0) {
         await Promise.all(holidayForm.staffIds.map(async (sId) => {
           const staffObj = (data?.allStaff || []).find((s: any) => s.id === sId || s.staffId === sId);
@@ -1040,14 +1217,12 @@ export default function ManagerPayrollPage() {
     }
   };
 
-  // Instant one-click "Make Paid Leave" from Staff Detail breakdown list
   const handleInstantMakePaidLeave = async (staffRow: any, dateStr: string) => {
     if (!confirm(`Mark ${dateStr} as Paid Leave for ${staffRow.name}? This will remove the absence deduction and restore full daily salary.`)) return;
     try {
       setMarkingPaidLeaveDate(dateStr);
       const leaveLabel = `Approved Paid Leave (${staffRow.name})`;
 
-      // Add to hq_holidays
       await addDoc(collection(db, 'hq_holidays'), {
         date: dateStr,
         label: leaveLabel,
@@ -1059,7 +1234,6 @@ export default function ManagerPayrollPage() {
         createdAt: Timestamp.now(),
       });
 
-      // Also set attendance to paid_leave
       const prefix = getDeptPrefix(staffRow.dept as StaffDept);
       const attId = `${dateStr}_${staffRow.id}`;
       await setDoc(doc(db, `${prefix}_attendance`, attId), {
@@ -1166,6 +1340,7 @@ export default function ManagerPayrollPage() {
   const filteredTotalAdditions = salaryRows.reduce((s: number, r: any) => s + r.totalCustomAdditions, 0);
   const filteredTotalDeductions = salaryRows.reduce((s: number, r: any) => s + r.deductions, 0);
   const filteredTotalAdvances = salaryRows.reduce((s: number, r: any) => s + r.totalAdvance, 0);
+  const filteredTotalPreviousDebt = salaryRows.reduce((s: number, r: any) => s + (r.previousMonthDebt || 0), 0);
 
   // Filtered fines
   const filteredFines = data?.allFines?.filter((f: any) => {
@@ -1179,49 +1354,21 @@ export default function ManagerPayrollPage() {
     ? (data?.allStaff?.filter((s: any) => s.dept === fineForm.dept) || [])
     : [];
 
-  const availableFineDepts = data ? ALL_DEPTS.filter(d => (data.byDept[d]?.allStaff?.length || 0) > 0) : [];
-
-  if (sessionLoading || (loading && !data)) return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className="text-center space-y-3">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-600 mx-auto" />
-        <p className="text-sm font-bold text-gray-600">Loading All-Department Payroll & Custom Adjustments...</p>
-      </div>
-    </div>
-  );
+  const availableFineDepts = Array.from(new Set((data?.allStaff || []).map((s: any) => s.dept))).filter(Boolean) as string[];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8 text-black">
-      <style>{`
-        @page {
-          size: landscape;
-          margin: 5mm;
-        }
-        @media print {
-          aside, header, nav, .no-print, .pointer-events-none, .no-print-col { display: none !important; }
-          html, body, div[class*="min-h-screen"], div[class*="lg:ml-"], main, div[class*="max-w-"] {
-            margin: 0 !important; padding: 0 !important; min-height: 0 !important;
-            height: auto !important; background: white !important; box-shadow: none !important;
-            width: 100% !important; max-width: 100% !important;
-          }
-          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .overflow-x-auto { overflow: visible !important; min-width: 0 !important; width: 100% !important; }
-          #hq-payroll-print { position: relative !important; left: 0 !important; top: 0 !important; width: 100% !important; padding: 5px !important; margin: 0 !important; }
-          table { width: 100% !important; min-width: 0 !important; max-width: 100% !important; page-break-inside: auto; border-collapse: collapse !important; font-size: 8.5px !important; table-layout: fixed !important; }
-          tr { page-break-inside: avoid; page-break-after: auto; }
-          th, td { border: 1px solid #cbd5e1 !important; padding: 3px 2px !important; word-wrap: break-word !important; overflow-wrap: break-word !important; }
-        }
-      `}</style>
+    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
 
-      <div className="max-w-6xl mx-auto space-y-6">
-
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
+      {/* Header */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <UserCog className="w-6 h-6 text-emerald-600" /> All-Department Payroll & Salary Management
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Select any date to make it a fully Paid Leave or Holiday (no salary cut), customize salary additions, and track staff advances</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Automated carryover of previous month deficit/negative salary, paid leave salary protection, and multi-department ledger
+            </p>
           </div>
           {data && (
             <div className="flex gap-2 flex-wrap items-center">
@@ -1314,8 +1461,11 @@ export default function ManagerPayrollPage() {
                 <div className="text-sm font-black text-green-800">+{formatPKR(data.totalAdditions)}</div>
               </div>
               <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl text-center shadow-sm">
-                <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Total Advances</div>
-                <div className="text-sm font-black text-amber-800">{formatPKR(data.totalAdvancesAmount)}</div>
+                <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Advances & Prev Due</div>
+                <div className="text-sm font-black text-amber-800">{formatPKR(data.totalAdvancesAmount + data.totalPreviousDebtAmount)}</div>
+                {data.totalPreviousDebtAmount > 0 && (
+                  <div className="text-[9px] text-rose-600 font-bold mt-0.5">Prev Due: {formatPKR(data.totalPreviousDebtAmount)}</div>
+                )}
               </div>
               <div className="bg-red-50 border border-red-100 p-4 rounded-2xl text-center shadow-sm">
                 <div className="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-1">Total Deductions</div>
@@ -1335,11 +1485,11 @@ export default function ManagerPayrollPage() {
                 </div>
                 <div>
                   <h4 className="font-extrabold text-sm flex items-center gap-2">
-                    Paid Leave & Holiday Protection Active
-                    <span className="text-[10px] bg-emerald-400 text-emerald-950 font-black px-2 py-0.5 rounded-full uppercase">100% Salary Safe</span>
+                    Paid Leave & Negative Salary Carryover Protection Active
+                    <span className="text-[10px] bg-emerald-400 text-emerald-950 font-black px-2 py-0.5 rounded-full uppercase">Automatic Balance</span>
                   </h4>
                   <p className="text-xs text-white/80 mt-0.5">
-                    Any date marked as an Official Holiday or Approved Paid Leave is fully credited. Staff daily salary is <span className="font-bold underline text-white">NOT cut</span>.
+                    Negative salaries from {MONTHS[prevMonth]} {prevYear} are automatically cut from this month. Approved Paid Leaves remain 100% deduction-free.
                   </p>
                 </div>
               </div>
@@ -1405,8 +1555,11 @@ export default function ManagerPayrollPage() {
                       <div className="text-sm font-black text-green-800">+{formatPKR(filteredTotalAdditions)}</div>
                     </div>
                     <div className="bg-amber-50 border border-amber-100 p-3 rounded-xl text-center">
-                      <div className="text-[10px] font-bold text-amber-600 mb-0.5">Total Advances</div>
-                      <div className="text-sm font-black text-amber-800">{formatPKR(filteredTotalAdvances)}</div>
+                      <div className="text-[10px] font-bold text-amber-600 mb-0.5">Advances & Prev Due</div>
+                      <div className="text-sm font-black text-amber-800">{formatPKR(filteredTotalAdvances + filteredTotalPreviousDebt)}</div>
+                      {filteredTotalPreviousDebt > 0 && (
+                        <div className="text-[9px] text-rose-600 font-bold mt-0.5">Prev Due: {formatPKR(filteredTotalPreviousDebt)}</div>
+                      )}
                     </div>
                     <div className="bg-red-50 border border-red-100 p-3 rounded-xl text-center">
                       <div className="text-[10px] font-bold text-red-500 mb-0.5">Total Deductions</div>
@@ -1430,8 +1583,8 @@ export default function ManagerPayrollPage() {
                       <col className="w-[7%]" />
                       <col className="w-[8%]" />
                       <col className="w-[7%]" />
-                      <col className="w-[9%]" />
-                      <col className="w-[11%]" />
+                      <col className="w-[10%]" />
+                      <col className="w-[10%]" />
                       <col className="w-[13%]" />
                       <col className="w-[0%] no-print no-print-col" />
                     </colgroup>
@@ -1445,7 +1598,7 @@ export default function ManagerPayrollPage() {
                         <th className="px-2 py-2.5 text-right font-bold text-green-800 border-b border-gray-200 bg-green-50/80">Additions (+)</th>
                         <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200">Absent Ded.</th>
                         <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200">Fine Ded.</th>
-                        <th className="px-2 py-2.5 text-right font-bold text-amber-800 border-b border-gray-200 bg-amber-50/70">Advance Ded.</th>
+                        <th className="px-2 py-2.5 text-right font-bold text-amber-800 border-b border-gray-200 bg-amber-50/70">Advance & Prev Due</th>
                         <th className="px-2 py-2.5 text-right font-bold text-rose-800 border-b border-gray-200 bg-rose-50/70">Security / Custom Ded.</th>
                         <th className="px-2 py-2.5 text-right font-bold text-emerald-900 border-b border-gray-200 bg-emerald-100/70">Net Salary To Pay</th>
                         <th className="px-2 py-2.5 text-center font-bold text-emerald-900 border-b border-gray-200 no-print no-print-col">Actions</th>
@@ -1533,8 +1686,28 @@ export default function ManagerPayrollPage() {
                           <td className="px-3 py-3.5 text-right text-red-600 font-medium text-xs">
                             {r.totalFines > 0 ? formatPKR(r.totalFines) : '—'}
                           </td>
-                          <td className="px-3 py-3.5 text-right text-amber-700 font-bold text-xs bg-amber-50/40">
-                            {r.totalAdvance > 0 ? formatPKR(r.totalAdvance) : '—'}
+
+                          {/* Advance & Previous Month Deficit Column */}
+                          <td className="px-3 py-3.5 text-right font-bold text-xs bg-amber-50/40">
+                            {r.totalAdvance > 0 || (r.previousMonthDebt || 0) > 0 ? (
+                              <div className="space-y-0.5">
+                                <span className="inline-block bg-amber-100 text-amber-900 px-2 py-0.5 rounded border border-amber-200">
+                                  -{formatPKR(r.totalAdvance + (r.previousMonthDebt || 0))}
+                                </span>
+                                {r.previousMonthDebt > 0 && (
+                                  <div className="text-[9px] text-rose-600 font-black">
+                                    Prev Due: -{formatPKR(r.previousMonthDebt)}
+                                  </div>
+                                )}
+                                {r.totalAdvance > 0 && r.previousMonthDebt > 0 && (
+                                  <div className="text-[9px] text-amber-700">
+                                    This Month: {formatPKR(r.totalAdvance)}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-300">—</span>
+                            )}
                           </td>
 
                           {/* Security & Custom Deductions Column */}
@@ -1589,7 +1762,7 @@ export default function ManagerPayrollPage() {
                               <button
                                 onClick={(e) => { e.stopPropagation(); openCustomizeModal(r); }}
                                 className="p-1.5 bg-emerald-100 hover:bg-emerald-600 hover:text-white rounded-lg text-emerald-700 transition-colors flex items-center gap-1 text-xs font-bold px-2 py-1 cursor-pointer"
-                                title="Customize salary (Add remaining balance, security fee, advance, etc.)"
+                                title="Customize salary (Add remaining balance, security fee, previous debt cut, etc.)"
                               >
                                 <SlidersHorizontal className="w-3.5 h-3.5" /> Edit
                               </button>
@@ -1634,7 +1807,12 @@ export default function ManagerPayrollPage() {
                           <td />
                           <td className="px-3.5 py-3.5 text-right text-green-800 bg-green-100/60">+{formatPKR(filteredTotalAdditions)}</td>
                           <td colSpan={2} />
-                          <td className="px-3.5 py-3.5 text-right text-amber-800 bg-amber-100/60">{formatPKR(filteredTotalAdvances)}</td>
+                          <td className="px-3.5 py-3.5 text-right text-amber-800 bg-amber-100/60">
+                            {formatPKR(filteredTotalAdvances + filteredTotalPreviousDebt)}
+                            {filteredTotalPreviousDebt > 0 && (
+                              <div className="text-[9px] text-rose-600 font-bold">Prev: {formatPKR(filteredTotalPreviousDebt)}</div>
+                            )}
+                          </td>
                           <td className="px-3.5 py-3.5 text-right text-red-700">{formatPKR(filteredTotalDeductions)}</td>
                           <td className={`px-3.5 py-3.5 text-right font-black text-sm ${filteredTotalNet < 0 ? 'text-rose-900 bg-rose-100' : 'text-emerald-950 bg-emerald-100/90'}`}>{formatPKR(filteredTotalNet)}</td>
                           <td className="no-print no-print-col" />
@@ -1947,7 +2125,7 @@ export default function ManagerPayrollPage() {
       {showHolidayModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto no-print">
           <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border border-gray-100 overflow-hidden my-8 transform transition-all animate-in fade-in duration-200">
-            
+
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-emerald-800 to-teal-900 text-white p-6 relative">
               <button
@@ -2145,7 +2323,7 @@ export default function ManagerPayrollPage() {
       {customizeModalStaff && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto no-print">
           <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border border-gray-100 overflow-hidden my-8 transform transition-all">
-            
+
             {/* Modal Header */}
             <div className="bg-emerald-800 text-white p-6 relative">
               <button
@@ -2297,7 +2475,7 @@ export default function ManagerPayrollPage() {
                   </div>
                   <div>
                     <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
-                      Previous Advance Salary Adjustment
+                      Previous Month Negative Salary / Advance Cut
                     </label>
                     <input
                       type="number"
@@ -2306,7 +2484,9 @@ export default function ManagerPayrollPage() {
                       placeholder="e.g. 3000"
                       className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-500 font-bold text-black"
                     />
-                    <span className="text-[10px] text-gray-400 mt-0.5 block">Advance salary taken before</span>
+                    <span className="text-[10px] text-gray-400 mt-0.5 block">
+                      Auto-detected previous deficit: {formatPKR(customizeModalStaff.previousMonthDebt || 0)}
+                    </span>
                   </div>
                 </div>
 
@@ -2403,7 +2583,7 @@ export default function ManagerPayrollPage() {
       {selectedStaffModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto no-print">
           <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full border border-gray-100 overflow-hidden my-8 transform transition-all">
-            
+
             {/* Modal Header */}
             <div className={`p-6 relative text-white ${selectedStaffModal.netPayable < 0 ? 'bg-rose-900' : 'bg-emerald-800'}`}>
               <button
@@ -2445,6 +2625,19 @@ export default function ManagerPayrollPage() {
                 </div>
               )}
 
+              {/* Previous Month Deficit Alert if carried over */}
+              {selectedStaffModal.previousMonthDebt > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-amber-900">
+                  <div className="flex items-center gap-2.5">
+                    <CreditCard className="w-5 h-5 text-amber-600 shrink-0" />
+                    <div className="text-xs">
+                      <span className="font-extrabold">Carried-over Deficit Cut: </span>
+                      {formatPKR(selectedStaffModal.previousMonthDebt)} was automatically cut from {selectedStaffModal.previousMonthLabel || 'previous month'} negative salary balance.
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Salary Summary Cards matching Staff Profile */}
               <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
                 <div className="bg-gray-50 border border-gray-100 p-2.5 rounded-2xl text-center">
@@ -2475,9 +2668,11 @@ export default function ManagerPayrollPage() {
                 </div>
 
                 <div className="bg-amber-50 border border-amber-100 p-2.5 rounded-2xl text-center">
-                  <div className="text-[9px] font-bold text-amber-700 uppercase tracking-wider mb-0.5">Advance Ded.</div>
-                  <div className="text-xs font-black text-amber-800">{formatPKR(selectedStaffModal.totalAdvance)}</div>
-                  <div className="text-[9px] text-amber-600 mt-0.5">Salary Advance</div>
+                  <div className="text-[9px] font-bold text-amber-700 uppercase tracking-wider mb-0.5">Advance & Prev</div>
+                  <div className="text-xs font-black text-amber-800">{formatPKR(selectedStaffModal.totalAdvance + (selectedStaffModal.previousMonthDebt || 0))}</div>
+                  {selectedStaffModal.previousMonthDebt > 0 && (
+                    <div className="text-[9px] text-rose-600 font-bold mt-0.5">Prev: -{formatPKR(selectedStaffModal.previousMonthDebt)}</div>
+                  )}
                 </div>
 
                 <div className={`p-2.5 rounded-2xl text-center col-span-2 sm:col-span-1 border ${selectedStaffModal.netPayable < 0 ? 'bg-rose-100 border-rose-300' : 'bg-emerald-50 border-emerald-200'}`}>
@@ -2573,6 +2768,10 @@ export default function ManagerPayrollPage() {
                                 <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full font-bold text-[10px]">
                                   Security Fee
                                 </span>
+                              ) : item.reason?.includes('Previous Month') ? (
+                                <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-900 px-2 py-0.5 rounded-full font-bold text-[10px] border border-rose-200">
+                                  <CreditCard className="w-3 h-3 text-rose-700" /> Prev Deficit Cut
+                                </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold text-[10px]">
                                   <CreditCard className="w-3 h-3" /> Advance Salary
@@ -2626,7 +2825,7 @@ export default function ManagerPayrollPage() {
                   <div className="text-[11px] font-medium text-white/80">
                     {selectedStaffModal.netPayable < 0 ? 'Outstanding Advance Balance (Staff Owes Hub)' : 'Final Money To Pay Staff'}
                   </div>
-                  <div className="text-xs text-white/70">(Gross Salary + Additions) - Total Deductions</div>
+                  <div className="text-xs text-white/70">(Gross Salary + Additions) - Total Deductions (inc. Prev Deficit)</div>
                 </div>
                 <div className="text-2xl font-black text-white">
                   {formatPKR(selectedStaffModal.netPayable)}
@@ -2667,7 +2866,7 @@ export default function ManagerPayrollPage() {
       {slipStaffModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto no-print">
           <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full border border-gray-100 overflow-hidden my-8 transform transition-all">
-            
+
             {/* Modal Control Header */}
             <div className="bg-slate-900 text-white p-5 flex flex-col sm:flex-row items-center justify-between gap-4 no-print-modal">
               <div className="flex items-center gap-3">
@@ -2677,7 +2876,7 @@ export default function ManagerPayrollPage() {
                   <p className="text-xs text-gray-400 font-medium">{slipStaffModal.name} — {data?.monthLabel}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700">
                   <label className="text-xs font-bold text-gray-300">Paid Date:</label>
@@ -2688,21 +2887,21 @@ export default function ManagerPayrollPage() {
                     className="bg-slate-900 text-white border border-slate-600 rounded-lg px-2.5 py-1 text-xs font-bold outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>
-                
+
                 <button
                   onClick={handleDownloadSingleSlip}
                   className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
                 >
                   <Download className="w-4 h-4" /> Download PNG
                 </button>
-                
+
                 <button
                   onClick={handlePrintSingleSlip}
                   className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
                 >
                   <Printer className="w-4 h-4" /> Print Slip
                 </button>
-                
+
                 <button
                   onClick={() => setSlipStaffModal(null)}
                   className="text-gray-400 hover:text-white bg-slate-800 p-2 rounded-full transition-colors ml-1 cursor-pointer"
