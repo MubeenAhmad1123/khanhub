@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { formatDateDMY, downloadElementAsPng, toDate } from '@/lib/utils';
+import { SPIMS_COURSES } from '@/types/spims';
 import {
   FileBarChart, Printer, Calendar, Download,
   TrendingUp, TrendingDown, DollarSign, Loader2, BarChart3,
-  Users, UserCog, AlertTriangle,
+  Users, UserCog, AlertTriangle, GraduationCap, X,
   ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
 
@@ -100,6 +101,14 @@ export default function SuperAdminReportsPage() {
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
   const [reportFocus, setReportFocus] = useState<'income' | 'remaining' | 'students'>('income');
+
+  // Course & Session Filter States
+  const [availableCourses, setAvailableCourses] = useState<string[]>([]);
+  const [availableSessions, setAvailableSessions] = useState<string[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<string>('all');
+  const [selectedSession, setSelectedSession] = useState<string>('all');
+  const [customSessionInput, setCustomSessionInput] = useState<string>('');
+
   const [selectedStatuses, setSelectedStatuses] = useState<Record<string, boolean>>({
     active: true,
     inactive: true,
@@ -159,7 +168,43 @@ export default function SuperAdminReportsPage() {
       router.push('/departments/spims/login'); return;
     }
     setSession(parsed);
+
+    // Fetch existing courses and sessions from database
+    async function loadFilterOptions() {
+      try {
+        const snap = await getDocs(collection(db, 'spims_students'));
+        const coursesSet = new Set<string>(SPIMS_COURSES);
+        const sessionsSet = new Set<string>();
+
+        snap.docs.forEach(doc => {
+          const d = doc.data() as any;
+          if (d.course && typeof d.course === 'string' && d.course.trim()) {
+            coursesSet.add(d.course.trim());
+          }
+          if (d.session && typeof d.session === 'string' && d.session.trim()) {
+            sessionsSet.add(d.session.trim());
+          }
+        });
+
+        // Common standard sessions
+        ['22-24', '23-25', '24-26', '25-27', '26-28'].forEach(s => sessionsSet.add(s));
+
+        setAvailableCourses(Array.from(coursesSet).filter(Boolean).sort());
+        setAvailableSessions(Array.from(sessionsSet).filter(Boolean).sort());
+      } catch (err) {
+        console.error('Failed to load courses/sessions for filter:', err);
+        setAvailableCourses([...SPIMS_COURSES]);
+        setAvailableSessions(['22-24', '23-25', '24-26', '25-27', '26-28']);
+      }
+    }
+    loadFilterOptions();
   }, [router]);
+
+  const handleResetFilters = () => {
+    setSelectedCourse('all');
+    setSelectedSession('all');
+    setCustomSessionInput('');
+  };
 
   const handleSort = (field: string) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -247,6 +292,14 @@ export default function SuperAdminReportsPage() {
       setGenerating(true);
       setGenerated(false);
       setSortField('');
+
+      const appliedCourse = selectedCourse;
+      const appliedSession = selectedSession === 'custom' 
+        ? customSessionInput.trim() 
+        : selectedSession;
+
+      const targetCourse = appliedCourse === 'all' ? '' : appliedCourse.trim().toLowerCase();
+      const targetSession = appliedSession === 'all' || !appliedSession ? '' : appliedSession.trim().toLowerCase();
 
       // Fetch all approved fees and all approved transactions ever for dynamic remaining calculation
       const [allApprovedFeesSnap, allApprovedTxnsSnap] = await Promise.all([
@@ -388,6 +441,14 @@ export default function SuperAdminReportsPage() {
           });
         }
 
+        // Apply Course & Session Filters
+        if (targetCourse) {
+          students = students.filter(s => String(s.course || '').trim().toLowerCase() === targetCourse);
+        }
+        if (targetSession) {
+          students = students.filter(s => String(s.session || '').trim().toLowerCase() === targetSession);
+        }
+
         const totalStudentsCount = students.length;
         const totalActiveCount = students.filter(s => {
           const isLeft = String(s.status).toLowerCase() === 'left';
@@ -412,6 +473,8 @@ export default function SuperAdminReportsPage() {
           totalOutstandingDues,
           reportLabel: label,
           reportFocus,
+          appliedCourse,
+          appliedSession,
           generatedAt: new Date().toLocaleString(),
         });
         setGenerated(true);
@@ -427,7 +490,7 @@ export default function SuperAdminReportsPage() {
         orderBy('date', 'asc')
       );
       const txnSnap = await getDocs(txnQ);
-      const txns = txnSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const rawTxns = txnSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
       const pendingQ = query(
         collection(db, 'spims_transactions'),
@@ -437,26 +500,6 @@ export default function SuperAdminReportsPage() {
       );
       const pendingSnap = await getDocs(pendingQ);
       const pendingCount = pendingSnap.size;
-
-      const income = txns.filter((t: any) => t.type === 'income');
-      const expense = txns.filter((t: any) => t.type === 'expense');
-      const totalIncome = income.reduce((s: number, t: any) => s + (t.amount || 0), 0);
-      const totalExpenses = expense.reduce((s: number, t: any) => s + (t.amount || 0), 0);
-
-      const byCategory = (list: any[]) => {
-        const map: Record<string, number> = {};
-        list.forEach((t: any) => {
-          const isFee = 
-            t.category === 'student_fee' || 
-            t.category === 'fee' || 
-            String(t.category || '').toLowerCase().includes('fee') ||
-            String(t.categoryName || '').toLowerCase().includes('fee') ||
-            String(t.categoryName || '').toLowerCase().includes('admission');
-          const catKey = isFee ? 'student_fee' : t.category;
-          map[catKey] = (map[catKey] || 0) + (t.amount || 0);
-        });
-        return map;
-      };
 
       // === STAFF SALARY ===
       const staffSnap = await getDocs(query(collection(db, 'spims_staff'), where('isActive', '==', true)));
@@ -490,21 +533,29 @@ export default function SuperAdminReportsPage() {
 
       const totalPayroll = staffSalaries.reduce((s: number, st: any) => s + st.netPayable, 0);
 
-      // === STUDENTS ===
+      // === STUDENTS FETCH & FILTER ===
       const activeStudentsSnap = await getDocs(collection(db, 'spims_students'));
       const allStudents = activeStudentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-      // Only 'Active' students for the header count
-      const totalActiveStudents = allStudents.filter(s => (s.status || 'Active') === 'Active').length;
 
-      const newAdmissions = allStudents.filter((student: any) => {
+      let filteredStudents = allStudents;
+      if (targetCourse) {
+        filteredStudents = filteredStudents.filter(s => String(s.course || '').trim().toLowerCase() === targetCourse);
+      }
+      if (targetSession) {
+        filteredStudents = filteredStudents.filter(s => String(s.session || '').trim().toLowerCase() === targetSession);
+      }
+
+      // Active students and new admissions for matching students
+      const totalActiveStudents = filteredStudents.filter(s => (s.status || 'Active') === 'Active').length;
+
+      const newAdmissions = filteredStudents.filter((student: any) => {
         if (!student.admissionDate) return false;
         const d = student.admissionDate.toDate?.() ? student.admissionDate.toDate() : new Date(student.admissionDate);
         return d >= firstDay && d <= lastDay;
       }).length;
 
       // === STUDENT FEES BREAKDOWN ===
-      // Period Collections = sum of all fee-type income txns in period (source of truth)
-      const feeTxnsInPeriod = txns.filter((t: any) => {
+      const feeTxnsInPeriod = rawTxns.filter((t: any) => {
         if (t.type !== 'income') return false;
         return (
           t.category === 'student_fee' ||
@@ -514,14 +565,13 @@ export default function SuperAdminReportsPage() {
           String(t.categoryName || '').toLowerCase().includes('admission')
         );
       });
-      const totalStudentFeesCollectedInPeriod = feeTxnsInPeriod.reduce((s: number, t: any) => s + (t.amount || 0), 0);
 
-      // Build per-student breakdown — use ALL students so no one is excluded
-      const studentFeesBreakdown = allStudents.map(student => {
+      // Build per-student breakdown for the filtered students
+      const studentFeesBreakdown = filteredStudents.map(student => {
         const sId = student.id;
         const sCustomId = String(student.studentId || student.customId || '').trim();
 
-        // Match txns by doc ID OR custom student ID (both are used in transactions)
+        // Match txns by doc ID OR custom student ID
         const studentPeriodTxns = feeTxnsInPeriod.filter((t: any) => {
           const tSId = String(t.studentId || '').trim();
           const tPId = String(t.patientId || '').trim();
@@ -535,15 +585,64 @@ export default function SuperAdminReportsPage() {
           rollNo: student.rollNo || student.serialNumber || '—',
           studentId: student.studentId || student.customId || '—',
           course: student.course || '—',
+          session: student.session || '—',
           monthlyFee: Number(student.monthlyFee || 0),
           totalPackage: Number(student.totalPackage || student.totalPackageAmount || 0),
           paidInPeriod,
-          amountPaidThisMonth: paidInPeriod, // same source in period context
+          amountPaidThisMonth: paidInPeriod,
           overallRemaining: calculateStudentRemaining(sId, student.studentId, student.totalPackage || student.totalPackageAmount, allApprovedFees, allApprovedTxns)
         };
       });
 
+      const totalStudentFeesCollectedInPeriod = studentFeesBreakdown.reduce((s: number, t: any) => s + (t.paidInPeriod || 0), 0);
       const totalStudentOutstandingDues = studentFeesBreakdown.reduce((sum, s) => sum + s.overallRemaining, 0);
+
+      // Filter transactions to matching students if course or session filter is active
+      let txns = rawTxns;
+      if (targetCourse || targetSession) {
+        const matchingIds = new Set<string>();
+        filteredStudents.forEach(s => {
+          if (s.id) matchingIds.add(s.id);
+          if (s.studentId) matchingIds.add(String(s.studentId).trim());
+          if (s.customId) matchingIds.add(String(s.customId).trim());
+        });
+        txns = rawTxns.filter((t: any) => {
+          const sId = String(t.studentId || '').trim();
+          const pId = String(t.patientId || '').trim();
+          return (sId && matchingIds.has(sId)) || (pId && matchingIds.has(pId));
+        });
+      }
+
+      const income = (targetCourse || targetSession) 
+        ? txns.filter((t: any) => t.type === 'income')
+        : rawTxns.filter((t: any) => t.type === 'income');
+      
+      const expense = (targetCourse || targetSession)
+        ? []
+        : rawTxns.filter((t: any) => t.type === 'expense');
+
+      const totalIncome = (targetCourse || targetSession)
+        ? totalStudentFeesCollectedInPeriod
+        : income.reduce((s: number, t: any) => s + (t.amount || 0), 0);
+
+      const totalExpenses = (targetCourse || targetSession)
+        ? 0
+        : expense.reduce((s: number, t: any) => s + (t.amount || 0), 0);
+
+      const byCategory = (list: any[]) => {
+        const map: Record<string, number> = {};
+        list.forEach((t: any) => {
+          const isFee = 
+            t.category === 'student_fee' || 
+            t.category === 'fee' || 
+            String(t.category || '').toLowerCase().includes('fee') ||
+            String(t.categoryName || '').toLowerCase().includes('fee') ||
+            String(t.categoryName || '').toLowerCase().includes('admission');
+          const catKey = isFee ? 'student_fee' : t.category;
+          map[catKey] = (map[catKey] || 0) + (t.amount || 0);
+        });
+        return map;
+      };
 
       setReportData({
         txns,
@@ -555,8 +654,8 @@ export default function SuperAdminReportsPage() {
         incomeByCategory: byCategory(income),
         expenseByCategory: byCategory(expense),
         pendingCount,
-        staffSalaries,
-        totalPayroll,
+        staffSalaries: (targetCourse || targetSession) ? [] : staffSalaries,
+        totalPayroll: (targetCourse || targetSession) ? 0 : totalPayroll,
         totalActiveStudents,
         newAdmissions,
         studentFeesBreakdown,
@@ -565,6 +664,8 @@ export default function SuperAdminReportsPage() {
         reportLabel: label,
         generatedAt: new Date().toLocaleString(),
         reportFocus,
+        appliedCourse,
+        appliedSession,
       });
       setGenerated(true);
     } catch (error: any) {
@@ -646,7 +747,7 @@ export default function SuperAdminReportsPage() {
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <FileBarChart className="w-6 h-6 text-purple-600" /> Super Admin Reports
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Comprehensive reports including student summaries and staff payroll</p>
+            <p className="text-sm text-gray-500 mt-1">Comprehensive reports including student summaries, course/session filters, and staff payroll</p>
           </div>
           {generated && (
             <div className="flex gap-3">
@@ -671,7 +772,7 @@ export default function SuperAdminReportsPage() {
                   key={t}
                   onClick={() => setReportType(t)}
                   className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                    reportType === t ? 'bg-white shadow-sm text-purple-600 font-bold' : 'text-gray-400 hover:text-gray-775'
+                    reportType === t ? 'bg-white shadow-sm text-purple-600 font-bold' : 'text-gray-400 hover:text-gray-700'
                   }`}
                 >
                   {t}
@@ -711,6 +812,70 @@ export default function SuperAdminReportsPage() {
               >
                 Student List
               </button>
+            </div>
+          </div>
+
+          {/* Course & Session Filter Section */}
+          <div className="border-t border-gray-100 pt-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+              <div>
+                <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4 text-purple-600" /> Filter by Course & Session
+                </h3>
+                <p className="text-xs text-gray-400">Generate report for a specific course or batch / session (e.g. 25-27)</p>
+              </div>
+              {(selectedCourse !== 'all' || selectedSession !== 'all' || customSessionInput.trim() !== '') && (
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="flex items-center gap-1 text-xs font-bold text-purple-600 hover:text-purple-800 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" /> Clear Filters
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Course</label>
+                <select
+                  value={selectedCourse}
+                  onChange={e => setSelectedCourse(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-gray-800 font-semibold cursor-pointer"
+                >
+                  <option value="all">All Courses</option>
+                  {availableCourses.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Session / Batch</label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <select
+                    value={selectedSession}
+                    onChange={e => setSelectedSession(e.target.value)}
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-gray-800 font-semibold cursor-pointer"
+                  >
+                    <option value="all">All Sessions</option>
+                    {availableSessions.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                    <option value="custom">Custom / Enter Manually...</option>
+                  </select>
+                  {selectedSession === 'custom' && (
+                    <input
+                      type="text"
+                      placeholder="e.g. 25-27"
+                      value={customSessionInput}
+                      onChange={e => setCustomSessionInput(e.target.value)}
+                      className="w-full sm:w-36 bg-gray-50 border-2 border-purple-400 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-500 text-gray-800 font-bold"
+                      autoFocus
+                    />
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -800,7 +965,7 @@ export default function SuperAdminReportsPage() {
                         type="checkbox"
                         checked={selectedColumns[col.key] || false}
                         onChange={e => setSelectedColumns(prev => ({ ...prev, [col.key]: e.target.checked }))}
-                        className="rounded border-gray-300 text-purple-650 focus:ring-purple-500 w-4 h-4 cursor-pointer"
+                        className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer"
                       />
                       {col.label}
                     </label>
@@ -893,11 +1058,28 @@ export default function SuperAdminReportsPage() {
                     : 'Student List Report'
                 }
               </p>
-              <p className="text-sm text-gray-400 mt-1">Generated: {reportData.generatedAt}</p>
+
+              {/* Active Filter Badges */}
+              {(reportData.appliedCourse !== 'all' || (reportData.appliedSession && reportData.appliedSession !== 'all')) && (
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+                  {reportData.appliedCourse !== 'all' && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                      <GraduationCap className="w-3.5 h-3.5" /> Course: {reportData.appliedCourse}
+                    </span>
+                  )}
+                  {reportData.appliedSession && reportData.appliedSession !== 'all' && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                      <Calendar className="w-3.5 h-3.5" /> Session: {reportData.appliedSession}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <p className="text-sm text-gray-400 mt-2">Generated: {reportData.generatedAt}</p>
             </div>
 
             {/* Pending Warning Banner */}
-            {reportData.pendingCount > 0 && reportData.reportFocus === 'income' && (
+            {reportData.pendingCount > 0 && reportData.reportFocus === 'income' && !reportData.appliedCourse && (
               <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 p-4 rounded-xl">
                 <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-amber-800">
@@ -910,44 +1092,44 @@ export default function SuperAdminReportsPage() {
             {reportData.reportFocus === 'students' ? (
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
                 <div className="bg-purple-50 border border-purple-100 p-5 rounded-2xl text-center">
-                  <Users className="w-6 h-6 text-purple-605 mx-auto mb-2" />
-                  <div className="text-xs font-bold text-purple-650 uppercase tracking-wider mb-1">Total Matching</div>
+                  <Users className="w-6 h-6 text-purple-600 mx-auto mb-2" />
+                  <div className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-1">Total Matching</div>
                   <div className="text-2xl font-black text-purple-800">{reportData.totalStudentsCount}</div>
                 </div>
                 <div className="bg-green-50 border border-green-100 p-5 rounded-2xl text-center">
                   <TrendingUp className="w-6 h-6 text-green-600 mx-auto mb-2" />
-                  <div className="text-xs font-bold text-green-650 uppercase tracking-wider mb-1">Active Students</div>
+                  <div className="text-xs font-bold text-green-600 uppercase tracking-wider mb-1">Active Students</div>
                   <div className="text-2xl font-black text-green-800">{reportData.totalActiveCount}</div>
                 </div>
                 <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl text-center">
                   <TrendingDown className="w-6 h-6 text-slate-500 mx-auto mb-2" />
-                  <div className="text-xs font-bold text-slate-650 uppercase tracking-wider mb-1">Inactive Students</div>
-                  <div className="text-2xl font-black text-slate-750">{reportData.totalInactiveCount}</div>
+                  <div className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Inactive Students</div>
+                  <div className="text-2xl font-black text-slate-700">{reportData.totalInactiveCount}</div>
                 </div>
                 <div className="bg-blue-50 border border-blue-100 p-5 rounded-2xl text-center">
                   <BarChart3 className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                  <div className="text-xs font-bold text-blue-650 uppercase tracking-wider mb-1">Passed/Completed</div>
+                  <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Passed/Completed</div>
                   <div className="text-2xl font-black text-blue-800">{reportData.totalCompletedCount}</div>
                 </div>
                 <div className="bg-red-50 border border-red-100 p-5 rounded-2xl text-center">
                   <TrendingDown className="w-6 h-6 text-red-500 mx-auto mb-2" />
-                  <div className="text-xs font-bold text-red-650 uppercase tracking-wider mb-1">Left Students</div>
-                  <div className="text-2xl font-black text-red-750">{reportData.totalLeftCount}</div>
+                  <div className="text-xs font-bold text-red-600 uppercase tracking-wider mb-1">Left Students</div>
+                  <div className="text-2xl font-black text-red-700">{reportData.totalLeftCount}</div>
                 </div>
                 <div className="bg-rose-50 border border-rose-100 p-5 rounded-2xl text-center">
                   <TrendingDown className="w-6 h-6 text-rose-500 mx-auto mb-2" />
-                  <div className="text-xs font-bold text-rose-650 uppercase tracking-wider mb-1">Failed Students</div>
+                  <div className="text-xs font-bold text-rose-600 uppercase tracking-wider mb-1">Failed Students</div>
                   <div className="text-2xl font-black text-rose-750">{reportData.totalFailedCount}</div>
                 </div>
                 <div className="bg-amber-50 border border-amber-100 p-5 rounded-2xl text-center">
                   <TrendingDown className="w-6 h-6 text-amber-500 mx-auto mb-2" />
-                  <div className="text-xs font-bold text-amber-650 uppercase tracking-wider mb-1">No Status</div>
-                  <div className="text-2xl font-black text-amber-750">{reportData.totalNoStatusCount}</div>
+                  <div className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-1">No Status</div>
+                  <div className="text-2xl font-black text-amber-700">{reportData.totalNoStatusCount}</div>
                 </div>
                 <div className="bg-orange-50 border border-orange-100 p-5 rounded-2xl text-center col-span-1">
                   <DollarSign className="w-6 h-6 text-orange-600 mx-auto mb-2" />
-                  <div className="text-xs font-bold text-orange-650 uppercase tracking-wider mb-1">Total Remaining</div>
-                  <div className="text-2xl font-black text-orange-850">{formatPKR(reportData.totalOutstandingDues)}</div>
+                  <div className="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Total Remaining</div>
+                  <div className="text-2xl font-black text-orange-800">{formatPKR(reportData.totalOutstandingDues)}</div>
                 </div>
               </div>
             ) : (
@@ -957,7 +1139,7 @@ export default function SuperAdminReportsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
                     <div className="text-3xl font-black text-teal-800">{reportData.totalActiveStudents}</div>
-                    <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mt-1">Active Students</div>
+                    <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mt-1">Active Students {reportData.appliedCourse !== 'all' || (reportData.appliedSession && reportData.appliedSession !== 'all') ? '(Filtered)' : ''}</div>
                   </div>
                   <div className="bg-blue-50 border border-blue-100 p-5 rounded-2xl text-center">
                     <div className="text-3xl font-black text-blue-800">{reportData.newAdmissions}</div>
@@ -974,7 +1156,9 @@ export default function SuperAdminReportsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-teal-50 border border-teal-100 p-5 rounded-2xl text-center">
                     <TrendingUp className="w-6 h-6 text-teal-600 mx-auto mb-2" />
-                    <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">Total Income</div>
+                    <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">
+                      {reportData.appliedCourse !== 'all' || (reportData.appliedSession && reportData.appliedSession !== 'all') ? 'Filtered Student Fees' : 'Total Income'}
+                    </div>
                     <div className="text-2xl font-black text-teal-800">{formatPKR(reportData.totalIncome)}</div>
                   </div>
                   <div className="bg-red-50 border border-red-100 p-5 rounded-2xl text-center">
@@ -983,7 +1167,7 @@ export default function SuperAdminReportsPage() {
                     <div className="text-2xl font-black text-red-700">{formatPKR(reportData.totalExpenses)}</div>
                   </div>
                   <div className={`border p-5 rounded-2xl text-center ${reportData.netBalance >= 0 ? 'bg-green-50 border-green-100' : 'bg-orange-50 border-orange-100'}`}>
-                    <DollarSign className={`w-6 h-6 mx-auto mb-2 ${reportData.netBalance >= 0 ? 'text-green-600' : 'text-orange-552'}`} />
+                    <DollarSign className={`w-6 h-6 mx-auto mb-2 ${reportData.netBalance >= 0 ? 'text-green-600' : 'text-orange-600'}`} />
                     <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${reportData.netBalance >= 0 ? 'text-green-700' : 'text-orange-700'}`}>Net Balance</div>
                     <div className={`text-2xl font-black ${reportData.netBalance >= 0 ? 'text-green-800' : 'text-orange-700'}`}>{formatPKR(reportData.netBalance)}</div>
                   </div>
@@ -995,11 +1179,11 @@ export default function SuperAdminReportsPage() {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-                    <Users className="w-5 h-5 text-purple-605" /> Student List Details
+                    <Users className="w-5 h-5 text-purple-600" /> Student List Details
                   </h3>
                   <div className="overflow-x-auto rounded-xl border border-gray-200">
                     <table className="w-full text-xs border-collapse min-w-[300px]">
-                      <thead className="bg-gray-50 text-gray-650 border-b border-gray-200 select-none">
+                      <thead className="bg-gray-50 text-gray-600 border-b border-gray-200 select-none">
                         <tr>
                           {selectedColumns.name && (
                             <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('name')}>
@@ -1140,7 +1324,7 @@ export default function SuperAdminReportsPage() {
                                 {sortField === 'overallRemaining' ? (
                                   sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
                                 ) : (
-                                  <ArrowUpDown className="w-3.5 h-3.5 text-rose-450" />
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-rose-500" />
                                 )}
                               </div>
                             </th>
@@ -1163,7 +1347,7 @@ export default function SuperAdminReportsPage() {
                         {getSortedStudents().map((s: any) => (
                           <tr key={s.id} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
                             {selectedColumns.name && (
-                              <td className="px-3 py-2.5 text-gray-855 font-bold">
+                              <td className="px-3 py-2.5 text-gray-800 font-bold">
                                 {s.name}
                                 {s.status && s.status !== 'Active' && <span className="ml-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">{s.status}</span>}
                               </td>
@@ -1172,7 +1356,7 @@ export default function SuperAdminReportsPage() {
                             {selectedColumns.rollNo && <td className="px-3 py-2.5 text-gray-550 font-mono">{s.rollNo}</td>}
                             {selectedColumns.studentId && <td className="px-3 py-2.5 text-gray-550 font-mono">{s.studentId}</td>}
                             {selectedColumns.course && <td className="px-3 py-2.5 text-gray-600">{s.course}</td>}
-                            {selectedColumns.session && <td className="px-3 py-2.5 text-gray-600">{s.session}</td>}
+                            {selectedColumns.session && <td className="px-3 py-2.5 text-gray-600 font-semibold">{s.session}</td>}
                             {selectedColumns.contact && <td className="px-3 py-2.5 text-gray-600">{s.contact}</td>}
                             {selectedColumns.admissionDate && <td className="px-3 py-2.5 text-gray-650">{s.admissionDate ? formatDateDMY(s.admissionDate) : '—'}</td>}
                             {selectedColumns.monthlyFee && <td className="px-3 py-2.5 text-right text-gray-800">{formatPKR(s.monthlyFee)}</td>}
@@ -1202,11 +1386,11 @@ export default function SuperAdminReportsPage() {
                   </div>
                 </div>
               </div>
-            ) : reportData.txns.length === 0 && reportData.reportFocus === 'income' ? (
+            ) : reportData.txns.length === 0 && reportData.reportFocus === 'income' && !reportData.appliedCourse ? (
               <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl text-gray-500">No approved transactions found for the selected period.</div>
             ) : (
               <>
-                {/* Income Breakdown */}
+                {/* Income Breakdown (only when not course-filtered or when general) */}
                 {reportData.reportFocus === 'income' && Object.keys(reportData.incomeByCategory).length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-teal-500" /> Income Breakdown</h3>
@@ -1296,7 +1480,7 @@ export default function SuperAdminReportsPage() {
                             </th>
                             <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('rollNo')}>
                               <div className="flex items-center gap-1">
-                                Roll No / Course
+                                Roll No / Course / Session
                                 {sortField === 'rollNo' ? (
                                   sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
                                 ) : (
@@ -1350,7 +1534,12 @@ export default function SuperAdminReportsPage() {
                           {getSortedStudentFees().map((s: any) => (
                             <tr key={s.id} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
                               <td className="px-3 py-2.5 text-gray-855 font-bold">{s.name}</td>
-                              <td className="px-3 py-2.5 text-gray-555 font-mono">{s.rollNo} / {s.course}</td>
+                              <td className="px-3 py-2.5 text-gray-600">
+                                <div className="font-mono text-gray-700 font-bold">{s.rollNo}</div>
+                                <div className="text-[11px] text-gray-500">
+                                  {s.course}{s.session && s.session !== '—' ? ` • Session: ${s.session}` : ''}
+                                </div>
+                              </td>
                               <td className="px-3 py-2.5 text-right text-gray-900">{formatPKR(s.totalPackage)}</td>
                               <td className="px-3 py-2.5 text-right text-teal-700 font-black bg-teal-50/20">{formatPKR(s.paidInPeriod)}</td>
                               <td className="px-3 py-2.5 text-right text-indigo-700 font-black bg-indigo-50/30">{formatPKR(s.amountPaidThisMonth)}</td>
@@ -1364,7 +1553,7 @@ export default function SuperAdminReportsPage() {
                 )}
 
                 {/* Transaction Detail (Only for Income Report) */}
-                {reportData.reportFocus === 'income' && (
+                {reportData.reportFocus === 'income' && reportData.txns.length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold text-gray-800 mb-3">Transaction Details</h3>
                     <div className="overflow-x-auto rounded-xl border border-gray-200">
