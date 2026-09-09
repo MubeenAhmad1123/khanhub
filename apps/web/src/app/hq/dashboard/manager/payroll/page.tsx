@@ -374,10 +374,10 @@ function calculateStaffMonthPayroll(
     return false;
   });
 
-  const customAdvanceVal = Number(customAdj?.previousAdvance || 0);
+  // Monthly advance only (NOT including previous debt which is computed separately)
   const actualAdvance = (slip && slip.advance !== undefined && slip.advance !== null)
     ? Number(slip.advance)
-    : (approvedAdvancesForMonth > 0 ? approvedAdvancesForMonth : customAdvanceVal);
+    : approvedAdvancesForMonth;
 
   const remainingBalance = Number(customAdj?.remainingBalance || 0);
   const bonus = Number(customAdj?.bonus || 0);
@@ -416,7 +416,7 @@ function calculateStaffMonthPayroll(
     staffAdvanceTxns,
     slip,
     customAdj,
-    customAdvanceVal,
+    customAdvanceVal: Number(customAdj?.previousAdvance || 0),
     remainingBalance,
     bonus,
     allowance,
@@ -545,6 +545,8 @@ export default function ManagerPayrollPage() {
       cat === 'advance_salary' ||
       cat === 'advance' ||
       cat === 'staff_advance' ||
+      cat === 'salary_advance' ||
+      cat === 'advance_payment' ||
       catName.includes('advance') ||
       desc.includes('advance') ||
       col.includes('advances');
@@ -597,12 +599,47 @@ export default function ManagerPayrollPage() {
     try {
       setLoading(true);
 
-      const globalTxns = await fetchGlobalTransactionsForMonth();
+      const [globalTxns, holidaysSnap, ...attSnaps] = await Promise.all([
+        fetchGlobalTransactionsForMonth(),
+        getDocs(collection(db, 'hq_holidays')).catch(() => ({ docs: [] } as any)),
+        ...ALL_PREFIXES.map(async (p) => {
+          const attColName = p ? `${p}_attendance` : 'attendance';
+          try {
+            const [currSnap, prevSnap] = await Promise.all([
+              getDocs(query(
+                collection(db, attColName),
+                where('date', '>=', `${monthStr}-01`),
+                where('date', '<=', `${monthStr}-31`)
+              )).catch(() => ({ docs: [] } as any)),
+              getDocs(query(
+                collection(db, attColName),
+                where('date', '>=', `${prevMonthStr}-01`),
+                where('date', '<=', `${prevMonthStr}-31`)
+              )).catch(() => ({ docs: [] } as any)),
+            ]);
+            return { attColName, currDocs: currSnap.docs, prevDocs: prevSnap.docs };
+          } catch (e) {
+            return { attColName, currDocs: [], prevDocs: [] };
+          }
+        }),
+      ]);
 
-      // Fetch all HQ holidays once (no composite index; filter client-side)
-      const holidaysSnap = await getDocs(collection(db, 'hq_holidays')).catch(() => ({ docs: [] } as any));
       const allHolidaysList: HqHoliday[] = holidaysSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
       const monthHolidays = allHolidaysList.filter((h) => h.date && h.date.startsWith(monthStr));
+
+      // Build unified attendance map once
+      const attMapDocs = new Map<string, any>();
+      attSnaps.forEach((res: any) => {
+        if (res) {
+          (res.currDocs || []).forEach((d: any) => {
+            if (d && d.id) attMapDocs.set(`${res.attColName}-${d.id}`, { id: d.id, _collection: res.attColName, ...d.data() });
+          });
+          (res.prevDocs || []).forEach((d: any) => {
+            if (d && d.id) attMapDocs.set(`${res.attColName}-${d.id}`, { id: d.id, _collection: res.attColName, ...d.data() });
+          });
+        }
+      });
+      const allAttDocs = Array.from(attMapDocs.values());
 
       const results = await Promise.all(ALL_DEPTS.map(async (dept) => {
         const prefix = getDeptPrefix(dept);
@@ -658,33 +695,6 @@ export default function ManagerPayrollPage() {
           const adjSnap = await getDocs(collection(db, adjCol)).catch(() => ({ docs: [] } as any));
           const allAdjustments = adjSnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
 
-          // Attendance for current month AND previous month
-          const attMapDocs = new Map<string, any>();
-          await Promise.all(ALL_PREFIXES.map(async (p) => {
-            const attColName = p ? `${p}_attendance` : 'attendance';
-            try {
-              const [currSnap, prevSnap] = await Promise.all([
-                getDocs(query(
-                  collection(db, attColName),
-                  where('date', '>=', `${monthStr}-01`),
-                  where('date', '<=', `${monthStr}-31`)
-                )).catch(() => ({ docs: [] } as any)),
-                getDocs(query(
-                  collection(db, attColName),
-                  where('date', '>=', `${prevMonthStr}-01`),
-                  where('date', '<=', `${prevMonthStr}-31`)
-                )).catch(() => ({ docs: [] } as any)),
-              ]);
-              currSnap.docs.forEach((d: any) => {
-                if (d && d.id) attMapDocs.set(`${attColName}-${d.id}`, { id: d.id, _collection: attColName, ...d.data() });
-              });
-              prevSnap.docs.forEach((d: any) => {
-                if (d && d.id) attMapDocs.set(`${attColName}-${d.id}`, { id: d.id, _collection: attColName, ...d.data() });
-              });
-            } catch (e) {}
-          }));
-          const allAttDocs = Array.from(attMapDocs.values());
-
           // Salary Slips
           const salarySnap = await getDocs(collection(db, `${prefix}_salary_records`)).catch(() => ({ docs: [] } as any));
           const allSalarySlips = salarySnap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
@@ -710,17 +720,33 @@ export default function ManagerPayrollPage() {
             );
 
             // Determine if previous month ended with negative salary / deficit
+            const prevManualAdvance = Number(prevCalc.customAdj?.previousAdvance || 0);
+            const prevMonthTotalDeductions = Math.round(
+              prevCalc.totalAbsentDeduction +
+              prevCalc.totalFines +
+              prevCalc.actualAdvance +
+              prevCalc.totalCustomDeductions +
+              prevManualAdvance
+            );
+            const prevMonthNetPayable = Math.floor(prevCalc.totalEarningsWithAdditions - prevMonthTotalDeductions);
+
             let calculatedPrevDebt = 0;
+            if (prevMonthNetPayable < 0) {
+              calculatedPrevDebt = Math.abs(prevMonthNetPayable);
+            }
             if (prevCalc.netPayable < 0) {
-              calculatedPrevDebt = Math.abs(prevCalc.netPayable);
+              calculatedPrevDebt = Math.max(calculatedPrevDebt, Math.abs(prevCalc.netPayable));
             }
-            if (prevCalc.slip && typeof prevCalc.slip.netSalary === 'number' && prevCalc.slip.netSalary < 0) {
-              calculatedPrevDebt = Math.max(calculatedPrevDebt, Math.abs(prevCalc.slip.netSalary));
+            if (prevCalc.slip) {
+              const slipNet = Number(prevCalc.slip.netSalary ?? prevCalc.slip.netPayable ?? prevCalc.slip.net ?? prevCalc.slip.netAmount);
+              if (!isNaN(slipNet) && slipNet < 0) {
+                calculatedPrevDebt = Math.max(calculatedPrevDebt, Math.abs(slipNet));
+              }
             }
-            if (staff.lastPayrollMonth === prevMonthStr && Number(staff.outstandingBalance) > 0) {
+            if (Number(staff.outstandingBalance) > 0) {
               calculatedPrevDebt = Math.max(calculatedPrevDebt, Number(staff.outstandingBalance));
             }
-            if (staff.lastPayrollMonth === prevMonthStr && Number(staff.salaryBalance) < 0) {
+            if (Number(staff.salaryBalance) < 0) {
               calculatedPrevDebt = Math.max(calculatedPrevDebt, Math.abs(Number(staff.salaryBalance)));
             }
 
