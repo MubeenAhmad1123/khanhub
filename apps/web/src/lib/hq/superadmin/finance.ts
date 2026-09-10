@@ -10,10 +10,7 @@ import {
   Timestamp, 
   doc, 
   updateDoc, 
-  getDoc,
-  getCountFromServer,
-  getAggregateFromServer,
-  sum
+  getDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toDate } from '@/lib/utils';
@@ -137,6 +134,16 @@ async function getCountByDocs(q: any, max = 100): Promise<number> {
   }
 }
 
+async function getSumByDocs(colName: string, field: string, max = 200): Promise<number> {
+  try {
+    const snap = await getDocs(query(collection(db, colName), limit(max)));
+    return snap.docs.reduce((acc, d) => acc + (Number(d.data()[field]) || 0), 0);
+  } catch (err) {
+    console.error(`[Finance] getSumByDocs error for ${colName}:`, err);
+    return 0;
+  }
+}
+
 export async function fetchFinanceHubData(force = false) {
   const cacheKey = 'finance_hub_data';
   if (force) {
@@ -245,10 +252,10 @@ export async function fetchFinanceSummary(force = false): Promise<FinanceSummary
     getCountByDocs(query(collection(db, 'hospital_transactions'), where('status', '==', 'pending'))),
     getCountByDocs(query(collection(db, 'cashierTransactions'), where('status', '==', 'pending'))),
     getCountByDocs(query(collection(db, 'hq_reconciliation'), where('status', '==', 'pending'))),
-    getAggregateFromServer(collection(db, 'rehab_patients'), { t: sum('remaining') }).then(s => s.data().t).catch(() => 0),
-    getAggregateFromServer(collection(db, 'spims_students'), { t: sum('totalCourseFee') }).then(s => s.data().t).catch(() => 0),
-    getAggregateFromServer(collection(db, 'job_center_seekers'), { t: sum('remaining') }).then(s => s.data().t).catch(() => 0),
-    getAggregateFromServer(collection(db, 'hospital_patients'), { t: sum('remaining') }).then(s => s.data().t).catch(() => 0),
+    getSumByDocs('rehab_patients', 'remaining', 200),
+    getSumByDocs('spims_students', 'totalCourseFee', 200),
+    getSumByDocs('job_center_seekers', 'remaining', 200),
+    getSumByDocs('hospital_patients', 'remaining', 200),
   ]);
 
   const result = {

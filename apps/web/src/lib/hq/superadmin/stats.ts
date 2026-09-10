@@ -2,7 +2,6 @@
 
 import {
   collection,
-  getCountFromServer,
   getDocs,
   limit,
   orderBy,
@@ -13,6 +12,7 @@ import {
 import { db } from '@/lib/firebase';
 import { getCached, setCached } from '@/lib/queryCache';
 import { fetchDailyBreakdown } from './finance';
+import { listStaffCards } from './staff';
 
 export type OverviewStats = {
   rehabPatientsTotal: number;
@@ -28,7 +28,7 @@ export type OverviewStats = {
 
 const CACHE_TTL = 600; // 10 minutes for dashboard stats
 
-async function getCountByDocs(q: any, max = 100): Promise<number> {
+async function getCountByDocs(q: any, max = 500): Promise<number> {
   try {
     const snap = await getDocs(query(q, limit(max)));
     return snap.size;
@@ -54,9 +54,9 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
     pendingJob,
     pendingRecs,
   ] = await Promise.all([
-    getCountFromServer(collection(db, 'rehab_patients')).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(collection(db, 'spims_students')).then((r) => r.data().count).catch(() => 0),
-    getCountFromServer(collection(db, 'job_center_seekers')).then((r) => r.data().count).catch(() => 0),
+    getCountByDocs(collection(db, 'rehab_patients'), 500),
+    getCountByDocs(collection(db, 'spims_students'), 500),
+    getCountByDocs(collection(db, 'job_center_seekers'), 500),
     getCountByDocs(query(collection(db, 'rehab_transactions'), where('status', 'in', PENDING_LIST))),
     getCountByDocs(query(collection(db, 'spims_transactions'), where('status', 'in', PENDING_LIST))),
     getCountByDocs(query(collection(db, 'job_center_transactions'), where('status', 'in', PENDING_LIST))),
@@ -97,8 +97,6 @@ export async function fetchTodayTxAmount(): Promise<number> {
     return 0;
   }
 }
-
-import { listStaffCards } from './staff';
 
 export async function fetchActiveStaffCount(): Promise<number> {
   const cacheKey = 'hq_superadmin_active_staff';

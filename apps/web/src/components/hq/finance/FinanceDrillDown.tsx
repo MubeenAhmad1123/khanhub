@@ -23,7 +23,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { DeptBreakdown, approveTransaction } from '@/lib/hq/superadmin/finance';
-import { collection, query, where, getDocs, Timestamp, orderBy, limit, getCountFromServer } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { cn, toDate } from '@/lib/utils';
@@ -217,11 +217,11 @@ export const FinanceDrillDown: React.FC<DrillDownProps> = ({ dept, selectedDate,
       setSeekers(seekersMapped);
 
       // 2. Fetch seeker registration and placement aggregates
-      const totalSnap = await getCountFromServer(collection(db, 'job_center_seekers')).catch(() => ({ data: () => ({ count: 0 }) }));
-      const total = totalSnap.data().count;
+      const totalSnap = await getDocs(query(collection(db, 'job_center_seekers'), limit(250))).catch(() => ({ docs: [], size: 0 } as any));
+      const total = totalSnap.docs ? totalSnap.docs.length : (totalSnap.size || 0);
 
-      const employedSnap = await getCountFromServer(query(collection(db, 'job_center_seekers'), where('isEmployed', '==', true))).catch(() => ({ data: () => ({ count: 0 }) }));
-      const employed = employedSnap.data().count;
+      const employedSnap = await getDocs(query(collection(db, 'job_center_seekers'), where('isEmployed', '==', true), limit(250))).catch(() => ({ docs: [], size: 0 } as any));
+      const employed = employedSnap.docs ? employedSnap.docs.length : (employedSnap.size || 0);
 
       const seeking = Math.max(0, total - employed);
       const placementRate = total > 0 ? Math.round((employed / total) * 100) : 0;

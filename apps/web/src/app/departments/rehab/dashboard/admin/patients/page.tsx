@@ -103,14 +103,26 @@ export default function PatientsListPage() {
     try {
       setLoading(true);
       
-      // 1. Get counts using zero-cost getCountFromServer (1 read per 1000 docs)
-      const dischargedCountSnap = await getCountFromServer(query(collection(db, 'rehab_patients'), where('isActive', '==', false)));
-      const totalCountSnap = await getCountFromServer(collection(db, 'rehab_patients'));
-      const dischargedCount = dischargedCountSnap.data().count;
-      const totalCount = totalCountSnap.data().count;
+      // 1. Get counts safely with fallback in case of 429 resource exhaustion
+      let dischargedCount = 0;
+      let totalCount = 0;
+      try {
+        const dischargedCountSnap = await getCountFromServer(query(collection(db, 'rehab_patients'), where('isActive', '==', false)));
+        const totalCountSnap = await getCountFromServer(collection(db, 'rehab_patients'));
+        dischargedCount = dischargedCountSnap.data().count;
+        totalCount = totalCountSnap.data().count;
+      } catch (countErr) {
+        console.warn('Count server aggregation limited/failed, falling back to docs count:', countErr);
+        const [dischargedDocs, totalDocs] = await Promise.all([
+          getDocs(query(collection(db, 'rehab_patients'), where('isActive', '==', false), limit(500))).catch(() => ({ size: 0 })),
+          getDocs(query(collection(db, 'rehab_patients'), limit(500))).catch(() => ({ size: 0 })),
+        ]);
+        dischargedCount = dischargedDocs.size || 0;
+        totalCount = totalDocs.size || 0;
+      }
       setTotalDischargedCount(dischargedCount);
       setTotalPatientsCount(totalCount);
-      setTotalActiveCount(totalCount - dischargedCount);
+      setTotalActiveCount(Math.max(0, totalCount - dischargedCount));
 
       // 2. Build Paginated Query
       let q = query(
