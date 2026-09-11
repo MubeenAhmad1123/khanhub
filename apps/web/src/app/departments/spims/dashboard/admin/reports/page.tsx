@@ -122,6 +122,7 @@ export default function AdminReportsPage() {
   const [selectedColumns, setSelectedColumns] = useState<Record<string, boolean>>({
     name: true,
     fatherName: true,
+    cnic: true,
     rollNo: true,
     studentId: true,
     course: true,
@@ -138,6 +139,7 @@ export default function AdminReportsPage() {
   const columnsList = [
     { key: 'name', label: 'Student Name' },
     { key: 'fatherName', label: 'Father Name' },
+    { key: 'cnic', label: 'CNIC' },
     { key: 'rollNo', label: 'Roll Number' },
     { key: 'studentId', label: 'Student ID' },
     { key: 'course', label: 'Course' },
@@ -396,6 +398,7 @@ export default function AdminReportsPage() {
             id: doc.id,
             name: d.name || '—',
             fatherName: d.fatherName || '—',
+            cnic: d.cnic || d.cnicNo || '—',
             rollNo: d.rollNo || d.serialNumber || '—',
             studentId: d.studentId || d.customId || '—',
             course: d.course || '—',
@@ -1171,6 +1174,18 @@ export default function AdminReportsPage() {
                               </div>
                             </th>
                           )}
+                          {selectedColumns.cnic && (
+                            <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('cnic')}>
+                              <div className="flex items-center gap-1">
+                                CNIC
+                                {sortField === 'cnic' ? (
+                                  sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </th>
+                          )}
                           {selectedColumns.rollNo && (
                             <th className="px-3 py-3 text-left font-bold cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('rollNo')}>
                               <div className="flex items-center gap-1">
@@ -1315,6 +1330,7 @@ export default function AdminReportsPage() {
                               </td>
                             )}
                             {selectedColumns.fatherName && <td className="px-3 py-2.5 text-gray-600">{s.fatherName}</td>}
+                            {selectedColumns.cnic && <td className="px-3 py-2.5 text-gray-600 font-mono">{s.cnic}</td>}
                             {selectedColumns.rollNo && <td className="px-3 py-2.5 text-gray-550 font-mono">{s.rollNo}</td>}
                             {selectedColumns.studentId && <td className="px-3 py-2.5 text-gray-550 font-mono">{s.studentId}</td>}
                             {selectedColumns.course && <td className="px-3 py-2.5 text-gray-600">{s.course}</td>}
