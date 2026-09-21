@@ -11,9 +11,12 @@ import {
   UserCog, Printer, Calendar, DollarSign, Loader2, Download,
   Plus, X, Receipt, Trash2, Building2, Eye, CheckCircle2,
   SlidersHorizontal, PlusCircle, MinusCircle,
-  Save, AlertTriangle, RefreshCw, FileText, Sun, CreditCard
+  Save, AlertTriangle, RefreshCw, FileText, Sun, CreditCard,
+  CheckCheck, Check
 } from 'lucide-react';
 import { SalarySlipPrintable } from '@/components/hq/SalarySlipPrintable';
+import { markStaffPayrollAsPaid } from '@/app/hq/actions/payroll';
+import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -504,7 +507,185 @@ export default function ManagerPayrollPage() {
   const [savingFine, setSavingFine] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Mark as Paid states
+  const [markingPaidStaffId, setMarkingPaidStaffId] = useState<string | null>(null);
+  const [showMarkPaidModal, setShowMarkPaidModal] = useState<any | null>(null);
+  const [showBulkMarkPaidModal, setShowBulkMarkPaidModal] = useState(false);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number; staffName: string; step: string } | null>(null);
+  const [captureStaff, setCaptureStaff] = useState<any | null>(null);
+
   const printRef = useRef<HTMLDivElement>(null);
+
+  const generateAndUploadSalarySlip = async (staffRow: any): Promise<string | null> => {
+    try {
+      setCaptureStaff(staffRow);
+      // Wait for DOM to render the capture target
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      const el = document.getElementById('salary-slip-capture-target');
+      if (!el) {
+        console.warn('Salary slip capture target element not found in DOM');
+        return null;
+      }
+
+      const { toPng } = await import('html-to-image');
+      const dataUrl = await toPng(el, {
+        quality: 0.95,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        cacheBust: true,
+      });
+
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const safeName = (staffRow.name || 'employee').replace(/[^a-zA-Z0-9]/g, '_');
+      const fileName = `salary_slip_${safeName}_${monthStr}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+
+      const prefix = getDeptPrefix(staffRow.dept as StaffDept);
+      const folder = `khanhub/staff/${prefix}/salaries/slips`;
+      const uploadedUrl = await uploadToCloudinary(file, folder, undefined, 'image');
+      return uploadedUrl;
+    } catch (err) {
+      console.error('Failed to generate or upload salary slip image:', err);
+      return null;
+    }
+  };
+
+  const handleConfirmMarkAsPaid = async (staffRow: any) => {
+    try {
+      setMarkingPaidStaffId(staffRow.id);
+
+      // 1. Generate slip image and upload to Cloudinary
+      const slipImageUrl = await generateAndUploadSalarySlip(staffRow);
+
+      // 2. Call server action to disburse and update all profile/cashier/fines records
+      const result = await markStaffPayrollAsPaid({
+        staffId: staffRow.id,
+        dept: staffRow.dept as StaffDept,
+        month: monthStr,
+        monthLabel: data?.monthLabel || monthStr,
+        paidDate: todayStr,
+        gross: Number(staffRow.gross) || 0,
+        dailyRate: Number(staffRow.dailyRate) || 0,
+        payableDays: Number(staffRow.payableDays) || 0,
+        absentDays: Number(staffRow.absentDays) || 0,
+        absentDeduction: Number(staffRow.totalAbsentDeduction) || 0,
+        totalFines: Number(staffRow.totalFines) || 0,
+        totalAdvance: Number(staffRow.totalAdvance) || 0,
+        totalCustomAdditions: Number(staffRow.totalCustomAdditions) || 0,
+        totalCustomDeductions: Number(staffRow.totalCustomDeductions) || 0,
+        previousMonthDebt: Number(staffRow.previousMonthDebt) || 0,
+        netPayable: Number(staffRow.netPayable) || 0,
+        staffName: staffRow.name || 'Staff Member',
+        designation: staffRow.designation || '',
+        employeeCode: staffRow.employeeCode || staffRow.id,
+        slipImageUrl: slipImageUrl || undefined,
+        paidBy: session?.displayName || session?.name || 'Super Admin',
+        finesList: (staffRow.staffFines || []).map((f: any) => ({
+          id: f.id,
+          amount: f.amount,
+          reason: f.reason,
+          date: f.date,
+        })),
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to disburse salary');
+      }
+
+      alert(`✅ Successfully marked ${staffRow.name}'s salary as PAID!\n\n• Cashier expense transaction recorded (Approved)\n• Salary slip picture saved to profile Documents Vault\n• Logged fines deducted\n• Ledger updated for ${data?.monthLabel || monthStr}`);
+      setShowMarkPaidModal(null);
+      await handleLoad();
+    } catch (err: any) {
+      alert('Failed to mark as paid: ' + err.message);
+    } finally {
+      setMarkingPaidStaffId(null);
+      setCaptureStaff(null);
+    }
+  };
+
+  const handleBulkMarkAsPaid = async (eligibleStaff: any[]) => {
+    if (!eligibleStaff || eligibleStaff.length === 0) {
+      alert('No unpaid staff found for the selected department/filter.');
+      return;
+    }
+    setBulkProcessing(true);
+    let successCount = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < eligibleStaff.length; i++) {
+      const staffRow = eligibleStaff[i];
+      setBulkProgress({
+        current: i + 1,
+        total: eligibleStaff.length,
+        staffName: staffRow.name,
+        step: 'Generating SECP salary slip image & uploading to Cloudinary...'
+      });
+
+      try {
+        const slipImageUrl = await generateAndUploadSalarySlip(staffRow);
+
+        setBulkProgress({
+          current: i + 1,
+          total: eligibleStaff.length,
+          staffName: staffRow.name,
+          step: 'Authorizing cashier transaction & syncing profile documents...'
+        });
+
+        const result = await markStaffPayrollAsPaid({
+          staffId: staffRow.id,
+          dept: staffRow.dept as StaffDept,
+          month: monthStr,
+          monthLabel: data?.monthLabel || monthStr,
+          paidDate: todayStr,
+          gross: Number(staffRow.gross) || 0,
+          dailyRate: Number(staffRow.dailyRate) || 0,
+          payableDays: Number(staffRow.payableDays) || 0,
+          absentDays: Number(staffRow.absentDays) || 0,
+          absentDeduction: Number(staffRow.totalAbsentDeduction) || 0,
+          totalFines: Number(staffRow.totalFines) || 0,
+          totalAdvance: Number(staffRow.totalAdvance) || 0,
+          totalCustomAdditions: Number(staffRow.totalCustomAdditions) || 0,
+          totalCustomDeductions: Number(staffRow.totalCustomDeductions) || 0,
+          previousMonthDebt: Number(staffRow.previousMonthDebt) || 0,
+          netPayable: Number(staffRow.netPayable) || 0,
+          staffName: staffRow.name || 'Staff Member',
+          designation: staffRow.designation || '',
+          employeeCode: staffRow.employeeCode || staffRow.id,
+          slipImageUrl: slipImageUrl || undefined,
+          paidBy: session?.displayName || session?.name || 'Super Admin',
+          finesList: (staffRow.staffFines || []).map((f: any) => ({
+            id: f.id,
+            amount: f.amount,
+            reason: f.reason,
+            date: f.date,
+          })),
+        });
+
+        if (result.success) {
+          successCount++;
+        } else {
+          errors.push(`${staffRow.name}: ${result.error}`);
+        }
+      } catch (err: any) {
+        errors.push(`${staffRow.name}: ${err.message}`);
+      }
+    }
+
+    setBulkProcessing(false);
+    setBulkProgress(null);
+    setShowBulkMarkPaidModal(false);
+    setCaptureStaff(null);
+
+    let summaryMsg = `🎉 Disbursement Complete!\nSuccessfully marked ${successCount} of ${eligibleStaff.length} staff salaries as PAID with slip pictures attached to profiles.`;
+    if (errors.length > 0) {
+      summaryMsg += `\n\nWarnings/Errors:\n${errors.join('\n')}`;
+    }
+    alert(summaryMsg);
+    await handleLoad();
+  };
 
   const monthStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
   const prevDate = new Date(selectedYear, selectedMonth - 1, 1);
@@ -1523,6 +1704,14 @@ export default function ManagerPayrollPage() {
           {data && (
             <div className="flex gap-2 flex-wrap items-center">
               <button
+                onClick={() => setShowBulkMarkPaidModal(true)}
+                className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-4 py-2.5 rounded-xl text-sm font-black hover:from-emerald-700 hover:to-teal-800 transition-all shadow-md transform hover:scale-[1.02] cursor-pointer"
+                title="Disburse salaries for all eligible staff in one click, deduct fines, and save slip pictures to profiles"
+              >
+                <CheckCheck className="w-4 h-4 text-emerald-200" />
+                Mark All as Paid
+              </button>
+              <button
                 onClick={() => openHolidayModalWithParams({ type: 'paid_leave' })}
                 className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-4 py-2.5 rounded-xl text-sm font-black hover:from-emerald-700 hover:to-teal-700 transition-all shadow-md transform hover:scale-[1.02] cursor-pointer"
                 title="Mark any specific date as Paid Leave or Holiday so staff salary will NOT be cut"
@@ -1891,7 +2080,35 @@ export default function ManagerPayrollPage() {
                           </td>
 
                           <td className="px-2 py-2 text-center no-print no-print-col">
-                            <div className="flex items-center justify-center gap-1">
+                            <div className="flex items-center justify-center gap-1 flex-wrap">
+                              {/* Mark as Paid Action Button / Paid Badge */}
+                              {r.slip?.status === 'paid' ? (
+                                <div className="flex items-center gap-1">
+                                  <span
+                                    className="p-1.5 bg-emerald-100 border border-emerald-300 rounded-lg text-emerald-800 transition-colors flex items-center gap-1 text-xs font-black px-2 py-1 shadow-xs"
+                                    title={`Paid: Salary recorded & disbursed for ${data?.monthLabel || monthStr}`}
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Paid
+                                  </span>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setShowMarkPaidModal(r); }}
+                                    className="p-1 text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 rounded text-[10px] font-bold cursor-pointer"
+                                    title="Re-disburse or update salary slip picture in profile"
+                                  >
+                                    Sync
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setShowMarkPaidModal(r); }}
+                                  disabled={markingPaidStaffId === r.id}
+                                  className="p-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg transition-all flex items-center gap-1 text-xs font-black px-2.5 py-1 cursor-pointer shadow-md disabled:opacity-50 transform hover:scale-[1.02]"
+                                  title="Mark as Paid: Disburse salary from Cashier, deduct fines, and save SECP slip to staff profile documents"
+                                >
+                                  {markingPaidStaffId === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <DollarSign className="w-3.5 h-3.5 text-emerald-200" />}
+                                  Mark Paid
+                                </button>
+                              )}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -3063,6 +3280,20 @@ export default function ManagerPayrollPage() {
                   <Printer className="w-4 h-4" /> Print Slip
                 </button>
 
+                {slipStaffModal.slip?.status !== 'paid' && (
+                  <button
+                    onClick={() => {
+                      const target = slipStaffModal;
+                      setSlipStaffModal(null);
+                      setShowMarkPaidModal(target);
+                    }}
+                    className="flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                    title="Mark this staff salary as Paid"
+                  >
+                    <DollarSign className="w-4 h-4" /> Mark as Paid
+                  </button>
+                )}
+
                 <button
                   onClick={() => setSlipStaffModal(null)}
                   className="text-gray-400 hover:text-white bg-slate-800 p-2 rounded-full transition-colors ml-1 cursor-pointer"
@@ -3086,6 +3317,244 @@ export default function ManagerPayrollPage() {
           </div>
         </div>
       )}
+
+      {/* ── SINGLE STAFF MARK AS PAID CONFIRMATION MODAL ── */}
+      {showMarkPaidModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto no-print">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full border border-gray-100 overflow-hidden transform transition-all animate-in zoom-in-95 duration-200 my-8">
+            <div className="bg-gradient-to-r from-emerald-800 to-teal-900 text-white p-6 relative">
+              <button
+                onClick={() => setShowMarkPaidModal(null)}
+                disabled={markingPaidStaffId === showMarkPaidModal.id}
+                className="absolute top-5 right-5 text-emerald-200 hover:text-white bg-black/30 p-2 rounded-full transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-emerald-200 border border-emerald-400/30 uppercase">
+                  {DEPT_LABELS[showMarkPaidModal.dept] || showMarkPaidModal.dept}
+                </span>
+                <span className="text-xs text-emerald-200 font-medium">{data?.monthLabel}</span>
+              </div>
+              <h3 className="text-xl font-black">{showMarkPaidModal.name}</h3>
+              <p className="text-xs text-emerald-100 mt-0.5">{showMarkPaidModal.designation || 'Staff Member'}</p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-emerald-700 font-bold uppercase tracking-wider">Net Amount To Disburse</div>
+                  <div className="text-2xl font-black text-emerald-950 mt-0.5">{formatPKR(showMarkPaidModal.netPayable)}</div>
+                </div>
+                <div className="w-12 h-12 bg-emerald-600 text-white rounded-2xl flex items-center justify-center shadow-md">
+                  <CreditCard className="w-6 h-6" />
+                </div>
+              </div>
+
+              {/* Breakdown Grid */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                  <span className="text-gray-400 block text-[10px] uppercase font-bold">Base Salary</span>
+                  <span className="font-black text-gray-800">{formatPKR(showMarkPaidModal.gross)}</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                  <span className="text-gray-400 block text-[10px] uppercase font-bold">Payable Days</span>
+                  <span className="font-black text-emerald-700">{showMarkPaidModal.payableDays} Days</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-green-50/50 border border-green-100">
+                  <span className="text-green-600 block text-[10px] uppercase font-bold">Custom Additions</span>
+                  <span className="font-black text-green-800">+{formatPKR(showMarkPaidModal.totalCustomAdditions)}</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-red-50/50 border border-red-100">
+                  <span className="text-red-500 block text-[10px] uppercase font-bold">Fines Deducted</span>
+                  <span className="font-black text-red-700">-{formatPKR(showMarkPaidModal.totalFines)}</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-orange-50/50 border border-orange-100">
+                  <span className="text-orange-500 block text-[10px] uppercase font-bold">Absent Cut</span>
+                  <span className="font-black text-orange-700">-{formatPKR(showMarkPaidModal.totalAbsentDeduction)}</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-amber-50/50 border border-amber-100">
+                  <span className="text-amber-600 block text-[10px] uppercase font-bold">Advance & Prev</span>
+                  <span className="font-black text-amber-800">-{formatPKR(showMarkPaidModal.totalAdvance + (showMarkPaidModal.previousMonthDebt || 0))}</span>
+                </div>
+              </div>
+
+              {/* What this does checklist */}
+              <div className="rounded-2xl border border-gray-200 p-3.5 bg-gray-50 space-y-2 text-xs text-gray-700">
+                <div className="font-bold text-gray-900 text-xs flex items-center gap-1.5">
+                  <Check className="w-4 h-4 text-emerald-600 shrink-0" /> Automated Actions on Confirmation:
+                </div>
+                <ul className="space-y-1.5 pl-5 list-disc text-[11px] text-gray-600">
+                  <li>Creates an <strong>Approved Expense Transaction</strong> in the Cashier Ledger.</li>
+                  <li>Deducts all logged fines for <strong>{data?.monthLabel}</strong> and marks them as paid.</li>
+                  <li>Generates high-resolution <strong>SECP Letterhead Salary Slip</strong> image.</li>
+                  <li>Saves salary slip picture directly into <strong>{showMarkPaidModal.name}'s Profile Documents Vault</strong>.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+              <button
+                onClick={() => setShowMarkPaidModal(null)}
+                disabled={markingPaidStaffId === showMarkPaidModal.id}
+                className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleConfirmMarkAsPaid(showMarkPaidModal)}
+                disabled={markingPaidStaffId === showMarkPaidModal.id}
+                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors disabled:opacity-60 cursor-pointer shadow-md"
+              >
+                {markingPaidStaffId === showMarkPaidModal.id ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Generating Slip & Paying...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                    Confirm & Mark as Paid
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── BULK MARK ALL AS PAID MODAL ── */}
+      {showBulkMarkPaidModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto no-print">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full border border-gray-100 overflow-hidden transform transition-all animate-in zoom-in-95 duration-200 my-8">
+            <div className="bg-gradient-to-r from-emerald-800 to-teal-900 text-white p-6 relative">
+              {!bulkProcessing && (
+                <button
+                  onClick={() => setShowBulkMarkPaidModal(false)}
+                  className="absolute top-5 right-5 text-emerald-200 hover:text-white bg-black/30 p-2 rounded-full transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+              <h3 className="text-xl font-black flex items-center gap-2">
+                <CheckCheck className="w-6 h-6 text-emerald-300" /> Disburse & Mark All as Paid
+              </h3>
+              <p className="text-xs text-emerald-100 mt-1">
+                Batch salary disbursement for {data?.monthLabel} ({deptFilter === 'all' ? 'All Departments' : DEPT_LABELS[deptFilter] || deptFilter})
+              </p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {bulkProcessing && bulkProgress ? (
+                <div className="py-6 space-y-4 text-center">
+                  <Loader2 className="w-10 h-10 animate-spin text-emerald-600 mx-auto" />
+                  <div>
+                    <div className="font-extrabold text-base text-gray-900">
+                      Processing {bulkProgress.current} of {bulkProgress.total}
+                    </div>
+                    <div className="text-sm font-bold text-emerald-700 mt-0.5">{bulkProgress.staffName}</div>
+                    <div className="text-xs text-gray-500 mt-1">{bulkProgress.step}</div>
+                  </div>
+                  {/* Progress Bar */}
+                  <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className="bg-emerald-600 h-2.5 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.round((bulkProgress.current / bulkProgress.total) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-400 italic">Please keep this window open while slips are generated and uploaded.</p>
+                </div>
+              ) : (
+                <>
+                  {(() => {
+                    const unpaidList = salaryRows.filter((r: any) => r.slip?.status !== 'paid');
+                    const totalUnpaidNet = unpaidList.reduce((acc: number, r: any) => acc + (Number(r.netPayable) || 0), 0);
+                    const alreadyPaidCount = salaryRows.length - unpaidList.length;
+
+                    return (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+                            <div className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider">Unpaid Staff</div>
+                            <div className="text-2xl font-black text-emerald-950 mt-1">{unpaidList.length} Staff</div>
+                            {alreadyPaidCount > 0 && (
+                              <div className="text-[10px] text-emerald-600 mt-0.5">{alreadyPaidCount} already marked as paid</div>
+                            )}
+                          </div>
+                          <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4">
+                            <div className="text-[10px] text-teal-700 font-bold uppercase tracking-wider">Total Net Disbursement</div>
+                            <div className="text-xl font-black text-teal-950 mt-1">{formatPKR(totalUnpaidNet)}</div>
+                            <div className="text-[10px] text-teal-600 mt-0.5">Cashier expense total</div>
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-gray-200 p-4 bg-gray-50 space-y-2 text-xs text-gray-700">
+                          <div className="font-bold text-gray-900 flex items-center gap-1.5">
+                            <Check className="w-4 h-4 text-emerald-600 shrink-0" /> One-Click Process Details:
+                          </div>
+                          <p className="text-[11px] text-gray-600 leading-relaxed">
+                            Clicking proceed will sequentially generate official salary slips for all <strong>{unpaidList.length}</strong> staff members, upload each slip to Cloudinary, record the approved cashier disbursements, and attach each slip picture directly into the staff member's profile Documents Vault.
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+            </div>
+
+            {!bulkProcessing && (
+              <div className="bg-gray-50 border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+                <button
+                  onClick={() => setShowBulkMarkPaidModal(false)}
+                  className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                {(() => {
+                  const unpaidList = salaryRows.filter((r: any) => r.slip?.status !== 'paid');
+                  return (
+                    <button
+                      onClick={() => handleBulkMarkAsPaid(unpaidList)}
+                      disabled={unpaidList.length === 0}
+                      className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors disabled:opacity-50 cursor-pointer shadow-md"
+                    >
+                      <CheckCheck className="w-4 h-4 text-emerald-200" />
+                      Disburse All ({unpaidList.length} Staff)
+                    </button>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Offscreen DOM capture container for generating high-res salary slip images */}
+      <div
+        style={{
+          position: 'fixed',
+          left: '-9999px',
+          top: 0,
+          width: '800px',
+          zIndex: -100,
+          pointerEvents: 'none',
+          opacity: 0,
+          backgroundColor: '#ffffff',
+        }}
+        aria-hidden="true"
+      >
+        {captureStaff && (
+          <SalarySlipPrintable
+            row={captureStaff}
+            monthLabel={data?.monthLabel}
+            selectedMonth={monthStr}
+            selectedYear={selectedYear}
+            paidDate={todayStr}
+            containerId="salary-slip-capture-target"
+          />
+        )}
+      </div>
 
     </div>
   );

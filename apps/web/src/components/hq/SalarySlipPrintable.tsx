@@ -71,6 +71,7 @@ interface Props {
   paidDate?: string; // YYYY-MM-DD or formatted date string
   weeklyOffDaysCount?: number;
   holidayDaysCount?: number;
+  containerId?: string;
 }
 
 export function SalarySlipPrintable({
@@ -82,6 +83,7 @@ export function SalarySlipPrintable({
   selectedMonth: propSelectedMonth,
   selectedYear: propSelectedYear,
   paidDate: propPaidDate,
+  containerId,
 }: Props) {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -379,7 +381,7 @@ export function SalarySlipPrintable({
 
       {/* ROOT ELEMENT (OFFICIAL LETTERHEAD SLIP) */}
       <div
-        id="salary-slip-print-root"
+        id={containerId || "salary-slip-print-root"}
         className="bg-white text-black font-sans w-full max-w-[780px] mx-auto p-6 text-sm border border-slate-300 relative"
       >
         {/* ROW 1 — LETTERHEAD HEADER */}

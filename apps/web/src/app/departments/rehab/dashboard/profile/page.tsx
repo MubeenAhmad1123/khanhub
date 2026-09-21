@@ -92,6 +92,8 @@ interface SalarySlip {
   absentDays?: number;
   bonusReason?: string;
   deductionReason?: string;
+  slipFileUrl?: string;
+  slipFileName?: string;
 }
 
 // Helper to translate raw duty item keys to beautiful labels
@@ -1714,8 +1716,21 @@ export default function ProfilePage() {
                          <p className="font-bold text-gray-900">{new Date(rec.month + '-02').toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
                          <p className="text-xs text-gray-400 font-medium">Net Disbursed: Rs. {rec.netSalary.toLocaleString()}</p>
                        </div>
-                       <div className={`px-3 py-1 text-[11px] font-black uppercase tracking-wide rounded-md ${rec.status === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                         {rec.status}
+                       <div className="flex items-center gap-2">
+                         {rec.slipFileUrl && (
+                           <a
+                             href={rec.slipFileUrl}
+                             target="_blank"
+                             rel="noopener noreferrer"
+                             className="px-2.5 py-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-md flex items-center gap-1 transition-colors"
+                             title="View Salary Slip Picture"
+                           >
+                             <Eye size={12} /> View Slip
+                           </a>
+                         )}
+                         <div className={`px-3 py-1 text-[11px] font-black uppercase tracking-wide rounded-md ${rec.status === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                           {rec.status}
+                         </div>
                        </div>
                      </div>
                    )) : (

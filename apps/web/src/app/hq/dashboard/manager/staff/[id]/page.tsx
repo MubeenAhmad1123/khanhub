@@ -4825,6 +4825,17 @@ export default function StaffProfilePage() {
                             </div>
 
                             <div className="flex items-center gap-4 md:self-start">
+                              {(record as any).slipFileUrl && (
+                                <a
+                                  href={(record as any).slipFileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-3 rounded-xl bg-white border border-gray-200 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 transition-all shadow-sm active:scale-90"
+                                  title="View Official Salary Slip Picture"
+                                >
+                                  <Eye size={18} strokeWidth={2.5} />
+                                </a>
+                              )}
                               <button
                                 onClick={() => {
                                   const prefix = getDeptPrefix(staff?.dept as StaffDept);
@@ -5162,6 +5173,7 @@ export default function StaffProfilePage() {
                 const titleLower = (doc.title || '').toLowerCase();
                 const isTermination = titleLower.includes('termination') || doc.type === 'termination';
                 const isFine = titleLower.includes('fine') || doc.type === 'fine';
+                const isSalarySlip = titleLower.includes('salary slip') || titleLower.includes('slip') || doc.type === 'salary_slip';
 
                 return (
                   <div key={idx} className="group relative rounded-2xl overflow-hidden border border-gray-200 bg-white hover:border-teal-500 hover:shadow-md transition-all duration-300 flex flex-col w-full">
@@ -5181,16 +5193,23 @@ export default function StaffProfilePage() {
                           }}
                         />
                       )}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                        <a href={doc.url} target="_blank" rel="noreferrer" className="bg-white text-black font-black text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-md">
-                          View Fullscreen
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
+                        <a href={doc.url} target="_blank" rel="noreferrer" className="bg-white text-black font-black text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-md flex items-center gap-1.5">
+                          <Eye size={14} /> View
+                        </a>
+                        <a href={doc.url} download target="_blank" rel="noreferrer" className="bg-white/90 text-black font-black text-xs uppercase tracking-wider px-3 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-md flex items-center gap-1.5" title="Download">
+                          <Download size={14} />
                         </a>
                       </div>
                     </div>
                     <div className="p-4 bg-white border-t border-gray-100 flex flex-col gap-2">
                       <div className="flex items-center justify-between">
                         <label className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Document Title</label>
-                        {isTermination ? (
+                        {isSalarySlip ? (
+                          <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md">
+                            Salary Slip
+                          </span>
+                        ) : isTermination ? (
                           <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-rose-100 text-rose-700 rounded-md">
                             Termination Letter
                           </span>

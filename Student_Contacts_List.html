@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPIMS - Student & Parent Contact List</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 8mm;
+            }
+            .no-print {
+                display: none !important;
+            }
+            body {
+                font-size: 11px;
+                color: black;
+                background: white !important;
+            }
+            table {
+                page-break-inside: auto;
+            }
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+            th {
+                background-color: #1e293b !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .bg-slate-50 {
+                background-color: #f8fafc !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen p-4 md:p-8">
+    <div class="max-w-7xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-md border border-slate-200">
+        
+        <!-- Header Controls -->
+        <div class="no-print flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-200">
+            <div>
+                <span class="text-xs font-semibold uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">Print Ready Document</span>
+                <p class="text-sm text-slate-500 mt-1">Ready for landscape A4 printing or saving to PDF.</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="window.print()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    Print / Save PDF (Ctrl + P)
+                </button>
+            </div>
+        </div>
+
+        <!-- Document Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-black text-slate-800 uppercase tracking-wide">Shahbaz Paramedical Institute of Medical Sciences (SPIMS)</h1>
+            <h2 class="text-lg font-bold text-slate-700 mt-1">Official Student & Parent Contact Directory</h2>
+            <p class="text-xs font-medium text-slate-500 mt-0.5">Session 2025–2027 | Verified Institute Portal Records</p>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto w-full border border-slate-300 rounded-lg">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                    <tr class="bg-slate-900 text-white font-semibold uppercase tracking-wider">
+                        <th class="px-3 py-2.5 text-center border-r border-slate-700 w-10">#</th>
+                        <th class="px-2 py-2.5 text-center border-r border-slate-700 w-12">ID</th>
+                        <th class="px-3 py-2.5 border-r border-slate-700">Student Name</th>
+                        <th class="px-3 py-2.5 text-center border-r border-slate-700">Dept</th>
+                        <th class="px-3 py-2.5 text-center border-r border-slate-700">Session</th>
+                        <th class="px-3 py-2.5 border-r border-slate-700">Father's Name</th>
+                        <th class="px-3 py-2.5 border-r border-slate-700">Student Contact</th>
+                        <th class="px-3 py-2.5 border-r border-slate-700">Father / Parent Contact</th>
+                        <th class="px-3 py-2.5">Address / Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+    <tr class="bg-white border-b border-slate-200 hover:bg-amber-50">
+        <td class="px-3 py-2.5 text-center font-bold text-slate-700">1</td>
+        <td class="px-2 py-2.5 text-center font-mono text-xs text-slate-500">200</td>
+        <td class="px-3 py-2.5 font-bold text-slate-900">Muhammad Imran</td>
+        <td class="px-3 py-2.5 text-center font-medium text-slate-700">OTT</td>
+        <td class="px-3 py-2.5 text-center text-xs text-slate-600">First Year, 25–27</td>
+        <td class="px-3 py-2.5 text-slate-700">Ghulam Murtaza</td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-blue-700">0330-8690924</span></td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-emerald-700">0303-6578224</span></td>
+        <td class="px-3 py-2.5 text-xs text-slate-600">224 WB, Vehari</td>
+    </tr>
+    
+    <tr class="bg-slate-50 border-b border-slate-200 hover:bg-amber-50">
+        <td class="px-3 py-2.5 text-center font-bold text-slate-700">2</td>
+        <td class="px-2 py-2.5 text-center font-mono text-xs text-slate-500">28</td>
+        <td class="px-3 py-2.5 font-bold text-slate-900">M. Ramzan</td>
+        <td class="px-3 py-2.5 text-center font-medium text-slate-700">Pharmacy Tech</td>
+        <td class="px-3 py-2.5 text-center text-xs text-slate-600">2nd Year, 22–24</td>
+        <td class="px-3 py-2.5 text-slate-700">M. Nawaz</td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-blue-700">0304-8175676</span></td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-emerald-700">0300-6839448</span></td>
+        <td class="px-3 py-2.5 text-xs text-slate-600">Chak No. 56 WB (Alt: 0325-0558165)</td>
+    </tr>
+    
+    <tr class="bg-white border-b border-slate-200 hover:bg-amber-50">
+        <td class="px-3 py-2.5 text-center font-bold text-slate-700">3</td>
+        <td class="px-2 py-2.5 text-center font-mono text-xs text-slate-500">219/233</td>
+        <td class="px-3 py-2.5 font-bold text-slate-900">Farooq Ahmad</td>
+        <td class="px-3 py-2.5 text-center font-medium text-slate-700">B-Cat / MLT</td>
+        <td class="px-3 py-2.5 text-center text-xs text-slate-600">2nd Year, 25–27</td>
+        <td class="px-3 py-2.5 text-slate-700">Maqbool Ahmad</td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-blue-700">0302-3786119</span></td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-emerald-700">0318-7451709</span></td>
+        <td class="px-3 py-2.5 text-xs text-slate-600">77 WB (B-Cat & MLT records)</td>
+    </tr>
+    
+    <tr class="bg-slate-50 border-b border-slate-200 hover:bg-amber-50">
+        <td class="px-3 py-2.5 text-center font-bold text-slate-700">4</td>
+        <td class="px-2 py-2.5 text-center font-mono text-xs text-slate-500">29</td>
+        <td class="px-3 py-2.5 font-bold text-slate-900">M. Danish</td>
+        <td class="px-3 py-2.5 text-center font-medium text-slate-700">B-Cat</td>
+        <td class="px-3 py-2.5 text-center text-xs text-slate-600">First Year, 25–27</td>
+        <td class="px-3 py-2.5 text-slate-700">Nasir Ahmad</td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-blue-700">0301-1404248</span></td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-emerald-700">0300-6877914</span></td>
+        <td class="px-3 py-2.5 text-xs text-slate-600">Post Office Khas, 45 WB</td>
+    </tr>
+    
+    <tr class="bg-white border-b border-slate-200 hover:bg-amber-50">
+        <td class="px-3 py-2.5 text-center font-bold text-slate-700">5</td>
+        <td class="px-2 py-2.5 text-center font-mono text-xs text-slate-500">111</td>
+        <td class="px-3 py-2.5 font-bold text-slate-900">Shahid (M. Shahid)</td>
+        <td class="px-3 py-2.5 text-center font-medium text-slate-700">B-Cat</td>
+        <td class="px-3 py-2.5 text-center text-xs text-slate-600">First Year, 25–27</td>
+        <td class="px-3 py-2.5 text-slate-700">M. Sarwar</td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-blue-700">0301-1641980</span></td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-emerald-700">0307-6874507</span></td>
+        <td class="px-3 py-2.5 text-xs text-slate-600">Chak No. 23 WB (Alt: 0300-7757057)</td>
+    </tr>
+    
+    <tr class="bg-slate-50 border-b border-slate-200 hover:bg-amber-50">
+        <td class="px-3 py-2.5 text-center font-bold text-slate-700">6</td>
+        <td class="px-2 py-2.5 text-center font-mono text-xs text-slate-500">212</td>
+        <td class="px-3 py-2.5 font-bold text-slate-900">Abeel (Arbeel) Fatima</td>
+        <td class="px-3 py-2.5 text-center font-medium text-slate-700">CMW / LHV</td>
+        <td class="px-3 py-2.5 text-center text-xs text-slate-600">First Year, 25–27</td>
+        <td class="px-3 py-2.5 text-slate-700">Tariq Mehmood</td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-blue-700">0371-1750074</span></td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-emerald-700">0306-5808027</span></td>
+        <td class="px-3 py-2.5 text-xs text-slate-600">101 WB, Vehari</td>
+    </tr>
+    
+    <tr class="bg-white border-b border-slate-200 hover:bg-amber-50">
+        <td class="px-3 py-2.5 text-center font-bold text-slate-700">7</td>
+        <td class="px-2 py-2.5 text-center font-mono text-xs text-slate-500">227</td>
+        <td class="px-3 py-2.5 font-bold text-slate-900">M. Aftab Khan</td>
+        <td class="px-3 py-2.5 text-center font-medium text-slate-700">B-Cat</td>
+        <td class="px-3 py-2.5 text-center text-xs text-slate-600">First Year, 25–27</td>
+        <td class="px-3 py-2.5 text-slate-700">Muhammad Mushtaq</td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-blue-700">0324-6055664</span></td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-emerald-700">0306-4509863</span></td>
+        <td class="px-3 py-2.5 text-xs text-slate-600">Vehari</td>
+    </tr>
+    
+    <tr class="bg-slate-50 border-b border-slate-200 hover:bg-amber-50">
+        <td class="px-3 py-2.5 text-center font-bold text-slate-700">8</td>
+        <td class="px-2 py-2.5 text-center font-mono text-xs text-slate-500">92/164</td>
+        <td class="px-3 py-2.5 font-bold text-slate-900">Awais Yasir</td>
+        <td class="px-3 py-2.5 text-center font-medium text-slate-700">Dispenser</td>
+        <td class="px-3 py-2.5 text-center text-xs text-slate-600">First Year, 25–27</td>
+        <td class="px-3 py-2.5 text-slate-700">Maqbool / S. Nadeem</td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-blue-700">0305-6743586</span></td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-emerald-700">0328-7956350</span></td>
+        <td class="px-3 py-2.5 text-xs text-slate-600">Awais: 0303029172 | Yasir: 03211362157</td>
+    </tr>
+    
+    <tr class="bg-white border-b border-slate-200 hover:bg-amber-50">
+        <td class="px-3 py-2.5 text-center font-bold text-slate-700">9</td>
+        <td class="px-2 py-2.5 text-center font-mono text-xs text-slate-500">217</td>
+        <td class="px-3 py-2.5 font-bold text-slate-900">Alina (Aleena) Sarwar</td>
+        <td class="px-3 py-2.5 text-center font-medium text-slate-700">CMW</td>
+        <td class="px-3 py-2.5 text-center text-xs text-slate-600">First Year, 25–27</td>
+        <td class="px-3 py-2.5 text-slate-700">M. Sarwar</td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-blue-700">0329-7174863</span></td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="text-slate-400">—</span></td>
+        <td class="px-3 py-2.5 text-xs text-slate-600">Chak No. 43</td>
+    </tr>
+    
+    <tr class="bg-slate-50 border-b border-slate-200 hover:bg-amber-50">
+        <td class="px-3 py-2.5 text-center font-bold text-slate-700">10</td>
+        <td class="px-2 py-2.5 text-center font-mono text-xs text-slate-500">201</td>
+        <td class="px-3 py-2.5 font-bold text-slate-900">Shahbaz (M. Shehbaz)</td>
+        <td class="px-3 py-2.5 text-center font-medium text-slate-700">OTT</td>
+        <td class="px-3 py-2.5 text-center text-xs text-slate-600">First Year, 25–27</td>
+        <td class="px-3 py-2.5 text-slate-700">Muhammad Saeed</td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-blue-700">0302-3574226</span></td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-emerald-700">0307-6857026</span></td>
+        <td class="px-3 py-2.5 text-xs text-slate-600">226 WB, Vehari</td>
+    </tr>
+    
+    <tr class="bg-white border-b border-slate-200 hover:bg-amber-50">
+        <td class="px-3 py-2.5 text-center font-bold text-slate-700">11</td>
+        <td class="px-2 py-2.5 text-center font-mono text-xs text-slate-500">181</td>
+        <td class="px-3 py-2.5 font-bold text-slate-900">Akash Ahmad</td>
+        <td class="px-3 py-2.5 text-center font-medium text-slate-700">B-Cat</td>
+        <td class="px-3 py-2.5 text-center text-xs text-slate-600">2nd Year, 24–26</td>
+        <td class="px-3 py-2.5 text-slate-700">M. Ishafaq</td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-blue-700">0317-6851109</span></td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="text-slate-400">—</span></td>
+        <td class="px-3 py-2.5 text-xs text-slate-600">Vehari</td>
+    </tr>
+    
+    <tr class="bg-slate-50 border-b border-slate-200 hover:bg-amber-50">
+        <td class="px-3 py-2.5 text-center font-bold text-slate-700">12</td>
+        <td class="px-2 py-2.5 text-center font-mono text-xs text-slate-500">206</td>
+        <td class="px-3 py-2.5 font-bold text-slate-900">Nimra</td>
+        <td class="px-3 py-2.5 text-center font-medium text-slate-700">LHV</td>
+        <td class="px-3 py-2.5 text-center text-xs text-slate-600">First Year, 25–27</td>
+        <td class="px-3 py-2.5 text-slate-700">Muhammad Wakeel</td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-blue-700">0317-6254148</span></td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-emerald-700">0309-5030276</span></td>
+        <td class="px-3 py-2.5 text-xs text-slate-600">Burewala</td>
+    </tr>
+    
+    <tr class="bg-white border-b border-slate-200 hover:bg-amber-50">
+        <td class="px-3 py-2.5 text-center font-bold text-slate-700">13</td>
+        <td class="px-2 py-2.5 text-center font-mono text-xs text-slate-500">222</td>
+        <td class="px-3 py-2.5 font-bold text-slate-900">Asad Nawaz</td>
+        <td class="px-3 py-2.5 text-center font-medium text-slate-700">B-Cat</td>
+        <td class="px-3 py-2.5 text-center text-xs text-slate-600">First Year, 25–27</td>
+        <td class="px-3 py-2.5 text-slate-700">M. Nawaz</td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-blue-700">0323-4217282</span></td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="text-slate-400">—</span></td>
+        <td class="px-3 py-2.5 text-xs text-slate-600">Kot Sadat</td>
+    </tr>
+    
+    <tr class="bg-slate-50 border-b border-slate-200 hover:bg-amber-50">
+        <td class="px-3 py-2.5 text-center font-bold text-slate-700">14</td>
+        <td class="px-2 py-2.5 text-center font-mono text-xs text-slate-500">216</td>
+        <td class="px-3 py-2.5 font-bold text-slate-900">Sobia Javed</td>
+        <td class="px-3 py-2.5 text-center font-medium text-slate-700">CMW</td>
+        <td class="px-3 py-2.5 text-center text-xs text-slate-600">First Year, 25–27</td>
+        <td class="px-3 py-2.5 text-slate-700">M. Javed</td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-blue-700">0305-1719703</span></td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="text-slate-400">—</span></td>
+        <td class="px-3 py-2.5 text-xs text-slate-600">Peer Murad, Vehari</td>
+    </tr>
+    
+    <tr class="bg-white border-b border-slate-200 hover:bg-amber-50">
+        <td class="px-3 py-2.5 text-center font-bold text-slate-700">15</td>
+        <td class="px-2 py-2.5 text-center font-mono text-xs text-slate-500">209</td>
+        <td class="px-3 py-2.5 font-bold text-slate-900">Feroza Mahfoz</td>
+        <td class="px-3 py-2.5 text-center font-medium text-slate-700">LHV</td>
+        <td class="px-3 py-2.5 text-center text-xs text-slate-600">First Year, 25–27</td>
+        <td class="px-3 py-2.5 text-slate-700">Mahfoz Ahmad</td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-blue-700">0317-8216911</span></td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="text-slate-400">—</span></td>
+        <td class="px-3 py-2.5 text-xs text-slate-600">Muslim Town, Grid Station, Vehari</td>
+    </tr>
+    
+    <tr class="bg-slate-50 border-b border-slate-200 hover:bg-amber-50">
+        <td class="px-3 py-2.5 text-center font-bold text-slate-700">16</td>
+        <td class="px-2 py-2.5 text-center font-mono text-xs text-slate-500">230</td>
+        <td class="px-3 py-2.5 font-bold text-slate-900">Mujahid (Mujhaid)</td>
+        <td class="px-3 py-2.5 text-center font-medium text-slate-700">B-Cat</td>
+        <td class="px-3 py-2.5 text-center text-xs text-slate-600">First Year, 25–27</td>
+        <td class="px-3 py-2.5 text-slate-700">M. Tahir</td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="font-semibold text-blue-700">0326-1742426</span></td>
+        <td class="px-3 py-2.5 font-mono text-sm"><span class="text-slate-400">—</span></td>
+        <td class="px-3 py-2.5 text-xs text-slate-600">Chak No. 46 WB</td>
+    </tr>
+    
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-4 pt-3 border-t border-slate-200 flex flex-wrap justify-between items-center text-[11px] text-slate-500">
+            <p>* Verified via live SPIMS database. Formatted for official institute documentation and calling registers.</p>
+            <p class="font-medium">KhanHub ERP / SPIMS Portal</p>
+        </div>
+
+    </div>
+</body>
+</html>
