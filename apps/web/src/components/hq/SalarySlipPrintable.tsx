@@ -27,6 +27,7 @@ export interface SalaryRowData {
   employeeCode?: string;
   joiningDate?: string;
   gross: number;
+  effectiveGross?: number;
   dailyRate: number;
   payableDays: number;
   earnings: number;
@@ -127,7 +128,10 @@ export function SalarySlipPrintable({
       }
     }
 
-    initialGrossPay = Number(row.gross) || 0;
+    const effectiveGrossVal = row.effectiveGross !== undefined
+      ? Number(row.effectiveGross)
+      : (row.payableDays < 30 && (!row.absentDays || row.absentDays === 0) ? Number(row.earnings) : Number(row.gross));
+    initialGrossPay = effectiveGrossVal || 0;
     initialIncentive = Number(row.bonus) || 0;
     const addTotal = Number(row.totalCustomAdditions) || 0;
     initialOtherPay = Math.max(0, addTotal - initialIncentive);
@@ -155,7 +159,10 @@ export function SalarySlipPrintable({
     const hasFullSlip = typeof slip.netSalary === 'number' && slip.netSalary !== 0;
 
     if (hasFullSlip) {
-      initialGrossPay = slip.basicSalary || 0;
+      const isProratedDays = Boolean(slip.presentDays && slip.workingDays && slip.presentDays < slip.workingDays && (!slip.absentDays || slip.absentDays === 0));
+      initialGrossPay = isProratedDays
+        ? Math.round(slip.presentDays! * (slip.dailyWage || (slip.basicSalary || 0) / 30))
+        : (slip.basicSalary || 0);
       initialIncentive = slip.incentive || slip.bonus || 0;
       initialOtherPay = slip.otherEarnings || 0;
       initialAbsentee = slip.absentDeduction || 0;

@@ -142,6 +142,7 @@ function calculateStaffMonthPayroll(
   if (joiningDateStr && joiningDateStr > targetMonthEndStr) {
     return {
       gross: 0,
+      effectiveGross: 0,
       dailyRate: 0,
       payableDays: 0,
       baseEarnedSalary: 0,
@@ -398,12 +399,15 @@ function calculateStaffMonthPayroll(
   }));
   const totalCustomDeductions = securityFee + customDeductionsList.reduce((acc, c) => acc + c.amount, 0);
 
-  const totalEarningsWithAdditions = gross + totalCustomAdditions;
+  // Prorate base salary when staff joined mid-month or fewer base days passed
+  const effectiveGross = Math.round(daysPassed * dailyRate);
+  const totalEarningsWithAdditions = effectiveGross + totalCustomAdditions;
   const totalDeductions = Math.round(totalAbsentDeduction + totalFines + actualAdvance + totalCustomDeductions);
   const netPayable = Math.floor(totalEarningsWithAdditions - totalDeductions);
 
   return {
     gross,
+    effectiveGross,
     dailyRate: Math.round(dailyRate),
     payableDays,
     baseEarnedSalary: Math.round(baseEarnedSalary),
@@ -575,7 +579,7 @@ export default function ManagerPayrollPage() {
         month: monthStr,
         monthLabel: data?.monthLabel || monthStr,
         paidDate: todayStr,
-        gross: Number(staffRow.gross) || 0,
+        gross: Number(staffRow.effectiveGross ?? staffRow.gross) || 0,
         dailyRate: Number(staffRow.dailyRate) || 0,
         payableDays: Number(staffRow.payableDays) || 0,
         absentDays: Number(staffRow.absentDays) || 0,
@@ -648,7 +652,7 @@ export default function ManagerPayrollPage() {
           month: monthStr,
           monthLabel: data?.monthLabel || monthStr,
           paidDate: todayStr,
-          gross: Number(staffRow.gross) || 0,
+          gross: Number(staffRow.effectiveGross ?? staffRow.gross) || 0,
           dailyRate: Number(staffRow.dailyRate) || 0,
           payableDays: Number(staffRow.payableDays) || 0,
           absentDays: Number(staffRow.absentDays) || 0,
@@ -1160,6 +1164,7 @@ export default function ManagerPayrollPage() {
               dept,
               weeklyOffDay: staff.weeklyOffDay || 'none',
               gross: currCalc.gross,
+              effectiveGross: currCalc.effectiveGross,
               dailyRate: currCalc.dailyRate,
               payableDays: currCalc.payableDays,
               earnings: currCalc.baseEarnedSalary,
@@ -3261,15 +3266,18 @@ export default function ManagerPayrollPage() {
                 <div className="bg-gray-50 border border-gray-100 p-2.5 rounded-2xl text-center">
                   <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Base Salary</div>
                   <div className="text-xs font-black text-gray-900">{formatPKR(selectedStaffModal.gross)}</div>
-                  <div className="text-[9px] text-gray-400 mt-0.5">Daily: {formatPKR(selectedStaffModal.dailyRate)}</div>
+                  <div className="text-[9px] text-gray-400 mt-0.5">
+                    {selectedStaffModal.effectiveGross && selectedStaffModal.effectiveGross !== selectedStaffModal.gross
+                      ? `Prorated: ${formatPKR(selectedStaffModal.effectiveGross)}`
+                      : `Daily: ${formatPKR(selectedStaffModal.dailyRate)}`}
+                  </div>
                 </div>
 
                 <div className="bg-emerald-50 border border-emerald-100 p-2.5 rounded-2xl text-center">
                   <div className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider mb-0.5">Earned Days</div>
                   <div className="text-xs font-black text-emerald-800">{selectedStaffModal.payableDays} Days</div>
-                  <div className="text-[9px] text-emerald-600 mt-0.5">
-                    {selectedStaffModal.weeklyOffDaysCount ? `Off: ${selectedStaffModal.weeklyOffDaysCount}d ` : ''}
-                    {selectedStaffModal.holidayDaysCount ? `Hol/Leave: ${selectedStaffModal.holidayDaysCount}d` : ''}
+                  <div className="text-[9px] text-emerald-700 font-bold mt-0.5">
+                    Earned: {formatPKR(selectedStaffModal.earnings)}
                   </div>
                 </div>
 
@@ -3364,6 +3372,29 @@ export default function ManagerPayrollPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
+                        {/* Base Earned Salary Row */}
+                        <tr className="bg-emerald-50/50 font-bold border-b border-emerald-100">
+                          <td className="px-3.5 py-3 font-mono text-gray-500 whitespace-nowrap text-[11px]">
+                            {selectedStaffModal.joiningDate || monthStr}
+                          </td>
+                          <td className="px-3.5 py-3">
+                            <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                              Base Earned Salary
+                            </span>
+                          </td>
+                          <td className="px-3.5 py-3 text-gray-700">
+                            <div>
+                              {selectedStaffModal.payableDays} Earned Days ({formatPKR(selectedStaffModal.dailyRate)}/day)
+                              {selectedStaffModal.gross !== selectedStaffModal.earnings && (
+                                <span className="text-gray-400 font-normal text-[10px] ml-1.5">(Base: {formatPKR(selectedStaffModal.gross)})</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3.5 py-3 text-right font-bold text-emerald-800 whitespace-nowrap">
+                            +{formatPKR(selectedStaffModal.earnings)}
+                          </td>
+                          <td className="px-3.5 py-3 text-center text-gray-300 text-[10px] whitespace-nowrap">—</td>
+                        </tr>
                         {selectedStaffModal.breakdownItems.map((item: any) => (
                           <tr key={item.id} className="hover:bg-gray-50/80">
                             <td className="px-3.5 py-3 font-mono font-bold text-gray-800 whitespace-nowrap">
@@ -3443,7 +3474,7 @@ export default function ManagerPayrollPage() {
                   <div className="text-[11px] font-medium text-white/80">
                     {selectedStaffModal.netPayable < 0 ? 'Outstanding Advance Balance (Staff Owes Hub)' : 'Final Money To Pay Staff'}
                   </div>
-                  <div className="text-xs text-white/70">(Gross Salary + Additions) - Total Deductions (inc. Prev Deficit)</div>
+                  <div className="text-xs text-white/70">(Earned Base Salary + Additions) - Total Deductions (inc. Prev Deficit)</div>
                 </div>
                 <div className="text-2xl font-black text-white">
                   {formatPKR(selectedStaffModal.netPayable)}
