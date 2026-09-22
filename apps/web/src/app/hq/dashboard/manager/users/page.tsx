@@ -446,11 +446,6 @@ export default function ManagerUsersPage() {
 
     try {
       const deptDetails = DEPARTMENTS.find(d => d.id === formData.department) || DEPARTMENTS[0];
-      const q = query(collection(db, getDeptCollection(deptDetails.id)), where('role', '==', 'admin'), where('isActive', '==', true));
-      const snap = await getDocs(q);
-      if (!snap.empty) {
-        throw new Error('An active Admin account already exists. Only one primary Admin is allowed.');
-      }
 
       const res = await createRehabUserServer(
         formData.customId,

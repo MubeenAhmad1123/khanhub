@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, addDoc, deleteDoc, doc, Timestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import { collection, getDocs, query, where, addDoc, deleteDoc, doc, Timestamp, setDoc, updateDoc, enableNetwork } from 'firebase/firestore';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import { getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
 import { toDate, downloadElementAsPng } from '@/lib/utils';
@@ -12,7 +12,7 @@ import {
   Plus, X, Receipt, Trash2, Building2, Eye, CheckCircle2,
   SlidersHorizontal, PlusCircle, MinusCircle,
   Save, AlertTriangle, RefreshCw, FileText, Sun, CreditCard,
-  CheckCheck, Check
+  CheckCheck, Check, ShieldAlert, WifiOff, HelpCircle, Info
 } from 'lucide-react';
 import { SalarySlipPrintable } from '@/components/hq/SalarySlipPrintable';
 import { markStaffPayrollAsPaid } from '@/app/hq/actions/payroll';
@@ -515,6 +515,14 @@ export default function ManagerPayrollPage() {
   const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number; staffName: string; step: string } | null>(null);
   const [captureStaff, setCaptureStaff] = useState<any | null>(null);
 
+  // Security & Network guidance states
+  const [permissionErrors, setPermissionErrors] = useState<string[]>([]);
+  const [offlineDetected, setOfflineDetected] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [failedDepts, setFailedDepts] = useState<string[]>([]);
+  const [refreshingSession, setRefreshingSession] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+
   const printRef = useRef<HTMLDivElement>(null);
 
   const generateAndUploadSalarySlip = async (staffRow: any): Promise<string | null> => {
@@ -693,7 +701,7 @@ export default function ManagerPayrollPage() {
   const prevMonth = prevDate.getMonth();
   const prevMonthStr = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}`;
 
-  const fetchGlobalTransactionsForMonth = async () => {
+  const fetchGlobalTransactionsForMonth = async (permCollector?: string[]) => {
     const txMap = new Map<string, any>();
 
     await Promise.all(ALL_PREFIXES.map(async (p) => {
@@ -702,13 +710,20 @@ export default function ManagerPayrollPage() {
 
       for (const colName of [txCol, advCol]) {
         try {
-          const snap = await getDocs(collection(db, colName)).catch(() => ({ docs: [] }));
+          const snap = await getDocs(collection(db, colName));
           snap.docs.forEach((d: any) => {
             if (d && d.id) {
               txMap.set(`${colName}-${d.id}`, { id: d.id, _collection: colName, ...d.data() });
             }
           });
-        } catch (e) {}
+        } catch (e: any) {
+          const msg = String(e?.message || e || '').toLowerCase();
+          if (e?.code === 'permission-denied' || msg.includes('permission') || msg.includes('insufficient')) {
+            if (permCollector) permCollector.push(colName);
+          } else if (msg.includes('offline') || msg.includes('backend') || msg.includes('reach')) {
+            setOfflineDetected(true);
+          }
+        }
       }
     }));
 
@@ -777,12 +792,21 @@ export default function ManagerPayrollPage() {
   };
 
   const handleLoad = useCallback(async () => {
+    const permCollector: string[] = [];
+    const failedCollector: string[] = [];
     try {
       setLoading(true);
+      setLoadError(null);
 
       const [globalTxns, holidaysSnap, ...attSnaps] = await Promise.all([
-        fetchGlobalTransactionsForMonth(),
-        getDocs(collection(db, 'hq_holidays')).catch(() => ({ docs: [] } as any)),
+        fetchGlobalTransactionsForMonth(permCollector),
+        getDocs(collection(db, 'hq_holidays')).catch((e) => {
+          const msg = String(e?.message || e || '').toLowerCase();
+          if (e?.code === 'permission-denied' || msg.includes('permission') || msg.includes('insufficient')) {
+            permCollector.push('hq_holidays');
+          }
+          return { docs: [] } as any;
+        }),
         ...ALL_PREFIXES.map(async (p) => {
           const attColName = p ? `${p}_attendance` : 'attendance';
           try {
@@ -791,15 +815,19 @@ export default function ManagerPayrollPage() {
                 collection(db, attColName),
                 where('date', '>=', `${monthStr}-01`),
                 where('date', '<=', `${monthStr}-31`)
-              )).catch(() => ({ docs: [] } as any)),
+              )),
               getDocs(query(
                 collection(db, attColName),
                 where('date', '>=', `${prevMonthStr}-01`),
                 where('date', '<=', `${prevMonthStr}-31`)
-              )).catch(() => ({ docs: [] } as any)),
+              )),
             ]);
             return { attColName, currDocs: currSnap.docs, prevDocs: prevSnap.docs };
-          } catch (e) {
+          } catch (e: any) {
+            const msg = String(e?.message || e || '').toLowerCase();
+            if (e?.code === 'permission-denied' || msg.includes('permission') || msg.includes('insufficient')) {
+              permCollector.push(attColName);
+            }
             return { attColName, currDocs: [], prevDocs: [] };
           }
         }),
@@ -838,7 +866,16 @@ export default function ManagerPayrollPage() {
           const daysInThisCalendarMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
           const monthEndStr = `${monthStr}-${String(daysInThisCalendarMonth).padStart(2, '0')}`;
 
-          const staffSnap = await getDocs(collection(db, staffCol));
+          let staffSnap;
+          try {
+            staffSnap = await getDocs(collection(db, staffCol));
+          } catch (staffErr: any) {
+            const msg = String(staffErr?.message || staffErr || '').toLowerCase();
+            if (staffErr?.code === 'permission-denied' || msg.includes('permission') || msg.includes('insufficient')) {
+              permCollector.push(staffCol);
+            }
+            throw staffErr;
+          }
           const allStaff = staffSnap.docs
             .map(d => ({ id: d.id, ...d.data() as any, dept }))
             .filter((s: any) => {
@@ -1163,8 +1200,13 @@ export default function ManagerPayrollPage() {
           }));
 
           return { dept, salaryRows, allFines: monthFinesFiltered, allStaff };
-        } catch (e) {
+        } catch (e: any) {
           console.error(`Error loading dept ${dept}:`, e);
+          const msg = String(e?.message || e || '').toLowerCase();
+          if (e?.code === 'permission-denied' || msg.includes('permission') || msg.includes('insufficient')) {
+            permCollector.push(`${dept}_users`);
+          }
+          failedCollector.push(dept);
           return { dept, salaryRows: [], allFines: [], allStaff: [] };
         }
       }));
@@ -1200,10 +1242,55 @@ export default function ManagerPayrollPage() {
 
     } catch (err: any) {
       console.error('Payroll load error:', err);
+      const msg = String(err?.message || err || '');
+      setLoadError(msg);
+      if (err?.code === 'permission-denied' || msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('insufficient')) {
+        permCollector.push('core_collections');
+      }
+      if (msg.toLowerCase().includes('offline') || msg.toLowerCase().includes('backend') || msg.toLowerCase().includes('reach')) {
+        setOfflineDetected(true);
+      }
     } finally {
+      setPermissionErrors(Array.from(new Set(permCollector)));
+      setFailedDepts(Array.from(new Set(failedCollector)));
       setLoading(false);
     }
   }, [monthStr, prevMonthStr, prevMonth, prevYear, selectedMonth, selectedYear, today]);
+
+  // Session & Network Recovery Handlers for UX guidance
+  const handleRefreshSession = async () => {
+    try {
+      setRefreshingSession(true);
+      if (auth.currentUser) {
+        await auth.currentUser.getIdToken(true);
+      }
+      await handleLoad();
+    } catch (err: any) {
+      console.error('Failed to refresh session:', err);
+      await handleLoad();
+    } finally {
+      setRefreshingSession(false);
+    }
+  };
+
+  const handleReconnectNetwork = async () => {
+    try {
+      setLoading(true);
+      await enableNetwork(db);
+      setOfflineDetected(false);
+      await handleLoad();
+    } catch (err: any) {
+      console.error('Failed to enable network:', err);
+      await handleLoad();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReLogin = () => {
+    localStorage.removeItem('hq_session');
+    router.push('/hq/login');
+  };
 
   // Auto-load on mount & month/year change
   useEffect(() => {
@@ -1729,6 +1816,122 @@ export default function ManagerPayrollPage() {
           )}
         </div>
 
+        {/* ── SECURITY PERMISSIONS & NETWORK GUIDANCE BANNER ── */}
+        {(permissionErrors.length > 0 || offlineDetected || loadError || failedDepts.length > 0) && (
+          <div className="bg-amber-50/90 border-2 border-amber-300 rounded-3xl p-5 shadow-sm space-y-4 no-print animate-in fade-in duration-300">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 bg-amber-500 text-white rounded-2xl shrink-0 mt-0.5 shadow-sm">
+                  <ShieldAlert className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base font-extrabold text-amber-950">
+                      {permissionErrors.length > 0 
+                        ? 'Security Permissions Guidance' 
+                        : offlineDetected 
+                          ? 'Offline / Connection Status' 
+                          : 'Payroll Data Notice'}
+                    </h3>
+                    {permissionErrors.length > 0 && (
+                      <span className="bg-rose-100 text-rose-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-rose-200">
+                        Permission Issue Detected
+                      </span>
+                    )}
+                    {offlineDetected && (
+                      <span className="bg-orange-100 text-orange-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-orange-200">
+                        Operating in Offline Mode
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-amber-900 mt-1 leading-relaxed">
+                    {permissionErrors.length > 0 ? (
+                      <>
+                        Your current session encountered insufficient permissions while loading certain department ledgers. 
+                        Security rules have been updated in the cloud. Click <strong>Refresh Security Session</strong> to sync your credentials, or log back in.
+                      </>
+                    ) : offlineDetected ? (
+                      <>
+                        Cloud Firestore could not reach the backend within 10 seconds. You are operating in offline cache mode.
+                      </>
+                    ) : (
+                      <>
+                        {loadError || 'Some department ledgers could not be retrieved.'}
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick Action Buttons */}
+              <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+                <button
+                  onClick={handleRefreshSession}
+                  disabled={refreshingSession || loading}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-xs font-black shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                  title="Force-refresh Firebase Auth Token and re-sync custom claims"
+                >
+                  {refreshingSession ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                  Refresh Session
+                </button>
+
+                {offlineDetected && (
+                  <button
+                    onClick={handleReconnectNetwork}
+                    disabled={loading}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-black shadow-sm transition-all cursor-pointer"
+                  >
+                    <WifiOff className="w-3.5 h-3.5" />
+                    Reconnect Network
+                  </button>
+                )}
+
+                <button
+                  onClick={handleReLogin}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+                  title="Log out and re-authenticate to obtain completely fresh security credentials"
+                >
+                  Re-Login to HQ
+                </button>
+
+                <button
+                  onClick={() => setShowDiagnostics(!showDiagnostics)}
+                  className="flex items-center justify-center p-2 rounded-xl border border-amber-300 text-amber-900 bg-amber-100 hover:bg-amber-200 text-xs transition-colors cursor-pointer"
+                  title="Show technical diagnostics"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Diagnostic Info Drawer */}
+            {showDiagnostics && (
+              <div className="bg-white rounded-2xl p-3 border border-amber-200 text-xs space-y-1.5 font-mono text-gray-700">
+                <div className="flex justify-between border-b pb-1">
+                  <span className="font-bold text-gray-500">Firebase User UID:</span>
+                  <span className="text-gray-900">{auth.currentUser?.uid || session?.uid || 'Not signed in'}</span>
+                </div>
+                <div className="flex justify-between border-b pb-1">
+                  <span className="font-bold text-gray-500">Session Role:</span>
+                  <span className="text-emerald-700 font-bold">{session?.role || 'None'}</span>
+                </div>
+                {failedDepts.length > 0 && (
+                  <div className="flex justify-between border-b pb-1">
+                    <span className="font-bold text-gray-500">Restricted Departments:</span>
+                    <span className="text-rose-700 font-bold">{failedDepts.map(d => DEPT_LABELS[d] || d).join(', ')}</span>
+                  </div>
+                )}
+                {permissionErrors.length > 0 && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-bold text-gray-500">Affected Collections:</span>
+                    <span className="text-rose-600 break-all">{permissionErrors.join(', ')}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Controls */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4 no-print">
           <h2 className="font-bold text-gray-800 flex items-center gap-2"><Calendar className="w-5 h-5 text-emerald-500" /> Select Month</h2>
@@ -1750,7 +1953,8 @@ export default function ManagerPayrollPage() {
                 onChange={e => setSelectedYear(Number(e.target.value))}
                 min={2020} max={2100}
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-black font-bold"
-              />
+              >
+              </input>
             </div>
             <button
               onClick={handleLoad} disabled={loading}
@@ -1761,6 +1965,42 @@ export default function ManagerPayrollPage() {
             </button>
           </div>
         </div>
+
+        {/* Loading state indicator */}
+        {loading && !data && (
+          <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center shadow-sm space-y-3">
+            <Loader2 className="w-8 h-8 animate-spin text-emerald-600 mx-auto" />
+            <h3 className="font-extrabold text-base text-gray-900">Synchronizing All-Department Payroll</h3>
+            <p className="text-xs text-gray-500 max-w-md mx-auto">
+              Connecting to Firestore, aggregating staff profiles, attendance logs, advance payments, and ledger records across all 9 departments...
+            </p>
+          </div>
+        )}
+
+        {/* Empty / Error fallback state */}
+        {!loading && !data && (
+          <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center shadow-sm space-y-4">
+            <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
+            <h3 className="font-extrabold text-lg text-gray-900">No Payroll Data Loaded</h3>
+            <p className="text-xs text-gray-500 max-w-md mx-auto">
+              Unable to display payroll records for {MONTHS[selectedMonth]} {selectedYear}. Please check your connection and security credentials above.
+            </p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={handleLoad}
+                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md cursor-pointer flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" /> Try Again
+              </button>
+              <button
+                onClick={handleRefreshSession}
+                className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black shadow-md cursor-pointer flex items-center gap-2"
+              >
+                <ShieldAlert className="w-4 h-4" /> Refresh Security Session
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Report Area */}
         {data && (
