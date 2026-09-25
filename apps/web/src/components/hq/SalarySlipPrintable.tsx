@@ -256,6 +256,7 @@ export function SalarySlipPrintable({
     otherDed: initialOtherDed,
     paidDateStr: initialPaidDateStr,
     queryPhone: '067-3364220',
+    signatureTitle: 'Authorized Signature',
   });
 
   // Keep state updated if props change
@@ -280,6 +281,7 @@ export function SalarySlipPrintable({
       otherDed: initialOtherDed,
       paidDateStr: initialPaidDateStr,
       queryPhone: '067-3364220',
+      signatureTitle: 'Authorized Signature',
     });
   }, [
     row, slip, propMonthLabel, propSelectedMonth, propPaidDate,
@@ -310,6 +312,7 @@ export function SalarySlipPrintable({
       otherDed: initialOtherDed,
       paidDateStr: initialPaidDateStr,
       queryPhone: '067-3364220',
+      signatureTitle: 'Authorized Signature',
     });
   };
 
@@ -747,7 +750,16 @@ export function SalarySlipPrintable({
 
           <div className="w-[38%] text-center">
             <hr className="border-t border-black mb-1.5" />
-            <p className="font-bold text-xs uppercase tracking-wider">Executive Officer</p>
+            {isEditing ? (
+              <input
+                type="text"
+                value={fields.signatureTitle}
+                onChange={(e) => setFields({ ...fields, signatureTitle: e.target.value })}
+                className="w-full text-center font-bold text-xs uppercase tracking-wider border border-amber-400 bg-amber-50 rounded px-1"
+              />
+            ) : (
+              <p className="font-bold text-xs uppercase tracking-wider">{fields.signatureTitle || 'Authorized Signature'}</p>
+            )}
           </div>
         </div>
       </div>
