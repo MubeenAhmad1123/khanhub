@@ -261,3 +261,289 @@ export async function markStaffPayrollAsPaid(payload: MarkPaidPayload): Promise<
     };
   }
 }
+
+export interface SaveSalaryCustomizationPayload {
+  staffId: string;
+  staffName: string;
+  dept: StaffDept;
+  month: string; // 'YYYY-MM'
+  baseSalary?: number | null;
+  remainingBalance: number;
+  bonus: number;
+  allowance: number;
+  securityFee: number;
+  previousAdvance: number;
+  overridePreviousAdvance: boolean;
+  advanceSalaryOverride?: number | null;
+  clearProfileDebt?: boolean;
+  customAdditions: Array<{ id: string; label: string; amount: number }>;
+  customDeductions: Array<{ id: string; label: string; amount: number }>;
+  notes: string;
+  updatedBy: string;
+  calcNetPayable?: number;
+}
+
+export async function saveSalaryCustomizationAction(
+  payload: SaveSalaryCustomizationPayload
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const adminDb = getAdminDb();
+    const prefix = getDeptPrefix(payload.dept);
+    const dept = payload.dept;
+    const docId = `${payload.staffId}_${payload.month}`;
+
+    const adjRef = adminDb.collection(`${prefix}_salary_adjustments`).doc(docId);
+
+    const baseSalaryNum =
+      payload.baseSalary !== undefined && payload.baseSalary !== null && !isNaN(payload.baseSalary)
+        ? Number(payload.baseSalary)
+        : null;
+
+    const advanceOverrideNum =
+      payload.advanceSalaryOverride !== undefined && payload.advanceSalaryOverride !== null && !isNaN(payload.advanceSalaryOverride)
+        ? Number(payload.advanceSalaryOverride)
+        : null;
+
+    const remainingBalNum = Number(payload.remainingBalance) || 0;
+    const bonusNum = Number(payload.bonus) || 0;
+    const allowanceNum = Number(payload.allowance) || 0;
+    const secFeeNum = Number(payload.securityFee) || 0;
+    const prevAdvNum = Number(payload.previousAdvance) || 0;
+
+    await adjRef.set(
+      {
+        staffId: payload.staffId,
+        staffName: payload.staffName,
+        dept: payload.dept,
+        month: payload.month,
+        baseSalary: baseSalaryNum,
+        baseSalaryOverride: baseSalaryNum,
+        remainingBalance: remainingBalNum,
+        bonus: bonusNum,
+        allowance: allowanceNum,
+        securityFee: secFeeNum,
+        previousAdvance: prevAdvNum,
+        overridePreviousAdvance: Boolean(payload.overridePreviousAdvance),
+        advanceSalaryOverride: advanceOverrideNum,
+        customAdditions: payload.customAdditions || [],
+        customDeductions: payload.customDeductions || [],
+        notes: (payload.notes || '').trim(),
+        updatedBy: payload.updatedBy || 'Super Admin',
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    // Sync to staff profile in department users collection
+    const staffColName =
+      dept === 'hq'
+        ? 'hq_users'
+        : dept === 'job-center'
+        ? 'jobcenter_users'
+        : dept === 'social-media'
+        ? 'media_users'
+        : `${prefix}_users`;
+
+    const staffDocRef = adminDb.collection(staffColName).doc(payload.staffId);
+    const staffSnap = await staffDocRef.get();
+
+    const profileUpdates: Record<string, any> = {
+      remainingBalance: remainingBalNum,
+      securityFeeDeduction: secFeeNum,
+      lastPayrollMonth: payload.month,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    if (baseSalaryNum !== null && baseSalaryNum > 0) {
+      profileUpdates.salary = baseSalaryNum;
+      profileUpdates.monthlySalary = baseSalaryNum;
+    }
+
+    if (payload.clearProfileDebt) {
+      profileUpdates.outstandingBalance = 0;
+      profileUpdates.salaryBalance = 0;
+      profileUpdates.advance = 0;
+      profileUpdates.advanceSalary = 0;
+      profileUpdates.monthlyAdvance = 0;
+    } else if (payload.calcNetPayable !== undefined) {
+      const net = Math.floor(payload.calcNetPayable);
+      profileUpdates.salaryBalance = net;
+      profileUpdates.outstandingBalance = net < 0 ? Math.abs(net) : 0;
+    }
+
+    if (staffSnap.exists) {
+      await staffDocRef.update(profileUpdates);
+    }
+
+    // If rehab, also update rehab_staff if document exists
+    if (dept === 'rehab') {
+      try {
+        const rehabStaffRef = adminDb.collection('rehab_staff').doc(payload.staffId);
+        const rehabStaffSnap = await rehabStaffRef.get();
+        if (rehabStaffSnap.exists) {
+          await rehabStaffRef.update(profileUpdates);
+        }
+      } catch (rErr) {
+        console.warn('[saveSalaryCustomizationAction] rehab_staff sync notice:', rErr);
+      }
+    }
+
+    // Audit log
+    try {
+      await adminDb.collection('hq_audit').add({
+        action: 'salary_customization_saved',
+        dept: payload.dept,
+        staffId: payload.staffId,
+        staffName: payload.staffName,
+        month: payload.month,
+        updatedBy: payload.updatedBy || 'Super Admin',
+        timestamp: FieldValue.serverTimestamp(),
+      });
+    } catch {}
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[saveSalaryCustomizationAction] Error:', err);
+    return { success: false, error: err.message || 'Failed to save salary customization' };
+  }
+}
+
+export async function syncStaffProfileBalanceAction(payload: {
+  staffId: string;
+  dept: StaffDept;
+  netPayable: number;
+  month: string;
+  syncedBy?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const adminDb = getAdminDb();
+    const prefix = getDeptPrefix(payload.dept);
+    const dept = payload.dept;
+
+    const staffColName =
+      dept === 'hq'
+        ? 'hq_users'
+        : dept === 'job-center'
+        ? 'jobcenter_users'
+        : dept === 'social-media'
+        ? 'media_users'
+        : `${prefix}_users`;
+
+    const staffDocRef = adminDb.collection(staffColName).doc(payload.staffId);
+    const updateData: Record<string, any> = {
+      salaryBalance: payload.netPayable,
+      outstandingBalance: payload.netPayable < 0 ? Math.abs(payload.netPayable) : 0,
+      lastPayrollMonth: payload.month,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    await staffDocRef.update(updateData);
+
+    if (dept === 'rehab') {
+      try {
+        const rehabStaffRef = adminDb.collection('rehab_staff').doc(payload.staffId);
+        const rehabStaffSnap = await rehabStaffRef.get();
+        if (rehabStaffSnap.exists) {
+          await rehabStaffRef.update(updateData);
+        }
+      } catch {}
+    }
+
+    try {
+      await adminDb.collection('hq_audit').add({
+        action: 'staff_profile_balance_synced',
+        dept: payload.dept,
+        staffId: payload.staffId,
+        month: payload.month,
+        netPayable: payload.netPayable,
+        syncedBy: payload.syncedBy || 'Super Admin',
+        timestamp: FieldValue.serverTimestamp(),
+      });
+    } catch {}
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[syncStaffProfileBalanceAction] Error:', err);
+    return { success: false, error: err.message || 'Failed to sync balance to profile' };
+  }
+}
+
+export async function clearStaffProfileDebtAction(payload: {
+  staffId: string;
+  staffName: string;
+  dept: StaffDept;
+  month: string;
+  clearedBy?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const adminDb = getAdminDb();
+    const prefix = getDeptPrefix(payload.dept);
+    const dept = payload.dept;
+
+    // 1. Clear profile fields in department users collection
+    const staffColName =
+      dept === 'hq'
+        ? 'hq_users'
+        : dept === 'job-center'
+        ? 'jobcenter_users'
+        : dept === 'social-media'
+        ? 'media_users'
+        : `${prefix}_users`;
+
+    const staffDocRef = adminDb.collection(staffColName).doc(payload.staffId);
+    const clearData: Record<string, any> = {
+      outstandingBalance: 0,
+      salaryBalance: 0,
+      advance: 0,
+      advanceSalary: 0,
+      monthlyAdvance: 0,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    await staffDocRef.update(clearData);
+
+    if (dept === 'rehab') {
+      try {
+        const rehabStaffRef = adminDb.collection('rehab_staff').doc(payload.staffId);
+        const rehabStaffSnap = await rehabStaffRef.get();
+        if (rehabStaffSnap.exists) {
+          await rehabStaffRef.update(clearData);
+        }
+      } catch {}
+    }
+
+    // 2. Set previousAdvance to 0 in salary adjustments doc so it never carries over
+    const adjDocId = `${payload.staffId}_${payload.month}`;
+    await adminDb.collection(`${prefix}_salary_adjustments`).doc(adjDocId).set(
+      {
+        staffId: payload.staffId,
+        staffName: payload.staffName,
+        dept: payload.dept,
+        month: payload.month,
+        previousAdvance: 0,
+        overridePreviousAdvance: true,
+        updatedBy: payload.clearedBy || 'Super Admin',
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    // 3. Audit trail
+    try {
+      await adminDb.collection('hq_audit').add({
+        action: 'staff_profile_debt_cleared',
+        dept: payload.dept,
+        staffId: payload.staffId,
+        staffName: payload.staffName,
+        month: payload.month,
+        clearedBy: payload.clearedBy || 'Super Admin',
+        timestamp: FieldValue.serverTimestamp(),
+      });
+    } catch {}
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[clearStaffProfileDebtAction] Error:', err);
+    return { success: false, error: err.message || 'Failed to clear debt from profile' };
+  }
+}

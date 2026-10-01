@@ -15,7 +15,7 @@ import {
   CheckCheck, Check, ShieldAlert, WifiOff, HelpCircle, Info
 } from 'lucide-react';
 import { SalarySlipPrintable } from '@/components/hq/SalarySlipPrintable';
-import { markStaffPayrollAsPaid } from '@/app/hq/actions/payroll';
+import { markStaffPayrollAsPaid, saveSalaryCustomizationAction, syncStaffProfileBalanceAction, clearStaffProfileDebtAction } from '@/app/hq/actions/payroll';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 
 const MONTHS = [
@@ -110,9 +110,6 @@ function calculateStaffMonthPayroll(
   const tMonthDays = getDaysInMonth(targetYear, targetMonthZeroIndexed);
   const tMonthHolidays = allHqHolidaysList.filter(h => h.date && h.date.startsWith(tMonthStr));
 
-  const gross = Number(staff.monthlySalary || staff.salary || 0);
-  const dailyRate = gross / 30;
-
   const uid = staff.staffId || staff.id;
   const loginId = staff.loginUserId || staff.uid || staff.userId || '';
 
@@ -132,6 +129,23 @@ function calculateStaffMonthPayroll(
   });
 
   const staffNameLower = String(staff.name || staff.displayName || '').toLowerCase();
+
+  // Find custom adjustment doc early to allow base salary override
+  const customAdj = allDeptAdjustments.find((a: any) => {
+    if (a.month !== tMonthStr) return false;
+    if (candidateIds.has(String(a.staffId))) return true;
+    if (a.staffName && String(a.staffName).toLowerCase() === staffNameLower) return true;
+    return false;
+  });
+
+  const rawGross = Number(staff.monthlySalary || staff.salary || 0);
+  const gross = (customAdj?.baseSalaryOverride !== undefined && customAdj?.baseSalaryOverride !== null && Number(customAdj.baseSalaryOverride) > 0)
+    ? Number(customAdj.baseSalaryOverride)
+    : (customAdj?.baseSalary !== undefined && customAdj?.baseSalary !== null && Number(customAdj.baseSalary) > 0)
+    ? Number(customAdj.baseSalary)
+    : rawGross;
+
+  const dailyRate = gross / 30;
 
   const daysInThisTargetMonth = new Date(targetYear, targetMonthZeroIndexed + 1, 0).getDate();
   const targetMonthEndStr = `${tMonthStr}-${String(daysInThisTargetMonth).padStart(2, '0')}`;
@@ -370,16 +384,10 @@ function calculateStaffMonthPayroll(
     return false;
   });
 
-  // Custom Adjustment Doc
-  const customAdj = allDeptAdjustments.find((a: any) => {
-    if (a.month !== tMonthStr) return false;
-    if (candidateIds.has(String(a.staffId))) return true;
-    if (a.staffName && String(a.staffName).toLowerCase() === staffNameLower) return true;
-    return false;
-  });
-
   // Monthly advance only (NOT including previous debt which is computed separately)
-  const actualAdvance = (slip && slip.advance !== undefined && slip.advance !== null)
+  const actualAdvance = (customAdj?.advanceSalaryOverride !== undefined && customAdj?.advanceSalaryOverride !== null && customAdj?.advanceSalaryOverride !== '')
+    ? Number(customAdj.advanceSalaryOverride)
+    : (slip && slip.advance !== undefined && slip.advance !== null)
     ? Number(slip.advance)
     : approvedAdvancesForMonth;
 
@@ -471,11 +479,15 @@ export default function ManagerPayrollPage() {
   // Staff customization modal state
   const [customizeModalStaff, setCustomizeModalStaff] = useState<any | null>(null);
   const [customizeForm, setCustomizeForm] = useState({
+    baseSalary: '',
     remainingBalance: '',
     bonus: '',
     allowance: '',
     securityFee: '',
     previousAdvance: '',
+    overridePreviousAdvance: false,
+    advanceSalaryOverride: '',
+    clearProfileDebt: false,
     notes: '',
     customAdditions: [] as Array<{ id: string; label: string; amount: string }>,
     customDeductions: [] as Array<{ id: string; label: string; amount: string }>,
@@ -770,26 +782,52 @@ export default function ManagerPayrollPage() {
   const syncStaffProfileBalance = async (staffRow: any) => {
     try {
       setSyncingProfileId(staffRow.id);
-      const prefix = getDeptPrefix(staffRow.dept as StaffDept);
-      const dept = staffRow.dept as StaffDept;
-      const staffCol = dept === 'hq' ? 'hq_users'
-        : dept === 'job-center' ? 'jobcenter_users'
-        : dept === 'social-media' ? 'media_users'
-        : `${prefix}_users`;
-
-      const staffDocRef = doc(db, staffCol, staffRow.id);
-
-      await updateDoc(staffDocRef, {
-        salaryBalance: staffRow.netPayable,
-        outstandingBalance: staffRow.netPayable < 0 ? Math.abs(staffRow.netPayable) : 0,
-        lastPayrollMonth: monthStr,
-        updatedAt: Timestamp.now(),
+      const res = await syncStaffProfileBalanceAction({
+        staffId: staffRow.id,
+        dept: staffRow.dept as StaffDept,
+        netPayable: staffRow.netPayable,
+        month: monthStr,
+        syncedBy: session?.displayName || session?.name || session?.customId || 'Super Admin',
       });
+
+      if (!res.success) {
+        alert('Failed to sync balance to profile: ' + res.error);
+        return;
+      }
 
       alert(`Successfully saved balance (${formatPKR(staffRow.netPayable)}) to ${staffRow.name}'s profile!`);
       await handleLoad();
     } catch (err: any) {
       alert('Failed to sync balance to profile: ' + err.message);
+    } finally {
+      setSyncingProfileId(null);
+    }
+  };
+
+  const handleClearStaffProfileDebt = async (staffRow: any) => {
+    if (!confirm(`Are you sure you want to clear/reset all advance and negative salary debt for ${staffRow.name}? This will set profile debt to Rs. 0 and waive previous carryovers.`)) return;
+    try {
+      setSyncingProfileId(staffRow.id);
+      const res = await clearStaffProfileDebtAction({
+        staffId: staffRow.id,
+        staffName: staffRow.name,
+        dept: staffRow.dept as StaffDept,
+        month: monthStr,
+        clearedBy: session?.displayName || session?.name || session?.customId || 'Super Admin',
+      });
+
+      if (!res.success) {
+        alert('Failed to clear debt: ' + res.error);
+        return;
+      }
+
+      alert(`✅ Successfully cleared debt balance for ${staffRow.name}!`);
+      if (selectedStaffModal && selectedStaffModal.id === staffRow.id) {
+        setSelectedStaffModal(null);
+      }
+      await handleLoad();
+    } catch (err: any) {
+      alert('Failed to clear debt: ' + err.message);
     } finally {
       setSyncingProfileId(null);
     }
@@ -989,13 +1027,13 @@ export default function ManagerPayrollPage() {
             );
 
             // Check if manager explicitly entered custom previousAdvance in current month
-            const manualPrevAdvance = currCalc.customAdj?.previousAdvance !== undefined &&
-              currCalc.customAdj?.previousAdvance !== null &&
-              currCalc.customAdj?.previousAdvance !== ''
-                ? Number(currCalc.customAdj.previousAdvance)
-                : 0;
+            const hasManualPrev = currCalc.customAdj?.overridePreviousAdvance === true ||
+              (currCalc.customAdj?.previousAdvance !== undefined &&
+               currCalc.customAdj?.previousAdvance !== null &&
+               currCalc.customAdj?.previousAdvance !== '');
 
-            const previousMonthDebt = manualPrevAdvance > 0 ? manualPrevAdvance : calculatedPrevDebt;
+            const manualPrevAdvance = hasManualPrev ? (Number(currCalc.customAdj.previousAdvance) || 0) : 0;
+            const previousMonthDebt = hasManualPrev ? manualPrevAdvance : calculatedPrevDebt;
 
             const totalAdvance = currCalc.actualAdvance;
             const totalDeductions = Math.round(
@@ -1310,13 +1348,22 @@ export default function ManagerPayrollPage() {
   // Customization Form Handler
   const openCustomizeModal = (staffRow: any) => {
     const adj = staffRow.customAdj || {};
+    const hasExplicitPrevAdv = adj.overridePreviousAdvance === true || (adj.previousAdvance !== undefined && adj.previousAdvance !== null && adj.previousAdvance !== '');
+    const prevAdvValue = hasExplicitPrevAdv
+      ? String(adj.previousAdvance ?? 0)
+      : (staffRow.previousMonthDebt !== undefined && staffRow.previousMonthDebt !== null && staffRow.previousMonthDebt > 0 ? String(staffRow.previousMonthDebt) : '');
+
     setCustomizeModalStaff(staffRow);
     setCustomizeForm({
-      remainingBalance: adj.remainingBalance ? String(adj.remainingBalance) : '',
-      bonus: adj.bonus ? String(adj.bonus) : '',
-      allowance: adj.allowance ? String(adj.allowance) : '',
-      securityFee: adj.securityFee ? String(adj.securityFee) : '',
-      previousAdvance: adj.previousAdvance ? String(adj.previousAdvance) : (staffRow.previousMonthDebt ? String(staffRow.previousMonthDebt) : ''),
+      baseSalary: String(adj.baseSalaryOverride ?? adj.baseSalary ?? staffRow.gross ?? ''),
+      remainingBalance: adj.remainingBalance !== undefined && adj.remainingBalance !== null && adj.remainingBalance !== 0 ? String(adj.remainingBalance) : '',
+      bonus: adj.bonus !== undefined && adj.bonus !== null && adj.bonus !== 0 ? String(adj.bonus) : '',
+      allowance: adj.allowance !== undefined && adj.allowance !== null && adj.allowance !== 0 ? String(adj.allowance) : '',
+      securityFee: adj.securityFee !== undefined && adj.securityFee !== null && adj.securityFee !== 0 ? String(adj.securityFee) : '',
+      previousAdvance: prevAdvValue,
+      overridePreviousAdvance: hasExplicitPrevAdv,
+      advanceSalaryOverride: adj.advanceSalaryOverride !== undefined && adj.advanceSalaryOverride !== null && adj.advanceSalaryOverride !== '' ? String(adj.advanceSalaryOverride) : '',
+      clearProfileDebt: false,
       notes: adj.notes || '',
       customAdditions: adj.customAdditions ? adj.customAdditions.map((ca: any) => ({
         id: ca.id || String(Math.random()),
@@ -1335,10 +1382,6 @@ export default function ManagerPayrollPage() {
     if (!customizeModalStaff) return;
     try {
       setSavingCustomization(true);
-      const prefix = getDeptPrefix(customizeModalStaff.dept as StaffDept);
-      const docId = `${customizeModalStaff.id}_${monthStr}`;
-      const adjRef = doc(db, `${prefix}_salary_adjustments`, docId);
-
       const parsedAdditions = customizeForm.customAdditions
         .filter(ca => ca.label.trim() && Number(ca.amount) > 0)
         .map(ca => ({ id: ca.id, label: ca.label.trim(), amount: Number(ca.amount) }));
@@ -1347,61 +1390,55 @@ export default function ManagerPayrollPage() {
         .filter(cd => cd.label.trim() && Number(cd.amount) > 0)
         .map(cd => ({ id: cd.id, label: cd.label.trim(), amount: Number(cd.amount) }));
 
+      const baseSalaryNum = customizeForm.baseSalary !== '' ? Number(customizeForm.baseSalary) : undefined;
       const remainingBalNum = Number(customizeForm.remainingBalance) || 0;
       const bonusNum = Number(customizeForm.bonus) || 0;
       const allowanceNum = Number(customizeForm.allowance) || 0;
       const secFeeNum = Number(customizeForm.securityFee) || 0;
-      const prevAdvNum = Number(customizeForm.previousAdvance) || 0;
+      const prevAdvNum = customizeForm.previousAdvance !== '' ? Number(customizeForm.previousAdvance) : 0;
+      const overridePrev = customizeForm.overridePreviousAdvance || customizeForm.previousAdvance !== '';
+      const advanceOverrideNum = customizeForm.advanceSalaryOverride !== '' ? Number(customizeForm.advanceSalaryOverride) : null;
 
-      // 1. Save salary adjustment doc
-      await setDoc(adjRef, {
+      // Calculate net payable
+      const effectiveGross = baseSalaryNum !== undefined && baseSalaryNum > 0 ? baseSalaryNum : (customizeModalStaff.gross || 0);
+      const dailyRate = effectiveGross / 30;
+      const earnedBase = Math.round((customizeModalStaff.payableDays || 0) * dailyRate);
+      const totalCustomAdd = remainingBalNum + bonusNum + allowanceNum + parsedAdditions.reduce((s, a) => s + a.amount, 0);
+      const totalCustomDed = secFeeNum + parsedDeductions.reduce((s, d) => s + d.amount, 0);
+      const monthlyAdvance = advanceOverrideNum !== null ? advanceOverrideNum : (customizeModalStaff.actualAdvance || 0);
+      const appliedPrevDebt = overridePrev ? prevAdvNum : (customizeModalStaff.previousMonthDebt || 0);
+      const totalDed = Math.round((customizeModalStaff.totalAbsentDeduction || 0) + (customizeModalStaff.totalFines || 0) + monthlyAdvance + appliedPrevDebt + totalCustomDed);
+      const calcNetPayable = Math.floor((earnedBase + totalCustomAdd) - totalDed);
+
+      const res = await saveSalaryCustomizationAction({
         staffId: customizeModalStaff.id,
         staffName: customizeModalStaff.name,
-        dept: customizeModalStaff.dept,
+        dept: customizeModalStaff.dept as StaffDept,
         month: monthStr,
+        baseSalary: baseSalaryNum,
         remainingBalance: remainingBalNum,
         bonus: bonusNum,
         allowance: allowanceNum,
         securityFee: secFeeNum,
         previousAdvance: prevAdvNum,
+        overridePreviousAdvance: overridePrev,
+        advanceSalaryOverride: advanceOverrideNum,
+        clearProfileDebt: customizeForm.clearProfileDebt || (overridePrev && prevAdvNum === 0),
         customAdditions: parsedAdditions,
         customDeductions: parsedDeductions,
         notes: customizeForm.notes.trim(),
-        updatedBy: session?.name || session?.customId || 'Manager',
-        updatedAt: Timestamp.now(),
-      }, { merge: true });
+        updatedBy: session?.displayName || session?.name || session?.customId || 'Super Admin',
+        calcNetPayable,
+      });
 
-      // 2. Sync to staff profile document
-      const dept = customizeModalStaff.dept as StaffDept;
-      const staffCol = dept === 'hq' ? 'hq_users'
-        : dept === 'job-center' ? 'jobcenter_users'
-        : dept === 'social-media' ? 'media_users'
-        : `${prefix}_users`;
-
-      const staffDocRef = doc(db, staffCol, customizeModalStaff.id);
-
-      const grossSalary = customizeModalStaff.gross || 0;
-      const totalCustomAdd = remainingBalNum + bonusNum + allowanceNum + parsedAdditions.reduce((s, a) => s + a.amount, 0);
-      const totalCustomDed = secFeeNum + parsedDeductions.reduce((s, d) => s + d.amount, 0);
-      const totalDed = (customizeModalStaff.totalAbsentDeduction || 0) + (customizeModalStaff.totalFines || 0) + (customizeModalStaff.totalAdvance || 0) + prevAdvNum + totalCustomDed;
-      const calcNetPayable = Math.floor((grossSalary + totalCustomAdd) - totalDed);
-
-      const outstandingDebt = calcNetPayable < 0 ? Math.abs(calcNetPayable) : (prevAdvNum > 0 ? prevAdvNum : (customizeModalStaff.totalAdvance || 0));
-
-      await updateDoc(staffDocRef, {
-        advance: outstandingDebt,
-        advanceSalary: outstandingDebt,
-        monthlyAdvance: outstandingDebt,
-        salaryBalance: calcNetPayable,
-        outstandingBalance: calcNetPayable < 0 ? Math.abs(calcNetPayable) : 0,
-        remainingBalance: remainingBalNum,
-        securityFeeDeduction: secFeeNum,
-        lastPayrollMonth: monthStr,
-        updatedAt: Timestamp.now(),
-      }).catch(e => console.error('Failed updating staff profile doc:', e));
+      if (!res.success) {
+        alert('Failed to save salary customization: ' + res.error);
+        return;
+      }
 
       setCustomizeModalStaff(null);
       await handleLoad();
+      alert(`✅ Salary customized and successfully saved to ${customizeModalStaff.name}'s profile!`);
     } catch (err: any) {
       alert('Failed to save salary customization: ' + err.message);
     } finally {
@@ -2967,15 +3004,33 @@ export default function ManagerPayrollPage() {
 
             <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
 
-              {/* Base Salary Reference Banner */}
-              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div>
-                  <span className="text-gray-500 font-bold">Gross Base Salary: </span>
-                  <span className="font-black text-gray-900">{formatPKR(customizeModalStaff.gross)}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 font-bold">Base Days Earned: </span>
-                  <span className="font-black text-emerald-800">{customizeModalStaff.payableDays} Days ({formatPKR(customizeModalStaff.earnings)})</span>
+              {/* Base Salary Reference & Edit Banner */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-3 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-1">
+                      Gross Contract Base Salary (Rs.)
+                    </label>
+                    <input
+                      type="number"
+                      value={customizeForm.baseSalary}
+                      onChange={e => setCustomizeForm(p => ({ ...p, baseSalary: e.target.value }))}
+                      placeholder="e.g. 35000"
+                      className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm font-black text-black outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <span className="text-[10px] text-gray-500 mt-0.5 block">
+                      Edit contract base salary (Saves to staff profile & recalculates daily wage)
+                    </span>
+                  </div>
+                  <div className="bg-white/80 border border-emerald-100 rounded-xl p-3 shrink-0 text-right">
+                    <div className="text-gray-500 font-bold text-[10px]">Base Days Earned</div>
+                    <div className="font-black text-emerald-800 text-sm">
+                      {customizeModalStaff.payableDays} Days
+                    </div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">
+                      Earned: {formatPKR(Math.round(((Number(customizeForm.baseSalary) || customizeModalStaff.gross || 0) / 30) * customizeModalStaff.payableDays))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -3080,9 +3135,9 @@ export default function ManagerPayrollPage() {
               {/* Section 2: Deductions (-) */}
               <div className="space-y-3 bg-rose-50/50 border border-rose-100 rounded-2xl p-4">
                 <h3 className="font-bold text-rose-900 text-sm flex items-center gap-2">
-                  <MinusCircle className="w-4 h-4 text-rose-600" /> Custom Salary Deductions (-)
+                  <MinusCircle className="w-4 h-4 text-rose-600" /> Custom Salary Deductions & Advance Overrides (-)
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
                       Security Fee Deduction
@@ -3096,19 +3151,46 @@ export default function ManagerPayrollPage() {
                     />
                     <span className="text-[10px] text-gray-400 mt-0.5 block">Staff security deposit fee</span>
                   </div>
+
                   <div>
                     <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
-                      Previous Month Negative Salary / Advance Cut
+                      Monthly Advance Override
                     </label>
                     <input
                       type="number"
-                      value={customizeForm.previousAdvance}
-                      onChange={e => setCustomizeForm(p => ({ ...p, previousAdvance: e.target.value }))}
-                      placeholder="e.g. 3000"
+                      value={customizeForm.advanceSalaryOverride}
+                      onChange={e => setCustomizeForm(p => ({ ...p, advanceSalaryOverride: e.target.value }))}
+                      placeholder={`Recorded: ${formatPKR(customizeModalStaff.actualAdvance)}`}
                       className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-500 font-bold text-black"
                     />
                     <span className="text-[10px] text-gray-400 mt-0.5 block">
-                      Auto-detected previous deficit: {formatPKR(customizeModalStaff.previousMonthDebt || 0)}
+                      Recorded: {formatPKR(customizeModalStaff.actualAdvance)} (Enter value to override)
+                    </span>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block">
+                        Prev Deficit / Debt Cut
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setCustomizeForm(p => ({ ...p, previousAdvance: '0', overridePreviousAdvance: true, clearProfileDebt: true }))}
+                        className="text-[10px] font-bold text-rose-700 hover:text-rose-900 bg-rose-100 hover:bg-rose-200 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                        title="Set previous deficit cut to 0"
+                      >
+                        Waive (Set Rs. 0)
+                      </button>
+                    </div>
+                    <input
+                      type="number"
+                      value={customizeForm.previousAdvance}
+                      onChange={e => setCustomizeForm(p => ({ ...p, previousAdvance: e.target.value, overridePreviousAdvance: true }))}
+                      placeholder="0"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-500 font-bold text-black"
+                    />
+                    <span className="text-[10px] text-gray-400 mt-0.5 block">
+                      Auto-deficit: {formatPKR(customizeModalStaff.previousMonthDebt || 0)} (Set 0 to remove)
                     </span>
                   </div>
                 </div>
@@ -3163,6 +3245,62 @@ export default function ManagerPayrollPage() {
                   <Plus className="w-3.5 h-3.5" /> Add Extra Deduction Item
                 </button>
               </div>
+
+              {/* Debt Reset Checkbox Option */}
+              <label className="flex items-center gap-2.5 p-3.5 bg-amber-50 border border-amber-200 rounded-2xl cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={customizeForm.clearProfileDebt}
+                  onChange={e => setCustomizeForm(p => ({ ...p, clearProfileDebt: e.target.checked }))}
+                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                />
+                <div>
+                  <span className="text-xs font-bold text-amber-950 block">
+                    Clear / Reset Staff Profile Debt Balance to Rs. 0
+                  </span>
+                  <span className="text-[11px] text-amber-800 block">
+                    Removes outstanding advance debt and negative balance from the profile document so it won't carry over.
+                  </span>
+                </div>
+              </label>
+
+              {/* Live Preview of Calculated Net Payout */}
+              {(() => {
+                const liveBase = Number(customizeForm.baseSalary) || customizeModalStaff.gross || 0;
+                const liveDaily = liveBase / 30;
+                const liveEarned = Math.round((customizeModalStaff.payableDays || 0) * liveDaily);
+                const liveCustomAdd = (Number(customizeForm.remainingBalance) || 0) +
+                  (Number(customizeForm.bonus) || 0) +
+                  (Number(customizeForm.allowance) || 0) +
+                  customizeForm.customAdditions.reduce((s, a) => s + (Number(a.amount) || 0), 0);
+                const liveTotalAdd = liveCustomAdd;
+                const liveAdv = customizeForm.advanceSalaryOverride !== ''
+                  ? Number(customizeForm.advanceSalaryOverride) || 0
+                  : (customizeModalStaff.actualAdvance || 0);
+                const livePrev = customizeForm.overridePreviousAdvance || customizeForm.previousAdvance !== ''
+                  ? Number(customizeForm.previousAdvance) || 0
+                  : (customizeModalStaff.previousMonthDebt || 0);
+                const liveCustomDed = (Number(customizeForm.securityFee) || 0) +
+                  customizeForm.customDeductions.reduce((s, d) => s + (Number(d.amount) || 0), 0);
+                const liveTotalDed = Math.round((customizeModalStaff.totalAbsentDeduction || 0) + (customizeModalStaff.totalFines || 0) + liveAdv + livePrev + liveCustomDed);
+                const liveNet = Math.floor((liveEarned + liveTotalAdd) - liveTotalDed);
+
+                return (
+                  <div className={`p-4 rounded-2xl flex items-center justify-between text-white ${liveNet < 0 ? 'bg-rose-950 border border-rose-800' : 'bg-emerald-950 border border-emerald-800'}`}>
+                    <div>
+                      <div className="text-[11px] font-bold text-white/80 uppercase tracking-wider">
+                        {liveNet < 0 ? 'Estimated Outstanding Advance / Debt' : 'Estimated Net Money To Pay'}
+                      </div>
+                      <div className="text-xs text-white/70 mt-0.5">
+                        Earned: {formatPKR(liveEarned)} | Total Ded: -{formatPKR(liveTotalDed)} {livePrev > 0 ? `(inc. Prev Deficit: -${formatPKR(livePrev)})` : ''}
+                      </div>
+                    </div>
+                    <div className="text-2xl font-black text-white">
+                      {formatPKR(liveNet)}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Notes */}
               <div>
@@ -3229,7 +3367,7 @@ export default function ManagerPayrollPage() {
 
               {/* Negative Salary Warning Alert Banner if netPayable < 0 */}
               {selectedStaffModal.netPayable < 0 && (
-                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center justify-between gap-3 text-rose-900">
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-rose-900">
                   <div className="flex items-center gap-3">
                     <AlertTriangle className="w-6 h-6 text-rose-600 shrink-0" />
                     <div>
@@ -3237,20 +3375,31 @@ export default function ManagerPayrollPage() {
                       <div className="text-xs text-rose-700">Total advances and deductions exceed earned salary by {formatPKR(Math.abs(selectedStaffModal.netPayable))}.</div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => syncStaffProfileBalance(selectedStaffModal)}
-                    disabled={syncingProfileId === selectedStaffModal.id}
-                    className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer"
-                  >
-                    {syncingProfileId === selectedStaffModal.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                    Sync Debt to Profile
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => syncStaffProfileBalance(selectedStaffModal)}
+                      disabled={syncingProfileId === selectedStaffModal.id}
+                      className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      title="Sync current net negative balance to staff profile as debt"
+                    >
+                      {syncingProfileId === selectedStaffModal.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                      Sync Debt to Profile
+                    </button>
+                    <button
+                      onClick={() => handleClearStaffProfileDebt(selectedStaffModal)}
+                      disabled={syncingProfileId === selectedStaffModal.id}
+                      className="bg-slate-800 hover:bg-black text-white font-bold px-3.5 py-2 rounded-xl text-xs transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      title="Reset and clear debt on staff profile to Rs. 0"
+                    >
+                      Clear Debt (Rs. 0)
+                    </button>
+                  </div>
                 </div>
               )}
 
               {/* Previous Month Deficit Alert if carried over */}
               {selectedStaffModal.previousMonthDebt > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-amber-900">
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900">
                   <div className="flex items-center gap-2.5">
                     <CreditCard className="w-5 h-5 text-amber-600 shrink-0" />
                     <div className="text-xs">
@@ -3258,6 +3407,14 @@ export default function ManagerPayrollPage() {
                       {formatPKR(selectedStaffModal.previousMonthDebt)} was automatically cut from {selectedStaffModal.previousMonthLabel || 'previous month'} negative salary balance.
                     </div>
                   </div>
+                  <button
+                    onClick={() => handleClearStaffProfileDebt(selectedStaffModal)}
+                    disabled={syncingProfileId === selectedStaffModal.id}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition-colors shrink-0 flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                    title="Waive carried over deficit and set profile debt to 0"
+                  >
+                    Waive Deficit (Rs. 0)
+                  </button>
                 </div>
               )}
 
@@ -3450,6 +3607,23 @@ export default function ManagerPayrollPage() {
                                     <Sun className="w-3 h-3 text-amber-300" />
                                   )}
                                   Make Paid Leave
+                                </button>
+                              ) : item.reason?.includes('Previous Month') ? (
+                                <button
+                                  onClick={() => handleClearStaffProfileDebt(selectedStaffModal)}
+                                  disabled={syncingProfileId === selectedStaffModal.id}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                                  title="Waive and clear previous month deficit cut"
+                                >
+                                  Waive Deficit
+                                </button>
+                              ) : item.type === 'advance' ? (
+                                <button
+                                  onClick={() => { const s = selectedStaffModal; setSelectedStaffModal(null); openCustomizeModal(s); }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+                                  title="Edit or override advance in Customize Salary"
+                                >
+                                  Edit Advance
                                 </button>
                               ) : (
                                 <span className="text-gray-300 text-[10px]">—</span>
