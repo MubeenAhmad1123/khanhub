@@ -430,6 +430,28 @@ function calculateStaffMonthPayroll(
     approvedAdvancesForMonth,
     staffAdvanceTxns,
     slip,
+    isPaid: Boolean((slip && slip.status === 'paid') ||
+      globalTxns.some((tx: any) => {
+        if (tx.status === 'rejected') return false;
+        const cat = String(tx.category || '').toLowerCase();
+        const catName = String(tx.categoryName || '').toLowerCase();
+        const desc = String(tx.description || '').toLowerCase();
+        const isSalaryTx = cat === 'staff_salary' || cat === 'salary' || catName.includes('salary') || desc.includes('salary disbursement');
+        if (!isSalaryTx) return false;
+        const txStaffId = String(tx.staffId || tx.userId || tx.customId || tx.employeeId || '');
+        const staffMatch = (txStaffId && candidateIds.has(txStaffId)) ||
+          (staffNameLower && tx.staffName && String(tx.staffName).toLowerCase() === staffNameLower) ||
+          (staffNameLower && desc.toLowerCase().includes(staffNameLower));
+        if (!staffMatch) return false;
+        if (tx.salaryMonth && tx.salaryMonth === tMonthStr) return true;
+        if (tx.forMonth && tx.forMonth === tMonthStr) return true;
+        if (tx.month && tx.month === tMonthStr) return true;
+        const txDateStr = formatDateString(tx.transactionDate || tx.date || tx.createdAt);
+        if (txDateStr && txDateStr.startsWith(tMonthStr)) return true;
+        return false;
+      }) ||
+      (staff.lastPayrollMonth === tMonthStr && staff.lastSalaryPaid !== undefined && staff.lastSalaryPaid !== null)
+    ),
     customAdj,
     customAdvanceVal: Number(customAdj?.previousAdvance || 0),
     remainingBalance,
@@ -526,10 +548,30 @@ export default function ManagerPayrollPage() {
   // Mark as Paid states
   const [markingPaidStaffId, setMarkingPaidStaffId] = useState<string | null>(null);
   const [showMarkPaidModal, setShowMarkPaidModal] = useState<any | null>(null);
+  const [markPaidDate, setMarkPaidDate] = useState<string>(todayStr);
   const [showBulkMarkPaidModal, setShowBulkMarkPaidModal] = useState(false);
+  const [bulkPaidDate, setBulkPaidDate] = useState<string>(todayStr);
   const [bulkProcessing, setBulkProcessing] = useState(false);
   const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number; staffName: string; step: string } | null>(null);
   const [captureStaff, setCaptureStaff] = useState<any | null>(null);
+
+  const openMarkPaidModal = (staffRow: any) => {
+    let defaultDate = todayStr;
+    if (!todayStr.startsWith(monthStr)) {
+      defaultDate = `${monthStr}-10`;
+    }
+    setMarkPaidDate(defaultDate);
+    setShowMarkPaidModal(staffRow);
+  };
+
+  const openBulkMarkPaidModal = () => {
+    let defaultDate = todayStr;
+    if (!todayStr.startsWith(monthStr)) {
+      defaultDate = `${monthStr}-10`;
+    }
+    setBulkPaidDate(defaultDate);
+    setShowBulkMarkPaidModal(true);
+  };
 
   // Security & Network guidance states
   const [permissionErrors, setPermissionErrors] = useState<string[]>([]);
@@ -580,9 +622,10 @@ export default function ManagerPayrollPage() {
   const handleConfirmMarkAsPaid = async (staffRow: any) => {
     try {
       setMarkingPaidStaffId(staffRow.id);
+      const chosenPaidDate = markPaidDate || todayStr;
 
-      // 1. Generate slip image and upload to Cloudinary
-      const slipImageUrl = await generateAndUploadSalarySlip(staffRow);
+      // 1. Generate slip image and upload to Cloudinary with selected paid date
+      const slipImageUrl = await generateAndUploadSalarySlip({ ...staffRow, paidDate: chosenPaidDate });
 
       // 2. Call server action to disburse and update all profile/cashier/fines records
       const result = await markStaffPayrollAsPaid({
@@ -590,7 +633,7 @@ export default function ManagerPayrollPage() {
         dept: staffRow.dept as StaffDept,
         month: monthStr,
         monthLabel: data?.monthLabel || monthStr,
-        paidDate: todayStr,
+        paidDate: chosenPaidDate,
         gross: Number(staffRow.effectiveGross ?? staffRow.gross) || 0,
         dailyRate: Number(staffRow.dailyRate) || 0,
         payableDays: Number(staffRow.payableDays) || 0,
@@ -619,7 +662,7 @@ export default function ManagerPayrollPage() {
         throw new Error(result.error || 'Failed to disburse salary');
       }
 
-      alert(`✅ Successfully marked ${staffRow.name}'s salary as PAID!\n\n• Cashier expense transaction recorded (Approved)\n• Salary slip picture saved to profile Documents Vault\n• Logged fines deducted\n• Ledger updated for ${data?.monthLabel || monthStr}`);
+      alert(`✅ Successfully marked ${staffRow.name}'s salary as PAID!\n\n• Cashier expense transaction recorded on ${chosenPaidDate} (Approved)\n• Salary slip picture saved to profile Documents Vault\n• Logged fines deducted\n• Ledger updated for ${data?.monthLabel || monthStr}`);
       setShowMarkPaidModal(null);
       await handleLoad();
     } catch (err: any) {
@@ -635,6 +678,7 @@ export default function ManagerPayrollPage() {
       alert('No unpaid staff found for the selected department/filter.');
       return;
     }
+    const chosenBulkDate = bulkPaidDate || todayStr;
     setBulkProcessing(true);
     let successCount = 0;
     const errors: string[] = [];
@@ -649,7 +693,7 @@ export default function ManagerPayrollPage() {
       });
 
       try {
-        const slipImageUrl = await generateAndUploadSalarySlip(staffRow);
+        const slipImageUrl = await generateAndUploadSalarySlip({ ...staffRow, paidDate: chosenBulkDate });
 
         setBulkProgress({
           current: i + 1,
@@ -663,7 +707,7 @@ export default function ManagerPayrollPage() {
           dept: staffRow.dept as StaffDept,
           month: monthStr,
           monthLabel: data?.monthLabel || monthStr,
-          paidDate: todayStr,
+          paidDate: chosenBulkDate,
           gross: Number(staffRow.effectiveGross ?? staffRow.gross) || 0,
           dailyRate: Number(staffRow.dailyRate) || 0,
           payableDays: Number(staffRow.payableDays) || 0,
@@ -1230,6 +1274,8 @@ export default function ManagerPayrollPage() {
               deductions: totalDeductions,
               netPayable,
               breakdownItems,
+              isPaid: currCalc.isPaid,
+              slip: currCalc.slip,
             };
           });
 
@@ -1833,7 +1879,7 @@ export default function ManagerPayrollPage() {
           {data && (
             <div className="flex gap-2 flex-wrap items-center">
               <button
-                onClick={() => setShowBulkMarkPaidModal(true)}
+                onClick={openBulkMarkPaidModal}
                 className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-4 py-2.5 rounded-xl text-sm font-black hover:from-emerald-700 hover:to-teal-800 transition-all shadow-md transform hover:scale-[1.02] cursor-pointer"
                 title="Disburse salaries for all eligible staff in one click, deduct fines, and save slip pictures to profiles"
               >
@@ -2364,25 +2410,16 @@ export default function ManagerPayrollPage() {
                           <td className="px-2 py-2 text-center no-print no-print-col">
                             <div className="flex items-center justify-center gap-1 flex-wrap">
                               {/* Mark as Paid Action Button / Paid Badge */}
-                              {r.slip?.status === 'paid' ? (
-                                <div className="flex items-center gap-1">
-                                  <span
-                                    className="p-1.5 bg-emerald-100 border border-emerald-300 rounded-lg text-emerald-800 transition-colors flex items-center gap-1 text-xs font-black px-2 py-1 shadow-xs"
-                                    title={`Paid: Salary recorded & disbursed for ${data?.monthLabel || monthStr}`}
-                                  >
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Paid
-                                  </span>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setShowMarkPaidModal(r); }}
-                                    className="p-1 text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 rounded text-[10px] font-bold cursor-pointer"
-                                    title="Re-disburse or update salary slip picture in profile"
-                                  >
-                                    Sync
-                                  </button>
-                                </div>
+                              {r.isPaid || r.slip?.status === 'paid' ? (
+                                <span
+                                  className="p-1.5 bg-emerald-100 border border-emerald-300 rounded-lg text-emerald-800 flex items-center gap-1 text-xs font-black px-2 py-1 shadow-xs"
+                                  title={`Paid: Salary recorded & disbursed for ${data?.monthLabel || monthStr}`}
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Paid
+                                </span>
                               ) : (
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); setShowMarkPaidModal(r); }}
+                                  onClick={(e) => { e.stopPropagation(); openMarkPaidModal(r); }}
                                   disabled={markingPaidStaffId === r.id}
                                   className="p-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg transition-all flex items-center gap-1 text-xs font-black px-2.5 py-1 cursor-pointer shadow-md disabled:opacity-50 transform hover:scale-[1.02]"
                                   title="Mark as Paid: Disburse salary from Cashier, deduct fines, and save SECP slip to staff profile documents"
@@ -3725,12 +3762,12 @@ export default function ManagerPayrollPage() {
                   <Printer className="w-4 h-4" /> Print Slip
                 </button>
 
-                {slipStaffModal.slip?.status !== 'paid' && (
+                {!slipStaffModal.isPaid && slipStaffModal.slip?.status !== 'paid' && (
                   <button
                     onClick={() => {
                       const target = slipStaffModal;
                       setSlipStaffModal(null);
-                      setShowMarkPaidModal(target);
+                      openMarkPaidModal(target);
                     }}
                     className="flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
                     title="Mark this staff salary as Paid"
@@ -3794,6 +3831,28 @@ export default function ManagerPayrollPage() {
                 <div className="w-12 h-12 bg-emerald-600 text-white rounded-2xl flex items-center justify-center shadow-md">
                   <CreditCard className="w-6 h-6" />
                 </div>
+              </div>
+
+              {/* Disbursement Date Selector for Cashier Ledger */}
+              <div className="bg-emerald-50/50 border-2 border-emerald-400 rounded-2xl p-4 space-y-2 shadow-xs">
+                <label className="block text-xs font-black text-emerald-950 uppercase tracking-wide flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-emerald-700" /> Disbursement Date (Cashier Expense Date)
+                  </span>
+                  <span className="text-[10px] text-emerald-800 font-extrabold bg-emerald-200/70 px-2 py-0.5 rounded-full border border-emerald-300">
+                    Ledger Date
+                  </span>
+                </label>
+                <input
+                  type="date"
+                  value={markPaidDate}
+                  onChange={(e) => setMarkPaidDate(e.target.value)}
+                  className="w-full text-sm font-bold border-2 border-emerald-500 rounded-xl px-3.5 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white shadow-xs"
+                  required
+                />
+                <p className="text-[11px] text-emerald-900 leading-snug">
+                  Cashier expense transaction will be recorded on <strong>{markPaidDate || todayStr}</strong> (not today's date). This places the expense in the selected date's accounts ledger.
+                </p>
               </div>
 
               {/* Breakdown Grid */}
@@ -3912,7 +3971,7 @@ export default function ManagerPayrollPage() {
               ) : (
                 <>
                   {(() => {
-                    const unpaidList = salaryRows.filter((r: any) => r.slip?.status !== 'paid');
+                    const unpaidList = salaryRows.filter((r: any) => !r.isPaid && r.slip?.status !== 'paid');
                     const totalUnpaidNet = unpaidList.reduce((acc: number, r: any) => acc + (Number(r.netPayable) || 0), 0);
                     const alreadyPaidCount = salaryRows.length - unpaidList.length;
 
@@ -3933,12 +3992,34 @@ export default function ManagerPayrollPage() {
                           </div>
                         </div>
 
+                        {/* Bulk Disbursement Date Picker */}
+                        <div className="bg-emerald-50/50 border-2 border-emerald-400 rounded-2xl p-4 space-y-2 shadow-xs">
+                          <label className="block text-xs font-black text-emerald-950 uppercase tracking-wide flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <Calendar className="w-4 h-4 text-emerald-700" /> Disbursement Date for All Staff
+                            </span>
+                            <span className="text-[10px] text-emerald-800 font-extrabold bg-emerald-200/70 px-2 py-0.5 rounded-full border border-emerald-300">
+                              Ledger Date
+                            </span>
+                          </label>
+                          <input
+                            type="date"
+                            value={bulkPaidDate}
+                            onChange={(e) => setBulkPaidDate(e.target.value)}
+                            className="w-full text-sm font-bold border-2 border-emerald-500 rounded-xl px-3.5 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white shadow-xs"
+                            required
+                          />
+                          <p className="text-[11px] text-emerald-900 leading-snug">
+                            All cashier expense entries will be recorded under <strong>{bulkPaidDate || todayStr}</strong> (not today's date). This places the expenses in the selected date's accounts ledger.
+                          </p>
+                        </div>
+
                         <div className="rounded-2xl border border-gray-200 p-4 bg-gray-50 space-y-2 text-xs text-gray-700">
                           <div className="font-bold text-gray-900 flex items-center gap-1.5">
                             <Check className="w-4 h-4 text-emerald-600 shrink-0" /> One-Click Process Details:
                           </div>
                           <p className="text-[11px] text-gray-600 leading-relaxed">
-                            Clicking proceed will sequentially generate official salary slips for all <strong>{unpaidList.length}</strong> staff members, upload each slip to Cloudinary, record the approved cashier disbursements, and attach each slip picture directly into the staff member's profile Documents Vault.
+                            Clicking proceed will sequentially generate official salary slips for all <strong>{unpaidList.length}</strong> staff members, upload each slip to Cloudinary, record the approved cashier disbursements on <strong>{bulkPaidDate || todayStr}</strong>, and attach each slip picture directly into the staff member's profile Documents Vault.
                           </p>
                         </div>
                       </div>
@@ -3957,7 +4038,7 @@ export default function ManagerPayrollPage() {
                   Cancel
                 </button>
                 {(() => {
-                  const unpaidList = salaryRows.filter((r: any) => r.slip?.status !== 'paid');
+                  const unpaidList = salaryRows.filter((r: any) => !r.isPaid && r.slip?.status !== 'paid');
                   return (
                     <button
                       onClick={() => handleBulkMarkAsPaid(unpaidList)}
@@ -3995,7 +4076,7 @@ export default function ManagerPayrollPage() {
             monthLabel={data?.monthLabel}
             selectedMonth={monthStr}
             selectedYear={selectedYear}
-            paidDate={todayStr}
+            paidDate={captureStaff.paidDate || bulkPaidDate || markPaidDate || todayStr}
             containerId="salary-slip-capture-target"
           />
         )}

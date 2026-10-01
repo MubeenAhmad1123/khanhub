@@ -43,7 +43,13 @@ export async function markStaffPayrollAsPaid(payload: MarkPaidPayload): Promise<
     const prefix = getDeptPrefix(payload.dept);
     const dept = payload.dept;
 
-    // 1. Record approved expense transaction in Cashier ledger (${prefix}_transactions)
+    // 1. Calculate proper timestamp from selected paidDate so it saves to the exact selected date
+    const [y, m, d] = (payload.paidDate || new Date().toISOString().slice(0, 10)).split('-').map(Number);
+    const paidDateTime = new Date(y, m - 1, d, 12, 0, 0);
+    const paidTimestamp = Timestamp.fromDate(paidDateTime);
+    const paidMonthStr = `${y}-${String(m).padStart(2, '0')}`; // Month when payment occurred (e.g. 2026-08)
+
+    // Record approved expense transaction in Cashier ledger (${prefix}_transactions)
     const txColName = `${prefix}_transactions`;
     const txData: Record<string, any> = {
       type: 'expense',
@@ -55,18 +61,22 @@ export async function markStaffPayrollAsPaid(payload: MarkPaidPayload): Promise<
       totalAdditions: Number(payload.totalCustomAdditions) || 0,
       staffId: payload.staffId,
       staffName: payload.staffName,
-      month: payload.month,
+      month: paidMonthStr, // expense recorded in this month (e.g. 2026-08)
+      salaryMonth: payload.month, // salary period (e.g. 2026-07)
+      forMonth: payload.month,
       monthLabel: payload.monthLabel || payload.month,
-      description: `Official salary disbursement for ${payload.staffName} (${payload.monthLabel || payload.month})`,
+      description: `Official salary disbursement for ${payload.staffName} (${payload.monthLabel || payload.month}) - Paid on ${payload.paidDate}`,
       status: 'approved', // Direct superadmin / manager authorization
       approvedBy: payload.paidBy || 'Super Admin',
-      approvedAt: FieldValue.serverTimestamp(),
-      paidAt: FieldValue.serverTimestamp(),
-      transactionDate: payload.paidDate,
-      date: payload.paidDate,
+      approvedAt: paidTimestamp,
+      paidAt: paidTimestamp,
+      transactionDate: paidTimestamp,
+      date: paidTimestamp,
+      dateString: payload.paidDate,
+      dateStr: payload.paidDate,
       paymentMethod: 'cash',
       slipImageUrl: payload.slipImageUrl || null,
-      createdAt: FieldValue.serverTimestamp(),
+      createdAt: paidTimestamp, // Save exact date timestamp so queries sort it into selected date
     };
 
     const txRef = await adminDb.collection(txColName).add(txData);
@@ -92,6 +102,7 @@ export async function markStaffPayrollAsPaid(payload: MarkPaidPayload): Promise<
       staffName: payload.staffName,
       department: payload.dept,
       month: payload.month,
+      disbursementDate: payload.paidDate,
       basicSalary: Number(payload.gross) || 0,
       dailyWage: Number(payload.dailyRate) || 0,
       workingDays: 30,
@@ -104,7 +115,8 @@ export async function markStaffPayrollAsPaid(payload: MarkPaidPayload): Promise<
       bonus: Number(payload.totalCustomAdditions) || 0,
       netSalary: Number(payload.netPayable) || 0,
       status: 'paid',
-      paidAt: FieldValue.serverTimestamp(),
+      paidAt: paidTimestamp,
+      paidDate: payload.paidDate,
       paidBy: payload.paidBy || 'Super Admin',
       slipFileUrl: payload.slipImageUrl || null,
       slipFileName: slipFileName,
@@ -193,7 +205,8 @@ export async function markStaffPayrollAsPaid(payload: MarkPaidPayload): Promise<
         outstandingBalance: payload.netPayable < 0 ? Math.abs(payload.netPayable) : 0,
         lastPayrollMonth: payload.month,
         lastSalaryPaid: Number(payload.netPayable) || 0,
-        lastSalaryPaidAt: FieldValue.serverTimestamp(),
+        lastSalaryPaidAt: paidTimestamp,
+        lastSalaryPaidDate: payload.paidDate,
         lastSalarySlipUrl: payload.slipImageUrl || null,
         ...(newDocItem ? { documents } : {}),
         updatedAt: FieldValue.serverTimestamp(),
@@ -218,7 +231,8 @@ export async function markStaffPayrollAsPaid(payload: MarkPaidPayload): Promise<
             salaryBalance: Number(payload.netPayable) || 0,
             lastPayrollMonth: payload.month,
             lastSalaryPaid: Number(payload.netPayable) || 0,
-            lastSalaryPaidAt: FieldValue.serverTimestamp(),
+            lastSalaryPaidAt: paidTimestamp,
+            lastSalaryPaidDate: payload.paidDate,
             lastSalarySlipUrl: payload.slipImageUrl || null,
             ...(newDocItem ? { documents } : {}),
             updatedAt: FieldValue.serverTimestamp(),
