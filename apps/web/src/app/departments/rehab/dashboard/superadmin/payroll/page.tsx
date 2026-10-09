@@ -9,6 +9,7 @@ import {
   UserCog, Printer, Calendar, DollarSign, Loader2, Download,
   Plus, X, Receipt, Trash2, Eye, CheckCircle2, Info, CreditCard
 } from 'lucide-react';
+import { deleteStaffFineAction } from '@/app/hq/actions/payroll';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -545,11 +546,39 @@ export default function RehabPayrollPage() {
     }
   };
 
-  const handleDeleteFine = async (fineId: string) => {
-    if (!confirm('Delete this fine? This cannot be undone.')) return;
+  const handleDeleteFine = async (fineId: string, optionalStaffRow?: any) => {
+    if (!confirm('Delete this fine? This cannot be undone and will remove it from payroll, finance records, and staff profile.')) return;
     try {
       setDeletingId(fineId);
-      await deleteDoc(doc(db, 'rehab_fines', fineId));
+      const res = await deleteStaffFineAction({
+        fineId,
+        staffId: optionalStaffRow?.id,
+        dept: 'rehab',
+        deletedBy: session?.name || session?.uid || 'Superadmin',
+      });
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to delete fine');
+      }
+
+      if (selectedStaffModal) {
+        setSelectedStaffModal((prev: any) => {
+          if (!prev) return null;
+          const updatedFines = (prev.staffFines || []).filter((f: any) => f.id !== fineId);
+          const newTotalFines = updatedFines.reduce((s: number, f: any) => s + (Number(f.amount) || 0), 0);
+          const updatedDeductions = (prev.deductionItems || []).filter((item: any) => item.id !== fineId);
+          const newTotalDeductions = Math.round((prev.totalAbsentDeduction || 0) + newTotalFines + (prev.totalAdvance || 0));
+          const newNetPayable = Math.floor((prev.earnings || 0) - newTotalFines - (prev.totalAdvance || 0));
+          return {
+            ...prev,
+            staffFines: updatedFines,
+            totalFines: newTotalFines,
+            deductionItems: updatedDeductions,
+            deductions: newTotalDeductions,
+            netPayable: newNetPayable,
+          };
+        });
+      }
+
       await handleLoad();
     } catch (err: any) {
       alert('Failed to delete: ' + err.message);
@@ -1004,6 +1033,7 @@ export default function RehabPayrollPage() {
                           <th className="px-3.5 py-2.5 font-bold text-gray-600">Deduction Type</th>
                           <th className="px-3.5 py-2.5 font-bold text-gray-600">Reason / Description</th>
                           <th className="px-3.5 py-2.5 font-bold text-gray-600 text-right">Amount</th>
+                          <th className="px-3.5 py-2.5 font-bold text-gray-600 text-center">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -1036,11 +1066,31 @@ export default function RehabPayrollPage() {
                             <td className="px-3.5 py-3 text-right font-bold text-red-600 whitespace-nowrap">
                               -{formatPKR(item.amount)}
                             </td>
+                            <td className="px-3.5 py-3 text-center whitespace-nowrap">
+                              {item.type === 'fine' ? (
+                                <button
+                                  onClick={() => handleDeleteFine(item.id, selectedStaffModal)}
+                                  disabled={deletingId === item.id}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                                  title="Delete this fine"
+                                >
+                                  {deletingId === item.id ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-3 h-3" />
+                                  )}
+                                  Delete Fine
+                                </button>
+                              ) : (
+                                <span className="text-gray-300 text-[10px]">—</span>
+                              )}
+                            </td>
                           </tr>
                         ))}
                         <tr className="bg-red-50/60 font-black">
                           <td colSpan={3} className="px-3.5 py-2.5 text-red-800">TOTAL DEDUCTIONS (Absents + Fines + Advances)</td>
                           <td className="px-3.5 py-2.5 text-right text-red-700">-{formatPKR(selectedStaffModal.deductions)}</td>
+                          <td />
                         </tr>
                       </tbody>
                     </table>

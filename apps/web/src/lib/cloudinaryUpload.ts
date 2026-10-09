@@ -63,8 +63,8 @@ export async function uploadToCloudinary(
     onProgress?: (progress: UploadProgress) => void,
     resourceType: 'image' | 'video' | 'auto' | 'raw' = 'auto'
 ): Promise<string> {
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dhshtdrjp';
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'auto-filled';
 
     if (!cloudName || !uploadPreset) {
         throw new Error(

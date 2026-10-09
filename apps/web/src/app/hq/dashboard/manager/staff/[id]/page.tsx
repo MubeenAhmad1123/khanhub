@@ -46,6 +46,7 @@ import {
   SalarySlip
 } from '@/types/hq';
 import { awardStaffPoint } from '@/app/hq/actions/points';
+import { deleteStaffFineAction, deleteStaffProfileDocumentAction } from '@/app/hq/actions/payroll';
 import { ResetPasswordModal } from '@/components/hq/superadmin/ResetPasswordModal';
 import LeadsCRM from '@/components/shared/LeadsCRM';
 import VisibilityManager from '@/components/shared/VisibilityManager';
@@ -218,6 +219,8 @@ export default function StaffProfilePage() {
   const [showSalaryBreakdownModal, setShowSalaryBreakdownModal] = useState(false);
   const [contributionsMap, setContributionsMap] = useState<Record<string, any>>({});
   const [fines, setFines] = useState<any[]>([]);
+  const [deletingFineId, setDeletingFineId] = useState<string | null>(null);
+  const [deletingDocUrl, setDeletingDocUrl] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [advanceForm, setAdvanceForm] = useState({
@@ -1964,6 +1967,90 @@ export default function StaffProfilePage() {
       fetchData();
     } catch (error) {
       toast.error("Recalculation failed", { id: 'recalc' });
+    }
+  };
+
+  const handleDeleteStaffFine = async (item: any) => {
+    if (!item) return;
+    const fineAmt = Number(item.amount || 0);
+    const fineDate = item.date || '';
+    const fineReason = item.reason || 'Penalty';
+    const sName = staff?.name || 'Staff Member';
+
+    if (!confirm(`Delete this fine of ₨${fineAmt.toLocaleString()} on ${fineDate} (${fineReason}) for ${sName}?\n\nThis will remove it from salary deductions, finance records, and staff profile documents.`)) {
+      return;
+    }
+
+    try {
+      setDeletingFineId(item.id);
+      const res = await deleteStaffFineAction({
+        fineId: item.id,
+        staffId: staff?.staffId || staff?.id || staffId,
+        dept: staff?.dept,
+        date: fineDate,
+        amount: fineAmt,
+        reason: fineReason,
+        letterUrl: item.letterUrl,
+        referenceNumber: item.referenceNumber,
+        deletedBy: session?.displayName || session?.name || 'Manager',
+      });
+
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to delete fine');
+      }
+
+      toast.success('Fine deleted successfully');
+      setFines(prev => prev.filter(f => f.id !== item.id));
+
+      if (staff?.documents) {
+        setStaff(prev => {
+          if (!prev) return null;
+          const cleanedDocs = (prev.documents || []).filter((d: any) => {
+            if (item.letterUrl && d.url === item.letterUrl) return false;
+            if (d.fineId && d.fineId === item.id) return false;
+            const t = String(d.title || '').toLowerCase();
+            if ((d.type === 'fine' || t.includes('fine')) && (d.date === fineDate || t.includes(String(fineAmt)))) return false;
+            return true;
+          });
+          return { ...prev, documents: cleanedDocs };
+        });
+      }
+    } catch (err: any) {
+      toast.error('Failed to delete fine: ' + err.message);
+    } finally {
+      setDeletingFineId(null);
+    }
+  };
+
+  const handleDeleteProfileDocument = async (docItem: any) => {
+    if (!docItem || !docItem.url) return;
+    if (!confirm(`Are you sure you want to delete "${docItem.title || 'this document'}" from this staff profile?`)) return;
+
+    try {
+      setDeletingDocUrl(docItem.url);
+      const res = await deleteStaffProfileDocumentAction({
+        staffId: staff?.staffId || staff?.id || staffId,
+        dept: (staff?.dept || 'rehab') as StaffDept,
+        docUrl: docItem.url,
+        docTitle: docItem.title,
+      });
+
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to delete document');
+      }
+
+      toast.success('Document deleted from profile');
+      setStaff(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          documents: (prev.documents || []).filter((d: any) => d.url !== docItem.url && d.title !== docItem.title)
+        };
+      });
+    } catch (err: any) {
+      toast.error('Failed to delete document: ' + err.message);
+    } finally {
+      setDeletingDocUrl(null);
     }
   };
 
@@ -5200,6 +5287,15 @@ export default function StaffProfilePage() {
                         <a href={doc.url} download target="_blank" rel="noreferrer" className="bg-white/90 text-black font-black text-xs uppercase tracking-wider px-3 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-md flex items-center gap-1.5" title="Download">
                           <Download size={14} />
                         </a>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProfileDocument(doc)}
+                          disabled={deletingDocUrl === doc.url}
+                          className="bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-wider px-3 py-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          title="Delete this document from profile"
+                        >
+                          {deletingDocUrl === doc.url ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                        </button>
                       </div>
                     </div>
                     <div className="p-4 bg-white border-t border-gray-100 flex flex-col gap-2">
@@ -5847,12 +5943,27 @@ export default function StaffProfilePage() {
                       <p className="text-[10px] text-gray-400 italic text-center py-4">No fines enforced this month</p>
                     ) : (
                       fines.filter(isFineInSelectedMonth).map((item, idx) => (
-                        <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-white border border-gray-100">
+                        <div key={item.id || idx} className="flex justify-between items-center p-2 rounded-xl bg-white border border-gray-100">
                           <div className="flex flex-col">
                             <span className="font-bold text-gray-700">{item.reason || 'Penalty'}</span>
                             <span className="text-[8px] text-gray-400 uppercase font-black">{formatDateDMY(item.date)}</span>
                           </div>
-                          <span className="font-black text-rose-500">-₨{Number(item.amount).toLocaleString()}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-rose-500">-₨{Number(item.amount).toLocaleString()}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteStaffFine(item)}
+                              disabled={deletingFineId === item.id}
+                              className="p-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer disabled:opacity-50"
+                              title="Delete this fine from payroll and profile"
+                            >
+                              {deletingFineId === item.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
                         </div>
                       ))
                     )}

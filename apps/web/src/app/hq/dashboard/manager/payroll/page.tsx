@@ -15,7 +15,7 @@ import {
   CheckCheck, Check, ShieldAlert, WifiOff, HelpCircle, Info
 } from 'lucide-react';
 import { SalarySlipPrintable } from '@/components/hq/SalarySlipPrintable';
-import { markStaffPayrollAsPaid, saveSalaryCustomizationAction, syncStaffProfileBalanceAction, clearStaffProfileDebtAction } from '@/app/hq/actions/payroll';
+import { markStaffPayrollAsPaid, saveSalaryCustomizationAction, syncStaffProfileBalanceAction, clearStaffProfileDebtAction, deleteStaffFineAction } from '@/app/hq/actions/payroll';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 
 const MONTHS = [
@@ -587,7 +587,7 @@ export default function ManagerPayrollPage() {
     try {
       setCaptureStaff(staffRow);
       // Wait for DOM to render the capture target
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 400));
 
       const el = document.getElementById('salary-slip-capture-target');
       if (!el) {
@@ -595,13 +595,28 @@ export default function ManagerPayrollPage() {
         return null;
       }
 
-      const { toPng } = await import('html-to-image');
-      const dataUrl = await toPng(el, {
-        quality: 0.95,
-        pixelRatio: 2,
-        backgroundColor: '#ffffff',
-        cacheBust: true,
-      });
+      let dataUrl: string | null = null;
+      try {
+        const html2canvas = (await import('html2canvas')).default;
+        const canvas = await html2canvas(el, {
+          scale: 2.2,
+          backgroundColor: '#ffffff',
+          useCORS: true,
+          logging: false,
+        });
+        dataUrl = canvas.toDataURL('image/png');
+      } catch (h2cErr) {
+        console.warn('html2canvas fallback to html-to-image:', h2cErr);
+        const { toPng } = await import('html-to-image');
+        dataUrl = await toPng(el, {
+          quality: 0.95,
+          pixelRatio: 2,
+          backgroundColor: '#ffffff',
+          cacheBust: true,
+        });
+      }
+
+      if (!dataUrl) return null;
 
       const res = await fetch(dataUrl);
       const blob = await res.blob();
@@ -611,8 +626,14 @@ export default function ManagerPayrollPage() {
 
       const prefix = getDeptPrefix(staffRow.dept as StaffDept);
       const folder = `khanhub/staff/${prefix}/salaries/slips`;
-      const uploadedUrl = await uploadToCloudinary(file, folder, undefined, 'image');
-      return uploadedUrl;
+      try {
+        const uploadedUrl = await uploadToCloudinary(file, folder, undefined, 'image');
+        return uploadedUrl;
+      } catch (uploadErr) {
+        console.warn('Cloudinary upload warning for salary slip:', uploadErr);
+        // Fallback to dataUrl so the image is never lost
+        return dataUrl;
+      }
     } catch (err) {
       console.error('Failed to generate or upload salary slip image:', err);
       return null;
@@ -1519,15 +1540,78 @@ export default function ManagerPayrollPage() {
     }
   };
 
-  const handleDeleteFine = async (fine: any) => {
-    if (!confirm('Delete this fine? This cannot be undone.')) return;
+  const handleDeleteFine = async (fine: any, optionalStaffRow?: any) => {
+    if (!fine || !fine.id) return;
+    const fineAmt = Number(fine.amount || 0);
+    const fineDate = fine.date || fine.month || '';
+    const fineReason = fine.reason || 'Disciplinary Fine';
+    const staffName = fine.staffName || optionalStaffRow?.name || 'Staff Member';
+
+    if (!confirm(`Delete this fine of ${formatPKR(fineAmt)} on ${fineDate} (${fineReason}) for ${staffName}?\n\nThis will completely remove it from payroll deductions, finance records, and the staff profile documents.`)) {
+      return;
+    }
+
     try {
       setDeletingId(fine.id);
-      const prefix = getDeptPrefix(fine.dept as StaffDept);
-      await deleteDoc(doc(db, `${prefix}_fines`, fine.id));
+
+      const res = await deleteStaffFineAction({
+        fineId: fine.id,
+        staffId: fine.staffId || optionalStaffRow?.id,
+        dept: fine.dept || optionalStaffRow?.dept,
+        date: fineDate,
+        amount: fineAmt,
+        reason: fineReason,
+        letterUrl: fine.letterUrl,
+        referenceNumber: fine.referenceNumber,
+        deletedBy: session?.displayName || session?.name || 'Manager',
+      });
+
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to delete fine');
+      }
+
+      // Optimistically update selectedStaffModal if open
+      if (selectedStaffModal) {
+        setSelectedStaffModal((prev: any) => {
+          if (!prev) return null;
+          const updatedFines = (prev.staffFines || []).filter((f: any) => f.id !== fine.id);
+          const newTotalFines = updatedFines.reduce((s: number, f: any) => s + (Number(f.amount) || 0), 0);
+          const updatedBreakdown = (prev.breakdownItems || []).filter((item: any) => {
+            if (item.id === fine.id) return false;
+            if (item.type === 'fine' && item.date === fineDate && Number(item.amount) === fineAmt) return false;
+            return true;
+          });
+          const newTotalDeductions = Math.round((prev.totalAbsentDeduction || 0) + newTotalFines + (prev.totalAdvance || 0) + (prev.previousMonthDebt || 0) + (prev.totalCustomDeductions || 0));
+          const newNetPayable = Math.floor(((prev.earnings || 0) + (prev.totalCustomAdditions || 0)) - newTotalDeductions);
+
+          return {
+            ...prev,
+            staffFines: updatedFines,
+            totalFines: newTotalFines,
+            breakdownItems: updatedBreakdown,
+            deductions: newTotalDeductions,
+            netPayable: newNetPayable,
+          };
+        });
+      }
+
+      // Optimistically update customizeModalStaff if open
+      if (customizeModalStaff) {
+        setCustomizeModalStaff((prev: any) => {
+          if (!prev) return null;
+          const updatedFines = (prev.staffFines || []).filter((f: any) => f.id !== fine.id);
+          const newTotalFines = updatedFines.reduce((s: number, f: any) => s + (Number(f.amount) || 0), 0);
+          return {
+            ...prev,
+            staffFines: updatedFines,
+            totalFines: newTotalFines,
+          };
+        });
+      }
+
       await handleLoad();
     } catch (err: any) {
-      alert('Failed to delete: ' + err.message);
+      alert('Failed to delete fine: ' + err.message);
     } finally {
       setDeletingId(null);
     }
@@ -3283,6 +3367,66 @@ export default function ManagerPayrollPage() {
                 </button>
               </div>
 
+              {/* Section 2.5: Enforced Fines This Month */}
+              <div className="space-y-3 bg-red-50/60 border border-red-200 rounded-2xl p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-red-900 text-sm flex items-center gap-2">
+                    <Receipt className="w-4 h-4 text-red-600" />
+                    Enforced Fines This Month ({customizeModalStaff.staffFines?.length || 0})
+                  </h3>
+                  <span className="text-xs font-black text-red-700">
+                    Total: {formatPKR(customizeModalStaff.totalFines || 0)}
+                  </span>
+                </div>
+
+                {(!customizeModalStaff.staffFines || customizeModalStaff.staffFines.length === 0) ? (
+                  <p className="text-xs text-gray-500 italic py-1">No fines recorded for this staff member in {data?.monthLabel}.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {customizeModalStaff.staffFines.map((fineItem: any) => (
+                      <div
+                        key={fineItem.id}
+                        className="flex items-center justify-between p-3 bg-white rounded-xl border border-red-100 shadow-sm"
+                      >
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-[11px] font-bold text-gray-700">
+                              {fineItem.date || fineItem.month || '—'}
+                            </span>
+                            <span className="font-bold text-xs text-gray-900">
+                              {fineItem.reason || 'Fine Penalty'}
+                            </span>
+                          </div>
+                          {fineItem.recordedBy && (
+                            <span className="text-[10px] text-gray-400 mt-0.5">Recorded by: {fineItem.recordedBy}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-black text-red-600 text-sm">
+                            -{formatPKR(Number(fineItem.amount || 0))}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteFine(fineItem, customizeModalStaff)}
+                            disabled={deletingId === fineItem.id}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+                            title="Delete this fine from payroll and profile"
+                          >
+                            {deletingId === fineItem.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                            Delete Fine
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+
               {/* Debt Reset Checkbox Option */}
               <label className="flex items-center gap-2.5 p-3.5 bg-amber-50 border border-amber-200 rounded-2xl cursor-pointer">
                 <input
@@ -3661,6 +3805,33 @@ export default function ManagerPayrollPage() {
                                   title="Edit or override advance in Customize Salary"
                                 >
                                   Edit Advance
+                                </button>
+                              ) : item.type === 'fine' ? (
+                                <button
+                                  onClick={() => {
+                                    const fineObj = selectedStaffModal.staffFines?.find((f: any) => f.id === item.id) ||
+                                      selectedStaffModal.staffFines?.find((f: any) => f.date === item.date && Number(f.amount) === Number(item.amount)) ||
+                                      {
+                                        id: item.id,
+                                        amount: item.amount,
+                                        date: item.date,
+                                        reason: item.reason,
+                                        staffId: selectedStaffModal.id,
+                                        dept: selectedStaffModal.dept,
+                                        staffName: selectedStaffModal.name,
+                                      };
+                                    handleDeleteFine(fineObj, selectedStaffModal);
+                                  }}
+                                  disabled={deletingId === item.id}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                                  title="Delete this fine from payroll, finance records, and staff profile"
+                                >
+                                  {deletingId === item.id ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-3 h-3" />
+                                  )}
+                                  Delete Fine
                                 </button>
                               ) : (
                                 <span className="text-gray-300 text-[10px]">—</span>
@@ -4065,7 +4236,7 @@ export default function ManagerPayrollPage() {
           width: '800px',
           zIndex: -100,
           pointerEvents: 'none',
-          opacity: 0,
+          opacity: 1,
           backgroundColor: '#ffffff',
         }}
         aria-hidden="true"

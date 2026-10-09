@@ -184,51 +184,70 @@ export async function markStaffPayrollAsPaid(payload: MarkPaidPayload): Promise<
         }
       : null;
 
-    const staffDocRef = adminDb.collection(staffColName).doc(payload.staffId);
-    const staffSnap = await staffDocRef.get();
+    const cleanStaffId = payload.staffId.replace(new RegExp(`^(hq|rehab|spims|hospital|sukoon|welfare|jobcenter|media|it)_`), '');
+    const prefixedStaffId = `${prefix}_${cleanStaffId}`;
+    const candidateStaffDocIds = Array.from(new Set([payload.staffId, cleanStaffId, prefixedStaffId]));
 
-    if (staffSnap.exists) {
-      const staffData = staffSnap.data() || {};
-      let documents = Array.isArray(staffData.documents) ? [...staffData.documents] : [];
+    // Find and update matching staff doc in staffColName
+    const candidateCollections = Array.from(new Set([
+      staffColName,
+      dept === 'rehab' ? 'rehab_staff' : '',
+      dept === 'rehab' ? 'rehab_users' : '',
+    ].filter(Boolean)));
 
-      if (newDocItem) {
-        // Remove prior salary slip document for the same month to prevent duplicate stacking
-        documents = documents.filter(
-          (d: any) => !(d.type === 'salary_slip' && d.month === payload.month)
-        );
-        // Prepend latest salary slip
-        documents.unshift(newDocItem);
-      }
-
-      await staffDocRef.update({
-        salaryBalance: Number(payload.netPayable) || 0,
-        outstandingBalance: payload.netPayable < 0 ? Math.abs(payload.netPayable) : 0,
-        lastPayrollMonth: payload.month,
-        lastSalaryPaid: Number(payload.netPayable) || 0,
-        lastSalaryPaidAt: paidTimestamp,
-        lastSalaryPaidDate: payload.paidDate,
-        lastSalarySlipUrl: payload.slipImageUrl || null,
-        ...(newDocItem ? { documents } : {}),
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-    }
-
-    // If Rehab department, also update rehab_staff if a document exists for this staff member
-    if (dept === 'rehab') {
+    for (const targetCol of candidateCollections) {
       try {
-        const rehabStaffRef = adminDb.collection('rehab_staff').doc(payload.staffId);
-        const rehabStaffSnap = await rehabStaffRef.get();
-        if (rehabStaffSnap.exists) {
-          const rData = rehabStaffSnap.data() || {};
-          let documents = Array.isArray(rData.documents) ? [...rData.documents] : [];
+        let matchedRef: any = null;
+        let matchedData: any = null;
+
+        for (const sId of candidateStaffDocIds) {
+          const dRef = adminDb.collection(targetCol).doc(sId);
+          const sSnap = await dRef.get();
+          if (sSnap.exists) {
+            matchedRef = dRef;
+            matchedData = sSnap.data() || {};
+            break;
+          }
+        }
+
+        // Fallback: search by staffId, customId, employeeId or name
+        if (!matchedRef) {
+          const qSnap = await adminDb.collection(targetCol)
+            .where('staffId', '==', payload.staffId)
+            .limit(1)
+            .get()
+            .catch(() => ({ empty: true, docs: [] } as any));
+
+          if (!qSnap.empty) {
+            matchedRef = qSnap.docs[0].ref;
+            matchedData = qSnap.docs[0].data() || {};
+          } else if (cleanStaffId) {
+            const qClean = await adminDb.collection(targetCol)
+              .where('staffId', '==', cleanStaffId)
+              .limit(1)
+              .get()
+              .catch(() => ({ empty: true, docs: [] } as any));
+            if (!qClean.empty) {
+              matchedRef = qClean.docs[0].ref;
+              matchedData = qClean.docs[0].data() || {};
+            }
+          }
+        }
+
+        if (matchedRef && matchedData) {
+          let documents = Array.isArray(matchedData.documents) ? [...matchedData.documents] : [];
           if (newDocItem) {
+            // Remove prior salary slip document for the same month to prevent duplicate stacking
             documents = documents.filter(
               (d: any) => !(d.type === 'salary_slip' && d.month === payload.month)
             );
+            // Prepend latest salary slip
             documents.unshift(newDocItem);
           }
-          await rehabStaffRef.update({
+
+          await matchedRef.update({
             salaryBalance: Number(payload.netPayable) || 0,
+            outstandingBalance: payload.netPayable < 0 ? Math.abs(payload.netPayable) : 0,
             lastPayrollMonth: payload.month,
             lastSalaryPaid: Number(payload.netPayable) || 0,
             lastSalaryPaidAt: paidTimestamp,
@@ -238,8 +257,8 @@ export async function markStaffPayrollAsPaid(payload: MarkPaidPayload): Promise<
             updatedAt: FieldValue.serverTimestamp(),
           });
         }
-      } catch (rErr) {
-        console.warn('[markStaffPayrollAsPaid] rehab_staff sync notice:', rErr);
+      } catch (colErr) {
+        console.warn(`[markStaffPayrollAsPaid] Error updating ${targetCol}:`, colErr);
       }
     }
 
@@ -561,3 +580,279 @@ export async function clearStaffProfileDebtAction(payload: {
     return { success: false, error: err.message || 'Failed to clear debt from profile' };
   }
 }
+
+export interface DeleteStaffFinePayload {
+  fineId: string;
+  staffId?: string;
+  dept?: string;
+  date?: string;
+  amount?: number;
+  reason?: string;
+  letterUrl?: string;
+  referenceNumber?: string;
+  deletedBy?: string;
+}
+
+export interface DeleteStaffFineResult {
+  success: boolean;
+  deletedCount?: number;
+  error?: string;
+}
+
+const ALL_DEPT_PREFIXES = ['hq', 'rehab', 'spims', 'hospital', 'sukoon', 'welfare', 'jobcenter', 'media', 'it'];
+
+export async function deleteStaffFineAction(payload: DeleteStaffFinePayload): Promise<DeleteStaffFineResult> {
+  try {
+    const adminDb = getAdminDb();
+    const fineId = payload.fineId;
+    if (!fineId) {
+      return { success: false, error: 'Fine ID is required' };
+    }
+
+    const deptPrefix = payload.dept ? getDeptPrefix(payload.dept as StaffDept) : '';
+    const searchPrefixes = deptPrefix
+      ? [deptPrefix, ...ALL_DEPT_PREFIXES.filter(p => p !== deptPrefix)]
+      : ALL_DEPT_PREFIXES;
+
+    let fineData: Record<string, any> = { ...payload };
+    let fineFoundCol = '';
+
+    // 1. Locate and delete fine document in corresponding fines collection
+    for (const p of searchPrefixes) {
+      const colName = `${p}_fines`;
+      try {
+        const docRef = adminDb.collection(colName).doc(fineId);
+        const snap = await docRef.get();
+        if (snap.exists) {
+          fineData = { ...snap.data(), ...fineData, id: fineId };
+          fineFoundCol = colName;
+          await docRef.delete();
+          break;
+        }
+      } catch (e) {}
+    }
+
+    // Also check generic 'fines' or 'rehab_fines' if not found
+    if (!fineFoundCol) {
+      for (const fallbackCol of ['rehab_fines', 'hq_fines', 'fines']) {
+        try {
+          const docRef = adminDb.collection(fallbackCol).doc(fineId);
+          const snap = await docRef.get();
+          if (snap.exists) {
+            fineData = { ...snap.data(), ...fineData, id: fineId };
+            fineFoundCol = fallbackCol;
+            await docRef.delete();
+            break;
+          }
+        } catch (e) {}
+      }
+    }
+
+    const targetDept = (fineData.dept || payload.dept || 'rehab') as StaffDept;
+    const prefix = getDeptPrefix(targetDept);
+    const targetStaffId = String(fineData.staffId || payload.staffId || '');
+    const cleanStaffId = targetStaffId.replace(/^(hq|rehab|spims|hospital|sukoon|welfare|jobcenter|media|it)_/, '');
+    const candidateStaffIds = new Set<string>([targetStaffId, cleanStaffId, `${prefix}_${cleanStaffId}`].filter(Boolean));
+
+    // 2. Remove from Finance Records / Transactions (${prefix}_transactions)
+    const txColNames = Array.from(new Set([`${prefix}_transactions`, 'rehab_transactions', 'hq_transactions', 'transactions']));
+    for (const tCol of txColNames) {
+      try {
+        const q1 = await adminDb.collection(tCol).where('fineId', '==', fineId).get().catch(() => ({ docs: [] } as any));
+        for (const d of q1.docs) {
+          await d.ref.delete().catch(() => {});
+        }
+        const q2 = await adminDb.collection(tCol).where('linkedFineId', '==', fineId).get().catch(() => ({ docs: [] } as any));
+        for (const d of q2.docs) {
+          await d.ref.delete().catch(() => {});
+        }
+
+        // Also check if an expense/fine transaction matches this exact staff, amount, and date
+        if (fineData.amount && (fineData.date || payload.date)) {
+          const fineDateStr = String(fineData.date || payload.date || '');
+          const q3 = await adminDb.collection(tCol)
+            .where('amount', '==', Number(fineData.amount))
+            .get()
+            .catch(() => ({ docs: [] } as any));
+
+          for (const d of q3.docs) {
+            const tData = d.data() || {};
+            const cat = String(tData.category || '').toLowerCase();
+            const desc = String(tData.description || '').toLowerCase();
+            const isFineCat = cat.includes('fine') || desc.includes('fine') || tData.type === 'fine';
+            const tStaffId = String(tData.staffId || tData.userId || '');
+            const tDateStr = String(tData.dateStr || tData.dateString || tData.date || '');
+
+            if (isFineCat && candidateStaffIds.has(tStaffId) && (tDateStr.startsWith(fineDateStr) || fineDateStr.startsWith(tDateStr))) {
+              await d.ref.delete().catch(() => {});
+            }
+          }
+        }
+      } catch (tErr) {
+        console.warn(`[deleteStaffFineAction] Failed to clean transactions in ${tCol}:`, tErr);
+      }
+    }
+
+    // 3. Remove/Update Duty Assessment Logs (${prefix}_duty_logs)
+    const dutyColNames = Array.from(new Set([`${prefix}_duty_logs`, 'rehab_duty_logs', 'hq_duty_logs']));
+    for (const dCol of dutyColNames) {
+      try {
+        if (targetStaffId && (fineData.date || payload.date)) {
+          const dateStr = String(fineData.date || payload.date || '');
+          for (const cId of Array.from(candidateStaffIds)) {
+            const dutySnap = await adminDb.collection(dCol)
+              .where('staffId', '==', cId)
+              .where('date', '==', dateStr)
+              .get()
+              .catch(() => ({ docs: [] } as any));
+
+            for (const dDoc of dutySnap.docs) {
+              const data = dDoc.data();
+              if (data.fineAmount && Number(data.fineAmount) === Number(fineData.amount)) {
+                await dDoc.ref.update({
+                  fineAmount: 0,
+                  fineReason: '',
+                  comment: 'Fine revoked/deleted',
+                }).catch(() => {});
+              }
+            }
+          }
+        }
+      } catch (dErr) {
+        console.warn(`[deleteStaffFineAction] Duty log cleanup notice:`, dErr);
+      }
+    }
+
+    // 4. Remove fine letter / picture from Staff Profile Documents Vault
+    const profileCols = Array.from(new Set([
+      targetDept === 'hq' ? 'hq_users' : targetDept === 'job-center' ? 'jobcenter_users' : targetDept === 'social-media' ? 'media_users' : `${prefix}_users`,
+      'rehab_staff',
+      'rehab_users',
+      'hq_users'
+    ]));
+
+    const fineLetterUrl = fineData.letterUrl || payload.letterUrl;
+    const fineRefNumber = String(fineData.referenceNumber || payload.referenceNumber || '').trim();
+    const fineDateStr = String(fineData.date || payload.date || '').trim();
+    const fineAmt = Number(fineData.amount || payload.amount || 0);
+    const fineReasonStr = String(fineData.reason || payload.reason || '').toLowerCase().trim();
+
+    for (const pCol of profileCols) {
+      try {
+        for (const sId of Array.from(candidateStaffIds)) {
+          const docRef = adminDb.collection(pCol).doc(sId);
+          const snap = await docRef.get();
+          if (snap.exists) {
+            const sData = snap.data() || {};
+            const documents = Array.isArray(sData.documents) ? [...sData.documents] : [];
+            const originalLen = documents.length;
+
+            const filteredDocs = documents.filter((d: any) => {
+              if (!d) return false;
+              // Exact URL match
+              if (fineLetterUrl && d.url === fineLetterUrl) return false;
+              // Explicit fineId match
+              if (d.fineId && d.fineId === fineId) return false;
+
+              // Matching by fine attributes
+              const dTitle = String(d.title || '').toLowerCase();
+              const isFineType = d.type === 'fine' || dTitle.includes('fine');
+
+              if (isFineType) {
+                // If reference number matches
+                if (fineRefNumber && (dTitle.includes(fineRefNumber.toLowerCase()) || String(d.referenceNumber || '') === fineRefNumber)) {
+                  return false;
+                }
+                // If same date AND amount
+                if (fineDateStr && d.date === fineDateStr && fineAmt > 0 && dTitle.includes(String(fineAmt))) {
+                  return false;
+                }
+                // If same date and reason
+                if (fineDateStr && d.date === fineDateStr && fineReasonStr && dTitle.includes(fineReasonStr)) {
+                  return false;
+                }
+                // If exact URL has the fine reference
+                if (fineRefNumber && d.url && d.url.includes(fineRefNumber)) {
+                  return false;
+                }
+              }
+
+              return true;
+            });
+
+            if (filteredDocs.length !== originalLen) {
+              await docRef.update({
+                documents: filteredDocs,
+                updatedAt: FieldValue.serverTimestamp(),
+              });
+            }
+          }
+        }
+      } catch (pErr) {
+        console.warn(`[deleteStaffFineAction] Profile document vault cleanup notice for ${pCol}:`, pErr);
+      }
+    }
+
+    // 5. Audit log
+    try {
+      await adminDb.collection('hq_audit').add({
+        action: 'staff_fine_deleted',
+        fineId,
+        dept: targetDept,
+        staffId: targetStaffId,
+        staffName: fineData.staffName || '',
+        amount: fineData.amount || 0,
+        date: fineData.date || '',
+        deletedBy: payload.deletedBy || 'Super Admin / Manager',
+        timestamp: FieldValue.serverTimestamp(),
+      });
+    } catch {}
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[deleteStaffFineAction] Error:', err);
+    return { success: false, error: err.message || 'Failed to delete fine' };
+  }
+}
+
+export async function deleteStaffProfileDocumentAction(payload: {
+  staffId: string;
+  dept: StaffDept;
+  docUrl: string;
+  docTitle?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const adminDb = getAdminDb();
+    const prefix = getDeptPrefix(payload.dept);
+    const cleanStaffId = payload.staffId.replace(/^(hq|rehab|spims|hospital|sukoon|welfare|jobcenter|media|it)_/, '');
+    const candidateIds = [payload.staffId, cleanStaffId, `${prefix}_${cleanStaffId}`];
+
+    const profileCols = Array.from(new Set([
+      payload.dept === 'hq' ? 'hq_users' : payload.dept === 'job-center' ? 'jobcenter_users' : payload.dept === 'social-media' ? 'media_users' : `${prefix}_users`,
+      'rehab_staff',
+      'rehab_users',
+      'hq_users'
+    ]));
+
+    for (const pCol of profileCols) {
+      for (const sId of candidateIds) {
+        try {
+          const docRef = adminDb.collection(pCol).doc(sId);
+          const snap = await docRef.get();
+          if (snap.exists) {
+            const data = snap.data() || {};
+            const documents = Array.isArray(data.documents) ? [...data.documents] : [];
+            const filtered = documents.filter((d: any) => d.url !== payload.docUrl && (!payload.docTitle || d.title !== payload.docTitle));
+            if (filtered.length !== documents.length) {
+              await docRef.update({ documents: filtered, updatedAt: FieldValue.serverTimestamp() });
+            }
+          }
+        } catch {}
+      }
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
