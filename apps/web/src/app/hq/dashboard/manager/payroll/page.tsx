@@ -15,7 +15,7 @@ import {
   CheckCheck, Check, ShieldAlert, WifiOff, HelpCircle, Info
 } from 'lucide-react';
 import { SalarySlipPrintable } from '@/components/hq/SalarySlipPrintable';
-import { markStaffPayrollAsPaid, saveSalaryCustomizationAction, syncStaffProfileBalanceAction, clearStaffProfileDebtAction, deleteStaffFineAction } from '@/app/hq/actions/payroll';
+import { markStaffPayrollAsPaid, saveSalaryCustomizationAction, syncStaffProfileBalanceAction, clearStaffProfileDebtAction, deleteStaffFineAction, deleteStaffAdvanceAction } from '@/app/hq/actions/payroll';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
 
 const MONTHS = [
@@ -544,6 +544,7 @@ export default function ManagerPayrollPage() {
   const [fineForm, setFineForm] = useState({ dept: '', staffId: '', amount: '', reason: '', date: '' });
   const [savingFine, setSavingFine] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingAdvanceId, setDeletingAdvanceId] = useState<string | null>(null);
 
   // Mark as Paid states
   const [markingPaidStaffId, setMarkingPaidStaffId] = useState<string | null>(null);
@@ -1614,6 +1615,102 @@ export default function ManagerPayrollPage() {
       alert('Failed to delete fine: ' + err.message);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleDeleteAdvance = async (advance: any, optionalStaffRow?: any) => {
+    if (!advance) return;
+    const advAmt = Number(advance.amount || 0);
+    const advDate = advance.date || advance.month || monthStr;
+    const advReason = advance.reason || advance.description || 'Advance Salary';
+    const staffName = advance.staffName || optionalStaffRow?.name || 'Staff Member';
+    const staffId = advance.staffId || optionalStaffRow?.id || optionalStaffRow?.staffId;
+    const dept = advance.dept || optionalStaffRow?.dept;
+    const txId = advance._collection ? advance.id : advance.id?.startsWith('adv-') || advance.id?.startsWith('doc-') ? undefined : advance.id;
+    const collectionName = advance._collection || undefined;
+
+    if (!confirm(`Delete this advance of ${formatPKR(advAmt)} on ${advDate} (${advReason}) for ${staffName}?\n\nThis will completely remove it from payroll advance deductions, transaction records, and reset the advance salary on staff records.`)) {
+      return;
+    }
+
+    try {
+      setDeletingAdvanceId(advance.id || 'adv');
+
+      const res = await deleteStaffAdvanceAction({
+        txId,
+        collectionName,
+        staffId,
+        dept,
+        amount: advAmt,
+        date: advDate,
+        month: monthStr,
+        reason: advReason,
+        deletedBy: session?.displayName || session?.name || 'Manager',
+      });
+
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to delete advance');
+      }
+
+      // Optimistically update selectedStaffModal if open
+      if (selectedStaffModal) {
+        setSelectedStaffModal((prev: any) => {
+          if (!prev) return null;
+          const updatedTxns = (prev.staffAdvanceTxns || []).filter((t: any) => {
+            if (txId && t.id === txId) return false;
+            if (advance.id && t.id === advance.id) return false;
+            if (Number(t.amount) === advAmt && (t.date === advDate || t.transactionDate === advDate)) return false;
+            return true;
+          });
+          const newTotalAdvance = Math.max(0, (prev.totalAdvance || 0) - advAmt);
+          const updatedBreakdown = (prev.breakdownItems || []).filter((item: any) => {
+            if (item.id === advance.id) return false;
+            if (item.type === 'advance' && Number(item.amount) === advAmt && item.date === advDate) return false;
+            return true;
+          });
+          const newTotalDeductions = Math.round((prev.totalAbsentDeduction || 0) + (prev.totalFines || 0) + newTotalAdvance + (prev.previousMonthDebt || 0) + (prev.totalCustomDeductions || 0));
+          const newNetPayable = Math.floor(((prev.earnings || 0) + (prev.totalCustomAdditions || 0)) - newTotalDeductions);
+
+          return {
+            ...prev,
+            staffAdvanceTxns: updatedTxns,
+            totalAdvance: newTotalAdvance,
+            breakdownItems: updatedBreakdown,
+            deductions: newTotalDeductions,
+            netPayable: newNetPayable,
+          };
+        });
+      }
+
+      // Optimistically update customizeModalStaff if open
+      if (customizeModalStaff) {
+        setCustomizeModalStaff((prev: any) => {
+          if (!prev) return null;
+          const updatedTxns = (prev.staffAdvanceTxns || []).filter((t: any) => {
+            if (txId && t.id === txId) return false;
+            if (advance.id && t.id === advance.id) return false;
+            if (Number(t.amount) === advAmt) return false;
+            return true;
+          });
+          const newTotalAdvance = Math.max(0, (prev.actualAdvance || prev.totalAdvance || 0) - advAmt);
+          return {
+            ...prev,
+            staffAdvanceTxns: updatedTxns,
+            actualAdvance: newTotalAdvance,
+            totalAdvance: newTotalAdvance,
+          };
+        });
+        setCustomizeForm((p: any) => ({
+          ...p,
+          advanceSalaryOverride: '0',
+        }));
+      }
+
+      await handleLoad();
+    } catch (err: any) {
+      alert('Failed to delete advance: ' + err.message);
+    } finally {
+      setDeletingAdvanceId(null);
     }
   };
 
@@ -3274,9 +3371,21 @@ export default function ManagerPayrollPage() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
-                      Monthly Advance Override
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-bold text-gray-600 uppercase tracking-wider block">
+                        Monthly Advance Override
+                      </label>
+                      {(Number(customizeModalStaff.actualAdvance || 0) > 0 || Number(customizeForm.advanceSalaryOverride) > 0) && (
+                        <button
+                          type="button"
+                          onClick={() => setCustomizeForm(p => ({ ...p, advanceSalaryOverride: '0' }))}
+                          className="text-[10px] font-bold text-rose-700 hover:text-rose-900 bg-rose-100 hover:bg-rose-200 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                          title="Override advance deduction to 0"
+                        >
+                          Clear (Set Rs. 0)
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="number"
                       value={customizeForm.advanceSalaryOverride}
@@ -3425,6 +3534,110 @@ export default function ManagerPayrollPage() {
                   </div>
                 )}
               </div>
+
+              {/* Section 2.6: Monthly Advance Records & Transactions */}
+              {((customizeModalStaff.staffAdvanceTxns && customizeModalStaff.staffAdvanceTxns.length > 0) || Number(customizeModalStaff.actualAdvance || 0) > 0) && (
+                <div className="space-y-3 bg-amber-50/60 border border-amber-200 rounded-2xl p-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-amber-900 text-sm flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-amber-600" />
+                      Recorded Advance Salaries ({customizeModalStaff.staffAdvanceTxns?.length || (Number(customizeModalStaff.actualAdvance || 0) > 0 ? 1 : 0)})
+                    </h3>
+                    <span className="text-xs font-black text-amber-800">
+                      Total: {formatPKR(customizeModalStaff.actualAdvance || 0)}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {customizeModalStaff.staffAdvanceTxns && customizeModalStaff.staffAdvanceTxns.length > 0 ? (
+                      customizeModalStaff.staffAdvanceTxns.map((advItem: any) => {
+                        const dateStr = formatDateString(advItem.transactionDate || advItem.date || advItem.createdAt) || String(advItem.month || monthStr);
+                        const advAmount = Number(advItem.amount || 0);
+                        const isDeleting = deletingAdvanceId === advItem.id;
+                        return (
+                          <div
+                            key={advItem.id || `adv-${dateStr}-${advAmount}`}
+                            className="flex items-center justify-between p-3 bg-white rounded-xl border border-amber-100 shadow-sm"
+                          >
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-[11px] font-bold text-gray-700">
+                                  {dateStr}
+                                </span>
+                                <span className="font-bold text-xs text-gray-900">
+                                  {advItem.description || advItem.categoryName || 'Advance Salary taken'}
+                                </span>
+                              </div>
+                              {(advItem.recordedBy || advItem.cashierName) && (
+                                <span className="text-[10px] text-gray-400 mt-0.5">
+                                  Recorded by: {advItem.recordedBy || advItem.cashierName}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="font-black text-amber-700 text-sm">
+                                -{formatPKR(advAmount)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteAdvance(advItem, customizeModalStaff)}
+                                disabled={isDeleting}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+                                title="Delete this advance from payroll and financial records"
+                              >
+                                {isDeleting ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                )}
+                                Delete Advance
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-amber-100 shadow-sm">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-xs text-gray-900">
+                            Monthly Advance Record
+                          </span>
+                          <span className="text-[10px] text-gray-400 mt-0.5">
+                            From staff profile or monthly adjustment
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-black text-amber-700 text-sm">
+                            -{formatPKR(Number(customizeModalStaff.actualAdvance || 0))}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAdvance({
+                              id: `adv-${customizeModalStaff.id}`,
+                              amount: customizeModalStaff.actualAdvance,
+                              staffId: customizeModalStaff.id,
+                              dept: customizeModalStaff.dept,
+                              staffName: customizeModalStaff.name,
+                              month: monthStr,
+                              date: monthStr,
+                            }, customizeModalStaff)}
+                            disabled={deletingAdvanceId === `adv-${customizeModalStaff.id}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+                            title="Delete this advance from payroll and reset advance salary"
+                          >
+                            {deletingAdvanceId === `adv-${customizeModalStaff.id}` ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                            Delete Advance
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
 
               {/* Debt Reset Checkbox Option */}
@@ -3799,13 +4012,41 @@ export default function ManagerPayrollPage() {
                                   Waive Deficit
                                 </button>
                               ) : item.type === 'advance' ? (
-                                <button
-                                  onClick={() => { const s = selectedStaffModal; setSelectedStaffModal(null); openCustomizeModal(s); }}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer"
-                                  title="Edit or override advance in Customize Salary"
-                                >
-                                  Edit Advance
-                                </button>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <button
+                                    onClick={() => { const s = selectedStaffModal; setSelectedStaffModal(null); openCustomizeModal(s); }}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+                                    title="Edit or override advance in Customize Salary"
+                                  >
+                                    Edit Advance
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      const advObj = (selectedStaffModal.staffAdvanceTxns || []).find((t: any) => t.id === item.id) ||
+                                        (selectedStaffModal.staffAdvanceTxns || []).find((t: any) => Number(t.amount) === Number(item.amount)) ||
+                                        {
+                                          id: item.id,
+                                          amount: item.amount,
+                                          date: item.date,
+                                          reason: item.reason,
+                                          staffId: selectedStaffModal.id,
+                                          dept: selectedStaffModal.dept,
+                                          staffName: selectedStaffModal.name,
+                                        };
+                                      handleDeleteAdvance(advObj, selectedStaffModal);
+                                    }}
+                                    disabled={deletingAdvanceId === item.id}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                                    title="Delete this advance completely from payroll and financial records"
+                                  >
+                                    {deletingAdvanceId === item.id ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="w-3 h-3" />
+                                    )}
+                                    Delete Advance
+                                  </button>
+                                </div>
                               ) : item.type === 'fine' ? (
                                 <button
                                   onClick={() => {

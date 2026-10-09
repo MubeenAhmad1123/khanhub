@@ -856,3 +856,191 @@ export async function deleteStaffProfileDocumentAction(payload: {
   }
 }
 
+export interface DeleteStaffAdvancePayload {
+  txId?: string;
+  collectionName?: string;
+  staffId: string;
+  dept?: string;
+  amount?: number;
+  date?: string;
+  month?: string;
+  reason?: string;
+  deletedBy?: string;
+}
+
+export interface DeleteStaffAdvanceResult {
+  success: boolean;
+  deletedCount?: number;
+  error?: string;
+}
+
+export async function deleteStaffAdvanceAction(payload: DeleteStaffAdvancePayload): Promise<DeleteStaffAdvanceResult> {
+  try {
+    const adminDb = getAdminDb();
+    const staffId = String(payload.staffId || '').trim();
+    if (!staffId && !payload.txId) {
+      return { success: false, error: 'Staff ID or Transaction ID is required' };
+    }
+
+    const deptPrefix = payload.dept ? getDeptPrefix(payload.dept as StaffDept) : '';
+    const cleanStaffId = staffId.replace(/^(hq|rehab|spims|hospital|sukoon|welfare|jobcenter|media|it)_/, '');
+    const candidateStaffIds = new Set<string>([staffId, cleanStaffId, deptPrefix ? `${deptPrefix}_${cleanStaffId}` : ''].filter(Boolean));
+
+    let deletedCount = 0;
+
+    // 1. If explicit collectionName and txId provided, delete it directly
+    if (payload.collectionName && payload.txId) {
+      try {
+        const docRef = adminDb.collection(payload.collectionName).doc(payload.txId);
+        const snap = await docRef.get();
+        if (snap.exists) {
+          await docRef.delete();
+          deletedCount++;
+        }
+      } catch (e) {
+        console.warn(`[deleteStaffAdvanceAction] Direct deletion failed for ${payload.collectionName}/${payload.txId}:`, e);
+      }
+    }
+
+    // 2. Search transaction & advance collections to delete matching transaction
+    const targetPrefixes = deptPrefix
+      ? [deptPrefix, ...ALL_DEPT_PREFIXES.filter(p => p !== deptPrefix)]
+      : ALL_DEPT_PREFIXES;
+
+    const txColNames: string[] = [];
+    targetPrefixes.forEach(p => {
+      txColNames.push(`${p}_transactions`);
+      txColNames.push(`${p}_advances`);
+    });
+    txColNames.push('transactions', 'advances');
+
+    const uniqueTxCols = Array.from(new Set(txColNames));
+
+    for (const tCol of uniqueTxCols) {
+      try {
+        // If txId is specified, check by ID
+        if (payload.txId) {
+          const docRef = adminDb.collection(tCol).doc(payload.txId);
+          const snap = await docRef.get();
+          if (snap.exists) {
+            await docRef.delete();
+            deletedCount++;
+          }
+        }
+
+        // If amount and/or staffId matches an advance transaction
+        if (candidateStaffIds.size > 0) {
+          for (const sId of Array.from(candidateStaffIds)) {
+            // Find transactions with staffId = sId
+            const snap = await adminDb.collection(tCol).where('staffId', '==', sId).get().catch(() => ({ docs: [] } as any));
+            for (const d of snap.docs) {
+              const data = d.data() || {};
+              const cat = String(data.category || '').toLowerCase();
+              const catName = String(data.categoryName || '').toLowerCase();
+              const desc = String(data.description || '').toLowerCase();
+              const isAdvanceCat = cat.includes('advance') || catName.includes('advance') || desc.includes('advance') || tCol.includes('advance');
+
+              if (!isAdvanceCat) continue;
+
+              let match = false;
+              if (payload.txId && d.id === payload.txId) {
+                match = true;
+              } else if (payload.amount !== undefined && Number(data.amount) === Number(payload.amount)) {
+                // Check if date or month matches if supplied
+                if (payload.date || payload.month) {
+                  const dDate = String(data.transactionDate || data.date || data.createdAt || '');
+                  const dMonth = String(data.month || data.salaryMonth || '');
+                  if ((payload.date && dDate.startsWith(payload.date)) || (payload.month && (dDate.startsWith(payload.month) || dMonth === payload.month))) {
+                    match = true;
+                  }
+                } else {
+                  match = true;
+                }
+              }
+
+              if (match) {
+                await d.ref.delete().catch(() => {});
+                deletedCount++;
+              }
+            }
+          }
+        }
+      } catch (colErr) {
+        console.warn(`[deleteStaffAdvanceAction] Col ${tCol} query notice:`, colErr);
+      }
+    }
+
+    // 3. Clear advanceSalaryOverride in salary adjustments for current/target month
+    if (payload.month && candidateStaffIds.size > 0) {
+      for (const p of targetPrefixes) {
+        const adjCol = `${p}_salary_adjustments`;
+        for (const sId of Array.from(candidateStaffIds)) {
+          const adjDocId = `${sId}_${payload.month}`;
+          try {
+            const adjRef = adminDb.collection(adjCol).doc(adjDocId);
+            const adjSnap = await adjRef.get();
+            if (adjSnap.exists) {
+              await adjRef.update({
+                advanceSalaryOverride: 0,
+                updatedAt: FieldValue.serverTimestamp(),
+              });
+            }
+          } catch {}
+        }
+      }
+    }
+
+    // 4. Clear advance fields on staff profile document
+    const profileCols = Array.from(new Set([
+      payload.dept === 'hq' ? 'hq_users' : payload.dept === 'job-center' ? 'jobcenter_users' : payload.dept === 'social-media' ? 'media_users' : `${deptPrefix}_users`,
+      'rehab_staff',
+      'rehab_users',
+      'hq_users',
+      'spims_users'
+    ].filter(Boolean)));
+
+    for (const pCol of profileCols) {
+      for (const sId of Array.from(candidateStaffIds)) {
+        try {
+          const docRef = adminDb.collection(pCol).doc(sId);
+          const snap = await docRef.get();
+          if (snap.exists) {
+            const data = snap.data() || {};
+            const updates: Record<string, any> = {
+              updatedAt: FieldValue.serverTimestamp(),
+            };
+            if (data.advance !== undefined && data.advance !== 0) updates.advance = 0;
+            if (data.advanceSalary !== undefined && data.advanceSalary !== 0) updates.advanceSalary = 0;
+            if (data.monthlyAdvance !== undefined && data.monthlyAdvance !== 0) updates.monthlyAdvance = 0;
+
+            if (Object.keys(updates).length > 1) {
+              await docRef.update(updates);
+            }
+          }
+        } catch {}
+      }
+    }
+
+    // 5. Audit log
+    try {
+      await adminDb.collection('hq_audit').add({
+        action: 'staff_advance_deleted',
+        txId: payload.txId || '',
+        dept: payload.dept || '',
+        staffId,
+        amount: payload.amount || 0,
+        month: payload.month || '',
+        deletedBy: payload.deletedBy || 'Super Admin / Manager',
+        deletedCount,
+        timestamp: FieldValue.serverTimestamp(),
+      });
+    } catch {}
+
+    return { success: true, deletedCount };
+  } catch (err: any) {
+    console.error('[deleteStaffAdvanceAction] Error:', err);
+    return { success: false, error: err.message || 'Failed to delete advance' };
+  }
+}
+
+
