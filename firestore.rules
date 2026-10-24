@@ -1163,7 +1163,8 @@ service cloud.firestore {
           || request.auth.uid == 'hospital_5mHY2l3o6NhGDji4CysY'
         )
       ) || isDiscoveryQuery();
-      allow create, delete: if false;
+      allow create: if isHqSuperOrManager();
+      allow delete: if isHqSuperOrManager();
       allow update: if isHqSuperOrManager()
         || (
           request.auth != null

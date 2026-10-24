@@ -47,6 +47,7 @@ import {
 } from '@/types/hq';
 import { awardStaffPoint } from '@/app/hq/actions/points';
 import { deleteStaffFineAction, deleteStaffProfileDocumentAction } from '@/app/hq/actions/payroll';
+import { vacateStaffAction } from '@/app/hq/actions/vacateStaff';
 import { ResetPasswordModal } from '@/components/hq/superadmin/ResetPasswordModal';
 import LeadsCRM from '@/components/shared/LeadsCRM';
 import VisibilityManager from '@/components/shared/VisibilityManager';
@@ -2431,52 +2432,33 @@ export default function StaffProfilePage() {
       setIsVacating(true);
       if (!staff) return;
 
-      // 1. Update the departing staff member's record in Firestore
-      // Keep their name and other details exactly as-is but change status to resigned/terminated and isActive = false
-      const res = await updateStaffProfile(staff.id, {
-        isActive: false,
-        status: vacateReason, // 'resigned' or 'terminated'
-        updatedAt: serverTimestamp()
-      });
-
-      if (!res.success) throw new Error(res.error);
-
-      // 2. Create the NEW replacement vacant profile document
-      // Clone configuration fields: dept, designation, dutyConfig, dressCodeConfig, monthlySalary, shift times
-      const newStaffDocRef = await addDoc(collection(db, getDeptCollection(staff.dept)), {
-        name: "Vacant",
-        displayName: "Vacant",
-        email: "",
-        phone: "",
-        phoneNumber: "",
-        cnic: "",
-        address: "",
-        photoUrl: "",
-        photoURL: "",
-        fatherName: "",
-        joiningDate: "",
-        isActive: false,
-        status: "active_vacancy",
+      const res = await vacateStaffAction({
+        compositeId: staff.id,
         dept: staff.dept,
-        role: staff.role || "staff",
-        designation: staff.designation || "",
-        dutyConfig: staff.dutyConfig || [],
-        dressCodeConfig: staff.dressCodeConfig || [],
-        monthlySalary: staff.monthlySalary || 0,
-        dutyStartTime: staff.dutyStartTime || "09:00",
-        dutyEndTime: staff.dutyEndTime || "17:00",
-        visibleSections: staff.visibleSections || {},
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        vacateReason,
+        departingStaffData: {
+          role: staff.role,
+          designation: staff.designation,
+          dutyConfig: staff.dutyConfig,
+          dressCodeConfig: staff.dressCodeConfig,
+          monthlySalary: staff.monthlySalary,
+          dutyStartTime: staff.dutyStartTime,
+          dutyEndTime: staff.dutyEndTime,
+          visibleSections: staff.visibleSections,
+          secondaryDepts: staff.secondaryDepts,
+          basicInfoExtras: staff.basicInfoExtras,
+        }
       });
 
-      const newCompositeId = `${staff.dept}_${newStaffDocRef.id}`;
+      if (!res.success) throw new Error(res.error || 'Failed to vacate profile slot');
 
       toast.success(`${staff.name} archived as ${vacateReason.toUpperCase()}. New vacant profile slot created!`);
       setShowVacateConfirm(false);
 
-      // 3. Redirect the manager to the new vacant profile
-      router.push(`/hq/dashboard/manager/staff/${newCompositeId}`);
+      if (res.newCompositeId) {
+        // Redirect the manager to the new vacant profile
+        router.push(`/hq/dashboard/manager/staff/${res.newCompositeId}`);
+      }
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || "Failed to vacate profile slot");
