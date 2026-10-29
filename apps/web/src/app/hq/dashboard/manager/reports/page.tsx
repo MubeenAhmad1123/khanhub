@@ -10,11 +10,12 @@ import {
   Loader2, Printer, Award, Clock, XCircle, ArrowRight, ArrowLeft, 
   Search, Filter, Calendar, Crown, Trophy, Medal, ChevronRight, 
   Coins, Sparkles, AlertCircle, AlertTriangle, ExternalLink, Shield,
-  ThumbsUp, Check, X, ClipboardList, Star, Edit3, Save
+  ThumbsUp, Check, X, ClipboardList, Star, Edit3, Save, FileText, User
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getDeptPrefix, getDeptCollection, StaffDept } from '@/lib/hq/superadmin/staff';
 import type { HqStaff } from '@/types/hq';
+import { DutyProformaModal } from '@/components/shared/DutyProformaModal';
 
 const getSimpleId = (id: string) => {
   if (!id) return '';
@@ -91,6 +92,13 @@ export default function ManagerReportsPage() {
   const [bulkEndDate, setBulkEndDate] = useState<string>(`${selectedMonth}-05`);
   const [bulkAction, setBulkAction] = useState<'auto_leave' | 'paid_leave' | 'unpaid_leave' | 'present' | 'absent' | 'late'>('auto_leave');
   const [savingBulk, setSavingBulk] = useState(false);
+
+  // Duty Proforma state
+  const [proformaStaff, setProformaStaff] = useState<any | null>(null);
+  const [isProformaModalOpen, setIsProformaModalOpen] = useState(false);
+  const [isStaffPickerOpen, setIsStaffPickerOpen] = useState(false);
+  const [staffPickerSearch, setStaffPickerSearch] = useState('');
+  const [staffPickerDept, setStaffPickerDept] = useState('all');
 
   useEffect(() => {
     if (selectedMonth) {
@@ -635,6 +643,20 @@ export default function ManagerReportsPage() {
     return Array.from(set).sort();
   }, [staff]);
 
+  const pickerStaffList = useMemo(() => {
+    return rankedStaff.filter((s) => {
+      if (staffPickerDept !== 'all' && s.department !== staffPickerDept) return false;
+      if (staffPickerSearch.trim()) {
+        const query = staffPickerSearch.toLowerCase().trim();
+        const n = String(s.name || '').toLowerCase();
+        const d = String(s.designation || '').toLowerCase();
+        const id = String(s.employeeId || (s as any).customId || s.id || '').toLowerCase();
+        return n.includes(query) || d.includes(query) || id.includes(query);
+      }
+      return true;
+    });
+  }, [rankedStaff, staffPickerDept, staffPickerSearch]);
+
   const activeViewingStaff = useMemo(() => {
     if (!viewingStaff) return null;
     return rankedStaff.find(s => s.id === viewingStaff.id) || viewingStaff;
@@ -1053,6 +1075,21 @@ export default function ManagerReportsPage() {
               <Edit3 size={16} /> Bulk Leaves / Edit
             </button>
             <button 
+              type="button"
+              onClick={() => {
+                if (activeViewingStaff) {
+                  setProformaStaff(activeViewingStaff);
+                  setIsProformaModalOpen(true);
+                } else {
+                  setIsStaffPickerOpen(true);
+                }
+              }} 
+              className="w-1/2 md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-5 py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-95 duration-200"
+              title="Generate Monthly Duty & Performance Proforma"
+            >
+              <FileText size={16} /> Duty Proforma
+            </button>
+            <button 
               onClick={() => window.print()} 
               className="w-1/2 md:w-auto bg-white hover:bg-slate-50 border border-slate-100 text-slate-700 font-bold text-xs px-5 py-3 rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2 hover:shadow-md active:scale-95 duration-200"
             >
@@ -1375,6 +1412,19 @@ export default function ManagerReportsPage() {
                           <span className="text-indigo-600 font-black text-sm bg-indigo-50 border border-indigo-100/50 px-3 py-2 rounded-xl shadow-inner min-w-[70px] text-center">
                             {stats.totalPoints} <span className="text-[10px] text-indigo-400 font-bold">/ {stats.maxPoints}</span>
                           </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProformaStaff(member);
+                              setIsProformaModalOpen(true);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-2 hover:bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[10px] font-black flex items-center gap-1 transition-all shadow-xs"
+                            title="Generate Monthly Duty & Performance Proforma"
+                          >
+                            <FileText size={12} />
+                            <span>Proforma</span>
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1511,12 +1561,26 @@ export default function ManagerReportsPage() {
                   </div>
                 </div>
                 
-                <button 
-                  onClick={() => setViewingStaff(null)} 
-                  className="text-slate-400 hover:text-slate-600 transition-all bg-slate-50 hover:bg-slate-100 border border-slate-100 p-2.5 rounded-full"
-                >
-                  <XCircle size={22} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProformaStaff(activeViewingStaff);
+                      setIsProformaModalOpen(true);
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-sm flex items-center gap-1.5 active:scale-95"
+                    title="Generate Monthly Duty & Performance Proforma"
+                  >
+                    <FileText size={15} />
+                    <span>Duty Proforma</span>
+                  </button>
+                  <button 
+                    onClick={() => setViewingStaff(null)} 
+                    className="text-slate-400 hover:text-slate-600 transition-all bg-slate-50 hover:bg-slate-100 border border-slate-100 p-2.5 rounded-full"
+                  >
+                    <XCircle size={22} />
+                  </button>
+                </div>
               </div>
 
               {/* Print Only Title Block */}
@@ -2240,6 +2304,137 @@ export default function ManagerReportsPage() {
           </div>
         </div>
       )}
-    </div>
+    
+      {/* ── STAFF PICKER MODAL (FOR DUTY PROFORMA) ────────────────────────── */}
+      {isStaffPickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200 print:hidden">
+          <div className="bg-white border border-slate-100 w-full max-w-2xl rounded-[2rem] shadow-2xl p-6 sm:p-7 space-y-5 animate-in zoom-in-95 duration-200 max-h-[88vh] flex flex-col">
+            
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 leading-tight">Select Staff Member</h3>
+                  <p className="text-xs text-slate-500 font-medium">Choose a staff profile to generate their Monthly Duty &amp; Performance Proforma</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsStaffPickerOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-50 transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search staff by name, designation, or ID..."
+                  value={staffPickerSearch}
+                  onChange={(e) => setStaffPickerSearch(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 focus:bg-white transition"
+                />
+              </div>
+              <select
+                value={staffPickerDept}
+                onChange={(e) => setStaffPickerDept(e.target.value)}
+                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-indigo-500 transition cursor-pointer"
+              >
+                <option value="all">All Departments</option>
+                <option value="hq">Head Office (HQ)</option>
+                <option value="hospital">Hospital</option>
+                <option value="rehab">Rehabilitation</option>
+                <option value="spims">SPIMS College</option>
+                <option value="it">IT Department</option>
+                <option value="job-center">Job Center</option>
+                <option value="social-media">Marketing &amp; Media</option>
+                <option value="sukoon">Sukoon Center</option>
+                <option value="welfare">Welfare</option>
+              </select>
+            </div>
+
+            {/* Staff List */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[220px]">
+              {pickerStaffList.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 text-xs font-bold">
+                  No staff members matched your filter.
+                </div>
+              ) : (
+                pickerStaffList.map((member) => (
+                  <div
+                    key={member.id}
+                    onClick={() => {
+                      setProformaStaff(member);
+                      setIsStaffPickerOpen(false);
+                      setIsProformaModalOpen(true);
+                    }}
+                    className="flex items-center justify-between p-3 rounded-2xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/40 transition cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-extrabold text-xs text-indigo-600 overflow-hidden shrink-0">
+                        {member.photoUrl ? (
+                          <img src={member.photoUrl} alt={member.name} className="w-full h-full object-cover" />
+                        ) : (
+                          member.name?.[0]
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-slate-900 font-extrabold text-xs leading-snug group-hover:text-emerald-700 transition">
+                          {member.name}
+                        </p>
+                        <p className="text-slate-400 font-semibold text-[10px] uppercase">
+                          {formatDesignation(member.designation)} · ID: {member.employeeId || (member as any).customId || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600">
+                        {getDeptLabel(member.department)}
+                      </span>
+                      <button
+                        type="button"
+                        className="px-3 py-1.5 bg-emerald-600 group-hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition shadow-2xs"
+                      >
+                        Generate
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsStaffPickerOpen(false)}
+                className="px-5 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MONTHLY DUTY & PERFORMANCE PROFORMA MODAL ─────────────────────── */}
+      {isProformaModalOpen && proformaStaff && (
+        <DutyProformaModal
+          isOpen={isProformaModalOpen}
+          onClose={() => {
+            setIsProformaModalOpen(false);
+            setProformaStaff(null);
+          }}
+          staff={proformaStaff}
+          initialYear={parseInt(selectedMonth.split('-')[0], 10)}
+          initialMonth={parseInt(selectedMonth.split('-')[1], 10)}
+        />
+      )}
+</div>
   );
 }
