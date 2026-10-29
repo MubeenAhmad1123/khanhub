@@ -234,11 +234,11 @@ export function buildProformaModel({
 
   rawDuties.forEach((d, idx) => {
     if (!d) return;
-    const name = String(d.name || d.dutyName || d.label || '').trim();
+    const name = typeof d === 'string' ? d.trim() : String(d.name || d.dutyName || d.label || '').trim();
     if (!name) return;
-    if (d.isActive === false) return; // filter out deactivated from current
+    if (d && typeof d === 'object' && d.isActive === false) return; // filter out deactivated from current
 
-    const id = String(d.id || d.dutyId || d.key || `duty-${idx + 1}`);
+    const id = typeof d === 'string' ? `duty-${idx + 1}` : String(d.id || d.dutyId || d.key || `duty-${idx + 1}`);
     const key = name.toLowerCase();
     if (!seenDutyKeys.has(key)) {
       seenDutyKeys.add(key);
