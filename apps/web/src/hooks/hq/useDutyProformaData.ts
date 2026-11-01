@@ -13,29 +13,81 @@ import {
   type HolidayRecord,
   type LeaveRecord,
 } from '@/lib/hq/dutyProforma';
-import { getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
+import { getDeptPrefix, getDeptCollection } from '@/lib/hq/superadmin/staff';
 
 const CACHE_TTL_SECONDS = 300; // 5 minutes cache
 
-function getSimpleId(id?: string): string {
+function getSimpleId(id?: any): string {
   if (!id) return '';
+  const str = String(id).trim();
   const prefixes = [
     'hq_', 'rehab_', 'spims_', 'hospital_', 'sukoon_', 'welfare_',
     'jobcenter_', 'media_', 'it_', 'job-center_', 'social-media_'
   ];
   for (const pref of prefixes) {
-    if (id.startsWith(pref)) {
-      return id.substring(pref.length);
+    if (str.startsWith(pref)) {
+      return str.substring(pref.length);
     }
   }
-  return id;
+  return str;
 }
 
-function getStaffCollection(dept: StaffDept): string {
+function getStaffCollection(dept: string): string {
   const d = String(dept || '').toLowerCase();
   if (d === 'job-center' || d === 'jobcenter') return 'jobcenter_staff';
   if (d === 'social-media' || d === 'media') return 'media_staff';
   return `${d.replace('-', '_')}_staff`;
+}
+
+function normalizeDateStr(val: any): string {
+  if (!val) return '';
+  if (typeof val === 'string') {
+    const s = val.trim();
+    if (s.includes('T')) return s.split('T')[0];
+    if (s.includes(' ')) return s.split(' ')[0];
+    return s;
+  }
+  try {
+    if (typeof val?.toDate === 'function') {
+      const d = val.toDate();
+      if (d instanceof Date && !isNaN(d.getTime())) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      }
+    }
+    if (val instanceof Date && !isNaN(val.getTime())) {
+      const y = val.getFullYear();
+      const m = String(val.getMonth() + 1).padStart(2, '0');
+      const day = String(val.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+    if (typeof val === 'object') {
+      const sec = val.seconds ?? val._seconds;
+      if (typeof sec === 'number') {
+        const d = new Date(sec * 1000);
+        if (!isNaN(d.getTime())) {
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${y}-${m}-${day}`;
+        }
+      }
+    }
+    if (typeof val === 'number') {
+      const d = new Date(val > 1e11 ? val : val * 1000);
+      if (!isNaN(d.getTime())) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      }
+    }
+  } catch {
+    // fallback
+  }
+  return '';
 }
 
 export interface UseDutyProformaResult {
@@ -57,8 +109,8 @@ export function useDutyProformaData(
   const [readCount, setReadCount] = useState<number>(0);
   const [reloadTrigger, setReloadTrigger] = useState<number>(0);
 
-  const staffId = staff?.id || '';
-  const dept = (staff?.department || staff?._dept || 'hq') as StaffDept;
+  const staffId = staff?.id ? String(staff.id).trim() : '';
+  const dept = (staff?.department || staff?.dept || staff?._dept || 'hq') as any;
 
   useEffect(() => {
     if (!staffId || !year || !month) {
@@ -92,60 +144,74 @@ export function useDutyProformaData(
         const prefix = getDeptPrefix(dept);
         const simpleSid = getSimpleId(staffId);
         const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+        const candidateIds = Array.from(new Set([staffId, simpleSid].filter(Boolean)));
 
         // 1. Fetch latest staff profile if duties are missing or incomplete
         let staffProfile = staff;
         if (!staff?.duties || staff.duties.length === 0) {
-          const staffCol = getStaffCollection(dept);
-          const staffDocRef = doc(db, staffCol, staffId);
-          const staffSnap = await getDoc(staffDocRef).catch(() => null);
-          if (staffSnap && staffSnap.exists()) {
-            localReads += 1;
-            staffProfile = { ...staff, ...staffSnap.data(), id: staffSnap.id };
-          } else if (simpleSid && simpleSid !== staffId) {
-            const simpleRef = doc(db, staffCol, simpleSid);
-            const simpleSnap = await getDoc(simpleRef).catch(() => null);
-            if (simpleSnap && simpleSnap.exists()) {
-              localReads += 1;
-              staffProfile = { ...staff, ...simpleSnap.data(), id: simpleSnap.id };
+          const colCandidates = [getStaffCollection(dept), getDeptCollection(dept)];
+          for (const colName of colCandidates) {
+            if (staffProfile?.duties && staffProfile.duties.length > 0) break;
+            for (const cId of candidateIds) {
+              const staffDocRef = doc(db, colName, cId);
+              const staffSnap = await getDoc(staffDocRef).catch(() => null);
+              if (staffSnap && staffSnap.exists()) {
+                localReads += 1;
+                staffProfile = { ...staff, ...staffSnap.data(), id: staffSnap.id };
+                break;
+              }
             }
           }
         }
 
         // 2. Fetch Duty Logs for this staff (single equality filter: no composite index needed)
         const dutyColName = `${prefix}_duty_logs`;
-        const dutyQuery = query(
-          collection(db, dutyColName),
-          where('staffId', '==', simpleSid)
+        const dutySnaps = await Promise.all(
+          candidateIds.map((cId) =>
+            getDocs(query(collection(db, dutyColName), where('staffId', '==', cId))).catch(
+              () => ({ docs: [], size: 0 } as any)
+            )
+          )
         );
-        const dutySnap = await getDocs(dutyQuery);
-        localReads += dutySnap.size;
 
         const dutyLogs: DailyDutyRecord[] = [];
-        dutySnap.forEach((d) => {
-          const data = d.data() as DailyDutyRecord;
-          const logDate = data.date || '';
-          if (logDate.startsWith(monthKey)) {
-            dutyLogs.push({ ...data, date: logDate });
-          }
+        const seenDutyDates = new Set<string>();
+
+        dutySnaps.forEach((snap) => {
+          localReads += snap.size || 0;
+          (snap.docs || []).forEach((d: any) => {
+            const data = (d.data?.() || {}) as DailyDutyRecord;
+            const logDate = normalizeDateStr(data.date);
+            if (logDate && logDate.startsWith(monthKey) && !seenDutyDates.has(logDate)) {
+              seenDutyDates.add(logDate);
+              dutyLogs.push({ ...data, date: logDate });
+            }
+          });
         });
 
         // 3. Fetch Leaves from Attendance for this staff
         const attColName = `${prefix}_attendance`;
-        const attQuery = query(
-          collection(db, attColName),
-          where('staffId', '==', simpleSid)
+        const attSnaps = await Promise.all(
+          candidateIds.map((cId) =>
+            getDocs(query(collection(db, attColName), where('staffId', '==', cId))).catch(
+              () => ({ docs: [], size: 0 } as any)
+            )
+          )
         );
-        const attSnap = await getDocs(attQuery).catch(() => ({ docs: [], size: 0 } as any));
-        localReads += attSnap.size;
 
         const leaves: LeaveRecord[] = [];
-        attSnap.docs.forEach((d: any) => {
-          const data = d.data();
-          const attDate = data.date || '';
-          if (attDate.startsWith(monthKey)) {
-            leaves.push({ date: attDate, status: data.status });
-          }
+        const seenAttDates = new Set<string>();
+
+        attSnaps.forEach((snap) => {
+          localReads += snap.size || 0;
+          (snap.docs || []).forEach((d: any) => {
+            const data = d.data?.() || {};
+            const attDate = normalizeDateStr(data.date);
+            if (attDate && attDate.startsWith(monthKey) && !seenAttDates.has(attDate)) {
+              seenAttDates.add(attDate);
+              leaves.push({ date: attDate, status: data.status });
+            }
+          });
         });
 
         // 4. Fetch Holidays from hq_holidays (cacheable)
@@ -155,11 +221,20 @@ export function useDutyProformaData(
         if (cachedHolidays) {
           holidays = cachedHolidays;
         } else {
-          const holidaySnap = await getDocs(collection(db, 'hq_holidays')).catch(() => ({ docs: [], size: 0 } as any));
-          localReads += holidaySnap.size;
-          holidays = holidaySnap.docs
-            .map((d: any) => ({ ...d.data() } as HolidayRecord))
-            .filter((h: HolidayRecord) => h.date && h.date.startsWith(monthKey));
+          const holidaySnap = await getDocs(collection(db, 'hq_holidays')).catch(
+            () => ({ docs: [], size: 0 } as any)
+          );
+          localReads += holidaySnap.size || 0;
+          holidays = (holidaySnap.docs || [])
+            .map((d: any) => {
+              const data = d.data?.() || {};
+              const hDate = normalizeDateStr(data.date);
+              return { ...data, date: hDate } as HolidayRecord;
+            })
+            .filter(
+              (h: HolidayRecord) =>
+                typeof h.date === 'string' && h.date.length >= 7 && h.date.startsWith(monthKey)
+            );
           setCached(holidayCacheKey, holidays, CACHE_TTL_SECONDS);
         }
 
@@ -189,7 +264,9 @@ export function useDutyProformaData(
         console.error('[useDutyProformaData] error:', err);
         if (isMounted) {
           if (err?.code === 'permission-denied') {
-            setError('Permission denied by Firestore rules. Please ensure you are logged in as HQ Superadmin or Manager.');
+            setError(
+              'Permission denied by Firestore rules. Please ensure you are logged in as HQ Superadmin or Manager.'
+            );
           } else {
             setError(err?.message || 'Failed to load duty records.');
           }

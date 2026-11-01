@@ -1909,6 +1909,7 @@ export default function DailyReportPage() {
                                         id: row.id,
                                         name: row.name,
                                         dept: row.department,
+                                        department: row.department,
                                         designation: row.designation,
                                         duties: (row as any).duties || [],
                                         dutyConfig: (row as any).dutyConfig || []
@@ -3030,6 +3031,7 @@ export default function DailyReportPage() {
                           id: m.id,
                           name: m.name,
                           dept: m.department,
+                          department: m.department,
                           designation: m.designation,
                           duties: (m as any).duties || [],
                           dutyConfig: (m as any).dutyConfig || []
