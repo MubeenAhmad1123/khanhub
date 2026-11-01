@@ -8,13 +8,14 @@ import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
 import {
   ArrowLeft, Loader2, Search,
-  Calendar, CheckCircle, XCircle, Download,
+  Calendar, CheckCircle, XCircle, Download, FileText,
   TrendingUp, Shield, AlertTriangle, Award,
   Zap, CheckCheck, ChevronDown, CheckSquare, Square, X
 } from 'lucide-react';
 import { getDeptPrefix, getDeptCollection, type StaffDept, listStaffCards } from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
 import { toDate, downloadElementAsPng } from '@/lib/utils';
+import { DutyProformaModal } from '@/components/shared/DutyProformaModal';
 
 interface DailyReportRow {
   id: string;
@@ -136,6 +137,10 @@ export default function DailyReportPage() {
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('all');
   const [downloading, setDownloading] = useState(false);
+  const [proformaStaff, setProformaStaff] = useState<any | null>(null);
+  const [isProformaModalOpen, setIsProformaModalOpen] = useState(false);
+  const [isProformaPickerOpen, setIsProformaPickerOpen] = useState(false);
+  const [proformaSearch, setProformaSearch] = useState('');
   const [showVacancies, setShowVacancies] = useState(false);
 
   // Step-by-step navigation flow states
@@ -1247,6 +1252,15 @@ export default function DailyReportPage() {
                   )}
                   {downloading ? 'Processing...' : 'Download Report'}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setIsProformaPickerOpen(true)}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-3.5 bg-white border border-gray-100 text-gray-700 rounded-2xl text-xs font-bold uppercase tracking-wider hover:bg-gray-50 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+                  title="Generate Monthly Duty & Performance Proforma"
+                >
+                  <FileText size={16} className="text-indigo-600" />
+                  <span>Duty Proforma</span>
+                </button>
               </>
             )}
           </div>
@@ -1887,6 +1901,24 @@ export default function DailyReportPage() {
                                 >
                                   {row.name}
                                 </a>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setProformaStaff({
+                                      id: row.id,
+                                      name: row.name,
+                                      dept: row.department,
+                                      designation: row.designation,
+                                      duties: (row as any).duties || [],
+                                      dutyConfig: (row as any).dutyConfig || []
+                                    });
+                                    setIsProformaModalOpen(true);
+                                  }}
+                                  className="inline-flex items-center gap-1 mt-1 text-[9px] font-bold text-indigo-600 hover:text-indigo-700 underline uppercase tracking-wider"
+                                  title="View Monthly Duty Proforma"
+                                >
+                                  <FileText size={11} /> Proforma Sheet
+                                </button>
                               )}
                             </div>
                           </div>
@@ -2932,6 +2964,90 @@ export default function DailyReportPage() {
           </div>
         </div>
 
+
+        {/* DUTY PROFORMA MODAL */}
+        {isProformaModalOpen && proformaStaff && (
+          <DutyProformaModal
+            isOpen={isProformaModalOpen}
+            onClose={() => {
+              setIsProformaModalOpen(false);
+              setProformaStaff(null);
+            }}
+            staff={proformaStaff}
+          />
+        )}
+
+        {/* STAFF PICKER MODAL FOR PROFORMA */}
+        {isProformaPickerOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fadeIn">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 max-h-[85vh] flex flex-col">
+              <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Monthly Duty &amp; Performance Proforma</h3>
+                  <p className="text-xs text-gray-500 font-medium">Choose a staff profile to generate their printable sheet</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setIsProformaPickerOpen(false); setProformaSearch(''); }}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="py-3">
+                <div className="relative">
+                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={proformaSearch}
+                    onChange={(e) => setProformaSearch(e.target.value)}
+                    placeholder="Search staff by name, role or department..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="overflow-y-auto flex-1 divide-y divide-gray-50 -mx-2 px-2">
+                {reportData
+                  .filter(m => {
+                    if (!proformaSearch) return true;
+                    const q = proformaSearch.toLowerCase();
+                    return (
+                      (m.name || '').toLowerCase().includes(q) ||
+                      (m.designation || '').toLowerCase().includes(q) ||
+                      (m.department || '').toLowerCase().includes(q)
+                    );
+                  })
+                  .map(m => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        setProformaStaff({
+                          id: m.id,
+                          name: m.name,
+                          dept: m.department,
+                          designation: m.designation,
+                          duties: (m as any).duties || [],
+                          dutyConfig: (m as any).dutyConfig || []
+                        });
+                        setIsProformaPickerOpen(false);
+                        setIsProformaModalOpen(true);
+                      }}
+                      className="w-full text-left py-2.5 px-3 hover:bg-indigo-50/60 rounded-xl flex items-center justify-between transition-colors group"
+                    >
+                      <div>
+                        <p className="text-xs font-bold text-gray-900 group-hover:text-indigo-600">{m.name}</p>
+                        <p className="text-[10px] text-gray-400 font-medium">{m.designation || 'Staff'} · <span className="uppercase">{m.department}</span></p>
+                      </div>
+                      <FileText size={14} className="text-gray-300 group-hover:text-indigo-600" />
+                    </button>
+                  ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
