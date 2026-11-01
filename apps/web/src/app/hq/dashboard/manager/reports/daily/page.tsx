@@ -1891,34 +1891,36 @@ export default function DailyReportPage() {
                                   {row.name}
                                 </span>
                               ) : (
-                                <a
-                                  href={`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`}
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    router.push(`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`);
-                                  }}
-                                  className="text-[11px] font-medium text-gray-500 hover:text-indigo-600 transition-colors leading-tight hover:underline cursor-pointer select-none mt-0.5"
-                                >
-                                  {row.name}
-                                </a>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setProformaStaff({
-                                      id: row.id,
-                                      name: row.name,
-                                      dept: row.department,
-                                      designation: row.designation,
-                                      duties: (row as any).duties || [],
-                                      dutyConfig: (row as any).dutyConfig || []
-                                    });
-                                    setIsProformaModalOpen(true);
-                                  }}
-                                  className="inline-flex items-center gap-1 mt-1 text-[9px] font-bold text-indigo-600 hover:text-indigo-700 underline uppercase tracking-wider"
-                                  title="View Monthly Duty Proforma"
-                                >
-                                  <FileText size={11} /> Proforma Sheet
-                                </button>
+                                <>
+                                  <a
+                                    href={`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      router.push(`/hq/dashboard/manager/staff/${row.id.includes('_') ? row.id : `${row.department}_${row.id}`}`);
+                                    }}
+                                    className="text-[11px] font-medium text-gray-500 hover:text-indigo-600 transition-colors leading-tight hover:underline cursor-pointer select-none mt-0.5"
+                                  >
+                                    {row.name}
+                                  </a>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setProformaStaff({
+                                        id: row.id,
+                                        name: row.name,
+                                        dept: row.department,
+                                        designation: row.designation,
+                                        duties: (row as any).duties || [],
+                                        dutyConfig: (row as any).dutyConfig || []
+                                      });
+                                      setIsProformaModalOpen(true);
+                                    }}
+                                    className="inline-flex items-center gap-1 mt-1 text-[9px] font-bold text-indigo-600 hover:text-indigo-700 underline uppercase tracking-wider"
+                                    title="View Monthly Duty Proforma"
+                                  >
+                                    <FileText size={11} /> Proforma Sheet
+                                  </button>
+                                </>
                               )}
                             </div>
                           </div>

@@ -269,10 +269,10 @@ export default function StaffProfileReport({ staff }: StaffProfileReportProps) {
                   Assigned Duties
                 </span>
                 <div className="flex flex-wrap gap-1.5 mt-1">
-                  {(staff.dutyConfig?.length || staff.duties?.length) ? (
+                  {(staff.dutyConfig?.length || (staff as any).duties?.length) ? (
                     (staff.dutyConfig?.length
                       ? staff.dutyConfig
-                      : staff.duties.map((d: any, idx: number) => ({
+                      : (staff as any).duties.map((d: any, idx: number) => ({
                           key: d.key || d.id || ('duty-' + idx),
                           label: typeof d === 'string' ? d : (d.label || d.name || d.dutyName || d.description || 'Duty item')
                         }))

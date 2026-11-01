@@ -52,7 +52,8 @@ export interface ProformaModel {
   };
 }
 
-export interface StaffDutyItem {
+export type StaffDutyItem = string | {
+  [key: string]: any;
   id?: string;
   name?: string;
   dutyId?: string;
@@ -245,8 +246,8 @@ export function buildProformaModel({
       profileDuties.push({
         id,
         name,
-        assignedAt: d.assignedAt,
-        isPriority: Boolean(d.isPriority),
+        assignedAt: typeof d === 'string' ? undefined : d.assignedAt,
+        isPriority: typeof d === 'string' ? false : Boolean(d.isPriority),
       });
     }
   });

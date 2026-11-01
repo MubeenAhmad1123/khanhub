@@ -1,0 +1,98 @@
+{
+  "hospital_staff": [
+    {
+      "_id": "2biIKB16ZhwBUXtUcF4j",
+      "emergencyContact": {
+        "name": "",
+        "phone": ""
+      },
+      "cnic": "[REDACTED]",
+      "firstName": "Aqsa",
+      "designation": "Nursing Staff",
+      "createdBy": "MANAGER",
+      "userId": "aqsa-27",
+      "department": "hospital",
+      "salary": "[REDACTED]",
+      "dressCode": [
+        "Shoes",
+        "Black OT Kit",
+        "White Overall",
+        "Employ Card",
+        "Employ Card",
+        "Hijab"
+      ],
+      "loginUserId": "aHTOgseUV4R1LDP6OUPkXLiSYJs1",
+      "name": "Aqsa Nasreen",
+      "role": "Worker",
+      "phone": "[REDACTED]",
+      "duties": [
+        "Patient Dealing"
+      ],
+      "isActive": true,
+      "dateOfBirth": "2003-07-27",
+      "gender": "female",
+      "employeeId": "27",
+      "photoUrl": null,
+      "loginEmail": "aqsa-27@hospital.khanhub",
+      "documents": [],
+      "createdAt": "2026-04-16T08:29:24.156Z",
+      "dutyEndTime": "20:00",
+      "joiningDate": "2024-01-08",
+      "dutyStartTime": "08:00",
+      "lastName": "Nasreen"
+    }
+  ],
+  "rehab_staff": [],
+  "hq_staff": [],
+  "it_staff": [],
+  "media_staff": [],
+  "spims_staff": [
+    {
+      "_id": "Tblq4DCZQl7Pv74PaVjV",
+      "loginEmail": "lecturer-1@spims.khanhub",
+      "emergencyContact": {
+        "name": "Saeed",
+        "phone": "03218492868"
+      },
+      "dressCode": [
+        "Hijab",
+        "Lab Coat",
+        "White Overall",
+        "ID Card"
+      ],
+      "department": "spims",
+      "photoUrl": null,
+      "firstName": "Hira ",
+      "designation": "lecturer",
+      "joiningDate": "2025-07-09",
+      "lastName": "Saeed",
+      "name": "Hira  Saeed",
+      "gender": "female",
+      "employeeId": "SPIMS-STF-001",
+      "createdBy": "MANAGER",
+      "salary": "[REDACTED]",
+      "cnic": "[REDACTED]",
+      "userId": "lecturer-1",
+      "role": "Supervisor",
+      "loginUserId": "aB0PlWMUWohwER1l00qTZVV0lC83",
+      "duties": [
+        "Medication Distribution (Morning)",
+        "Fajar Wake-up Round",
+        "Meal Supervision (Breakfast)",
+        "Meal Supervision (Lunch)",
+        "Meal Supervision (Dinner)"
+      ],
+      "dutyEndTime": "14:00",
+      "dutyStartTime": "09:00",
+      "createdAt": "2026-04-13T15:34:46.853Z",
+      "dateOfBirth": "",
+      "phone": "[REDACTED]",
+      "isActive": true,
+      "documents": []
+    }
+  ],
+  "jobcenter_staff": [],
+  "job_center_staff": [],
+  "welfare_staff": [],
+  "sukoon_staff": []
+}

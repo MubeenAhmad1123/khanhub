@@ -51,6 +51,7 @@ export type StaffCardRow = {
   todayDailyScore?: number;
   isPresentToday?: boolean;
   todayAttendanceStatus?: 'present' | 'absent' | 'late' | 'leave' | 'unmarked';
+  duties?: any[];
   dutyConfig?: { key: string; label: string }[];
   dressCodeConfig?: { key: string; label: string }[];
   dutyStartTime?: string;

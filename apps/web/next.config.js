@@ -49,8 +49,8 @@ const nextConfig = {
     ],
     formats: ['image/avif', 'image/webp'],
   },
-  serverExternalPackages: ['firebase-admin'],
   experimental: {
+    serverComponentsExternalPackages: ['firebase-admin'],
     optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
   async headers() {

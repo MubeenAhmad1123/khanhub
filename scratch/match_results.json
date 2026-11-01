@@ -1,0 +1,5220 @@
+[
+  {
+    "person": {
+      "index": 1,
+      "name": "Dr. Kashif",
+      "role": "HOSPITAL ADMIN",
+      "dept": "Khan Hub Hospital",
+      "hint": "hospital"
+    },
+    "candidates": [
+      {
+        "col": "hospital_users",
+        "doc": {
+          "_id": "U9vnWCqHIkdOqfbXQ3g8B0er0Mo2",
+          "customId": "kashif-82",
+          "lastDailyAssessmentDate": "2026-10-09",
+          "todayDailyScore": 3,
+          "patientId": null,
+          "createdAt": "2026-10-22T05:31:47.721Z",
+          "dressCodeConfig": [
+            {
+              "key": "uniform",
+              "label": "Uniform"
+            },
+            {
+              "key": "shoes",
+              "label": "Polished Shoes"
+            },
+            {
+              "key": "card",
+              "label": "Identity Card"
+            }
+          ],
+          "dutyConfig": [
+            {
+              "key": "morning",
+              "label": "Morning Duty"
+            },
+            {
+              "key": "afternoon",
+              "label": "Afternoon Duty"
+            },
+            {
+              "key": "evening",
+              "label": "Evening Duty"
+            }
+          ],
+          "isActive": true,
+          "todayUniformStatus": "yes",
+          "todayDutyStatus": "yes",
+          "todayFineReason": "",
+          "todayFines": 0,
+          "role": "admin",
+          "todayAttendance": "present",
+          "password": "[REDACTED]",
+          "displayName": "Dr kashif",
+          "updatedAt": "2026-10-25T04:07:11.100Z"
+        },
+        "score": 115,
+        "deptMatches": true
+      },
+      {
+        "col": "hospital_users",
+        "doc": {
+          "_id": "rLi8t3IW3DS0BUG7Z3EGcqLNuqK2",
+          "defaultPassword": "[REDACTED]",
+          "advanceSalary": "[REDACTED]",
+          "dutyConfig": [],
+          "lastPayrollMonth": "2026-07",
+          "salary": "[REDACTED]",
+          "cnic": "[REDACTED]",
+          "basicInfoExtras": {},
+          "education": [],
+          "dressCodeConfig": [
+            {
+              "key": "dress_pant",
+              "label": "Dress Pant"
+            },
+            {
+              "key": "dress_shirt",
+              "label": "Dress Shirt"
+            },
+            {
+              "key": "tie",
+              "label": "Tie"
+            },
+            {
+              "key": "id_card",
+              "label": "ID Card"
+            },
+            {
+              "key": "shoes",
+              "label": "Shoes"
+            }
+          ],
+          "documents": [],
+          "photoUrl": null,
+          "emergencyPhone": "[REDACTED]",
+          "dept": "hospital",
+          "gender": "male",
+          "monthlySalary": "[REDACTED]",
+          "experience": [],
+          "isVacancy": false,
+          "emergencyContactName": {
+            "phone": "+923006395220",
+            "name": "khanhub network"
+          },
+          "dob": "",
+          "employeeId": "89",
+          "loginUserId": "rLi8t3IW3DS0BUG7Z3EGcqLNuqK2",
+          "remainingBalance": 0,
+          "phone": "[REDACTED]",
+          "createdAt": "2026-08-25T04:58:05.017Z",
+          "emergencyContact": "",
+          "skills": [],
+          "userId": "rLi8t3IW3DS0BUG7Z3EGcqLNuqK2",
+          "fatherName": "-",
+          "password": "[REDACTED]",
+          "dateOfBirth": "1993-08-18",
+          "advance": 0,
+          "firstName": "Dr Ubaid Ur Rehman",
+          "loginEmail": "ubaid-89@hospital.khanhub",
+          "dutyEndTime": "20:00",
+          "status": "inactive",
+          "securityFeeDeduction": 0,
+          "customId": "ubaid-89",
+          "joiningDate": "2026-07-01",
+          "dutyStartTime": "08:00",
+          "salaryBalance": "[REDACTED]",
+          "bloodGroup": "",
+          "designation": "Medical Officer",
+          "lastName": "Nahra",
+          "displayName": "Dr Ubaid Ur Rehman Nahra",
+          "isActive": false,
+          "outstandingBalance": 0,
+          "updatedAt": "2026-08-25T05:47:33.116Z",
+          "address": "",
+          "department": "hospital",
+          "createdBy": "SUPER-ADMIN",
+          "name": "Dr Ubaid Ur Rehman Nahra",
+          "role": "doctor",
+          "monthlyAdvance": 0,
+          "secondaryDepts": [],
+          "seniority": ""
+        },
+        "score": 85,
+        "deptMatches": true
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "7rRErxISyvQyungrimndrDSJ6qa2",
+          "createdAt": "2026-04-20T04:30:25.690Z",
+          "customId": "KASHIF-49",
+          "patientId": "49q7zUKb3fyq1Bo7swcL",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "displayName": "M.Kashif",
+          "role": "family"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "B9Up50jtKFRpDG3dvErGeGc4vdk1",
+          "customId": "KASHIF-92",
+          "password": "[REDACTED]",
+          "createdAt": "2026-05-30T05:51:48.366Z",
+          "role": "family",
+          "patientId": "Xc3SAaAvSolfQD3gnsOQ",
+          "isActive": true,
+          "displayName": "Muhammad kashif"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "n1Ie4zgUcuVqIUlGLXXNC9vMYqe2",
+          "dutyConfig": [
+            {
+              "label": "Attendance Entry",
+              "key": "attendance_portal"
+            },
+            {
+              "key": "college_cleaning_and_dusting",
+              "label": "College Cleaning and Dusting"
+            },
+            {
+              "key": "classroom_and_office_dusting",
+              "label": "Classroom and Office Dusting"
+            },
+            {
+              "key": "parents_meeting_management",
+              "label": "Parents Meeting Management"
+            },
+            {
+              "key": "staff_and_student_attendance_record",
+              "label": "Staff and Student Attendance Record"
+            },
+            {
+              "key": "student_discipline_management",
+              "label": "Student Discipline Management"
+            },
+            {
+              "key": "student_fee_record_management",
+              "label": "Student Fee Record Management"
+            }
+          ],
+          "dob": "1999-05-13",
+          "gender": "female",
+          "todayDailyScore": 3,
+          "displayName": "Dr-Sonia",
+          "cnic": "[REDACTED]",
+          "dutyEndTime": "14:30",
+          "joiningDate": "2026-04-09",
+          "name": "Dr. Sonia Imran",
+          "emergencyPhone": "[REDACTED]",
+          "password": "[REDACTED]",
+          "dutyStartTime": "08:00",
+          "seniority": "managerial",
+          "dressCodeConfig": [
+            {
+              "key": "white_overall",
+              "label": "White Overall"
+            },
+            {
+              "key": "employ_card",
+              "label": "Employ Card"
+            }
+          ],
+          "bloodGroup": "",
+          "status": "inactive",
+          "patientId": null,
+          "address": "",
+          "customId": "spims-admin",
+          "todayDutyStatus": "yes",
+          "employeeId": "19",
+          "secondaryDepts": [
+            "hospital"
+          ],
+          "createdAt": "2026-04-09T08:06:29.370Z",
+          "defaultPassword": "[REDACTED]",
+          "designation": "Staff Member",
+          "isActive": false,
+          "emergencyContact": "Muhammad Imran Husband",
+          "monthlySalary": "[REDACTED]",
+          "todayFineReason": "",
+          "department": "spims",
+          "emergencyContactName": "Muhammad Imran Husband",
+          "todayAttendance": "present",
+          "totalGrowthPoints": 7,
+          "phone": "[REDACTED]",
+          "duties": [
+            {
+              "key": "attendance_portal",
+              "label": "Attendance Entry",
+              "status": "done"
+            }
+          ],
+          "documents": [],
+          "forceLogoutAt": "2026-04-19T13:33:17.521Z",
+          "role": "staff",
+          "updatedAt": "2026-10-22T08:09:33.853Z",
+          "fatherName": "",
+          "todayFines": 0,
+          "lastDailyAssessmentDate": "2026-10-19",
+          "basicInfoExtras": {},
+          "userId": "n1Ie4zgUcuVqIUlGLXXNC9vMYqe2",
+          "todayUniformStatus": "yes"
+        },
+        "score": 70,
+        "deptMatches": false
+      }
+    ],
+    "status": "MATCHED"
+  },
+  {
+    "person": {
+      "index": 2,
+      "name": "Qummar Iqbal",
+      "role": "SENIOR OT STAFF",
+      "dept": "Khan Hub Hospital",
+      "hint": "hospital"
+    },
+    "candidates": [
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "3N0oWannS8P3tkl044BzCybP41s2",
+          "patientId": "8iDPUBato6sUvkisrNjn",
+          "password": "[REDACTED]",
+          "createdAt": "2026-06-15T12:50:09.660Z",
+          "isActive": true,
+          "displayName": "M. Iqbal",
+          "role": "family",
+          "customId": "IQBAL-101"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "EqWFBJa6ujflP6b2RS1AJhbBf8o1",
+          "displayName": "Mehar Iqbal ",
+          "createdAt": "2026-04-19T10:06:23.925Z",
+          "customId": "IQBAL-1",
+          "patientId": "JcsUfXabUdg0RWR3iWZb",
+          "isActive": true,
+          "role": "family",
+          "password": "[REDACTED]"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "JcsPHvGPDzdpsa4LcezVjknOWXP2",
+          "patientId": "q0hgOfjGeFe4y6KVOHEr",
+          "isActive": true,
+          "createdAt": "2026-03-28T11:29:53.064Z",
+          "displayName": "Mahar Iqbal",
+          "role": "family",
+          "customId": "PAITENT-01"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "KhnvGHe22cSaZ5zhDzJX9gjrMSS2",
+          "role": "family",
+          "createdAt": "2026-04-20T06:22:17.312Z",
+          "customId": "AZHAR-11",
+          "patientId": "yqbPhum0n0H0L4grQaSI",
+          "isActive": true,
+          "displayName": "Azhar Iqbal",
+          "password": "[REDACTED]"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "0AHFbUUZaNNyOpgGAXeq15cE1yT2",
+          "studentId": "O0BfRhddFlxDebMU6ZMX",
+          "customId": "MANAN-PT",
+          "role": "student",
+          "createdAt": "2026-04-18T12:09:30.854Z",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "displayName": "Manan Iqbal"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "BBNQi8zrmJbaeecvdADSOfrpzXC3",
+          "createdAt": "2026-04-18T11:49:46.166Z",
+          "customId": "ARSLAN-PT",
+          "displayName": "Arslan Iqbal",
+          "studentId": "6VOCnhiQgsqJBwlsg0cA",
+          "role": "student",
+          "password": "[REDACTED]",
+          "isActive": true
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "PajRVNNAK3ZCnv2JDc7D1qFZWiu2",
+          "role": "student",
+          "displayName": "Sabir Iqbal",
+          "customId": "SABIR-PT",
+          "studentId": "giDFe7Ap3kz8JSktJXex",
+          "createdAt": "2026-04-19T06:07:35.362Z",
+          "password": "[REDACTED]",
+          "isActive": true
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "SVig3r1umAdfI3xBeP2qYcMmKXi1",
+          "displayName": "Khuram Iqbal",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "studentId": "UYe0nsTVR3QMKFXQaivc",
+          "role": "student",
+          "customId": "KHURAM-B-CAT",
+          "createdAt": "2026-04-16T11:56:32.570Z"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "jobcenter_users",
+        "doc": {
+          "_id": "diHaad707DOedXorEFzSLpDdDks1",
+          "employerId": null,
+          "seekerId": "r2XfmoQIHs7fjiwz1fLP",
+          "isActive": true,
+          "tsemployerType": null,
+          "password": "[REDACTED]",
+          "createdAt": "2026-07-10T09:16:39.518Z",
+          "displayName": "Hafiz Shahid iqbal",
+          "role": "seeker",
+          "tsjobCategory": "💻 IT / Digital",
+          "jobCategory": "💻 IT / Digital",
+          "customId": "HAFIZ",
+          "employerType": null
+        },
+        "score": 70,
+        "deptMatches": false
+      }
+    ],
+    "status": "AMBIGUOUS"
+  },
+  {
+    "person": {
+      "index": 3,
+      "name": "NOT SPECIFIED",
+      "role": "MEDICAL OFFICER",
+      "dept": "Khan Hub Hospital",
+      "hint": "hospital",
+      "isMo": true
+    },
+    "candidates": [
+      {
+        "col": "hospital_users",
+        "doc": {
+          "_id": "rLi8t3IW3DS0BUG7Z3EGcqLNuqK2",
+          "defaultPassword": "[REDACTED]",
+          "advanceSalary": "[REDACTED]",
+          "dutyConfig": [],
+          "lastPayrollMonth": "2026-07",
+          "salary": "[REDACTED]",
+          "cnic": "[REDACTED]",
+          "basicInfoExtras": {},
+          "education": [],
+          "dressCodeConfig": [
+            {
+              "key": "dress_pant",
+              "label": "Dress Pant"
+            },
+            {
+              "key": "dress_shirt",
+              "label": "Dress Shirt"
+            },
+            {
+              "key": "tie",
+              "label": "Tie"
+            },
+            {
+              "key": "id_card",
+              "label": "ID Card"
+            },
+            {
+              "key": "shoes",
+              "label": "Shoes"
+            }
+          ],
+          "documents": [],
+          "photoUrl": null,
+          "emergencyPhone": "[REDACTED]",
+          "dept": "hospital",
+          "gender": "male",
+          "monthlySalary": "[REDACTED]",
+          "experience": [],
+          "isVacancy": false,
+          "emergencyContactName": {
+            "phone": "+923006395220",
+            "name": "khanhub network"
+          },
+          "dob": "",
+          "employeeId": "89",
+          "loginUserId": "rLi8t3IW3DS0BUG7Z3EGcqLNuqK2",
+          "remainingBalance": 0,
+          "phone": "[REDACTED]",
+          "createdAt": "2026-08-25T04:58:05.017Z",
+          "emergencyContact": "",
+          "skills": [],
+          "userId": "rLi8t3IW3DS0BUG7Z3EGcqLNuqK2",
+          "fatherName": "-",
+          "password": "[REDACTED]",
+          "dateOfBirth": "1993-08-18",
+          "advance": 0,
+          "firstName": "Dr Ubaid Ur Rehman",
+          "loginEmail": "ubaid-89@hospital.khanhub",
+          "dutyEndTime": "20:00",
+          "status": "inactive",
+          "securityFeeDeduction": 0,
+          "customId": "ubaid-89",
+          "joiningDate": "2026-07-01",
+          "dutyStartTime": "08:00",
+          "salaryBalance": "[REDACTED]",
+          "bloodGroup": "",
+          "designation": "Medical Officer",
+          "lastName": "Nahra",
+          "displayName": "Dr Ubaid Ur Rehman Nahra",
+          "isActive": false,
+          "outstandingBalance": 0,
+          "updatedAt": "2026-08-25T05:47:33.116Z",
+          "address": "",
+          "department": "hospital",
+          "createdBy": "SUPER-ADMIN",
+          "name": "Dr Ubaid Ur Rehman Nahra",
+          "role": "doctor",
+          "monthlyAdvance": 0,
+          "secondaryDepts": [],
+          "seniority": ""
+        },
+        "score": 90
+      }
+    ],
+    "status": "MATCHED"
+  },
+  {
+    "person": {
+      "index": 4,
+      "name": "Asia",
+      "role": "NURSING STAFF (NIGHT SHIFT)",
+      "dept": "Khan Hub Hospital",
+      "hint": "hospital"
+    },
+    "candidates": [
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "fmd2ZGc7aVPJf5w1kz35wvDVFYT2",
+          "customId": "ASIA-C.M.W",
+          "displayName": "Asia Parveen",
+          "studentId": "WrzppuHvnoI9g2hFJbLl",
+          "role": "student",
+          "createdAt": "2026-04-19T05:20:51.339Z",
+          "isActive": true,
+          "password": "[REDACTED]"
+        },
+        "score": 80,
+        "deptMatches": false
+      }
+    ],
+    "status": "MATCHED"
+  },
+  {
+    "person": {
+      "index": 5,
+      "name": "Sobia",
+      "role": "NURSING STAFF + MAINTENANCE STAFF LEADER",
+      "dept": "Khan Hub Hospital",
+      "hint": "hospital"
+    },
+    "candidates": [
+      {
+        "col": "hospital_users",
+        "doc": {
+          "_id": "7V0VrSIkLdYAnVuiQwsdyLiFUOu1",
+          "designation": "Assistant Nurse",
+          "cnic": "[REDACTED]",
+          "loginEmail": "sobia_64@hospital.khanhub",
+          "lastDailyAssessmentDate": "2026-10-20",
+          "joiningDate": "2026-05-30",
+          "emergencyContactName": "Nasreen (Mother)",
+          "todayFineReason": "",
+          "address": "43wb Vehari",
+          "createdAt": "2026-05-30T12:26:28.250Z",
+          "duties": [
+            "Assist senior nurses and doctors in patient care",
+            "Help monitor patients' vital signs",
+            "Assist with injections, dressings and IV drips",
+            "Administer medicines to patients on time",
+            "Provide basic nursing care to patients",
+            "Keep the ward clean and organized",
+            "Maintain complete nursing records",
+            "Clean and arrange medical equipment",
+            "Monitor admitted patients",
+            "Assist doctor/nurse during emergencies",
+            "Handle pharmacy duty and arrange bedsheets/supplies",
+            "Switch office/ward lights and fans on/off as needed"
+          ],
+          "defaultPassword": "[REDACTED]",
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780319560/khanhub/staff/hospital/1780319558828_WhatsApp_Image_2026_06_01_at_5_55_25_PM_webp.webp",
+          "basicInfoExtras": {},
+          "dressCodeConfig": [
+            {
+              "key": "black_uniform",
+              "label": "Black Uniform"
+            },
+            {
+              "key": "white_overall",
+              "label": "White Overall"
+            },
+            {
+              "key": "hijab",
+              "label": "Hijab"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "key": "card",
+              "label": "Employee Card"
+            }
+          ],
+          "dept": "hospital",
+          "isVacancy": false,
+          "lastSalaryPaidDate": "[REDACTED]",
+          "todayAttendance": "present",
+          "dateOfBirth": "2006-08-20",
+          "department": "hospital",
+          "dutyStartTime": "08:00",
+          "salaryBalance": "[REDACTED]",
+          "lastSalarySlipUrl": "[REDACTED]",
+          "education": [
+            {
+              "degree": "Matric",
+              "institution": "GOVT.GIRLS HIGH SCHOOL , VEHARI",
+              "year": "2023"
+            }
+          ],
+          "dutyEndTime": "20:00",
+          "documents": [
+            {
+              "title": "Salary Slip - September 2026 (Rs. 10,000)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1792765328/khanhub/staff/hospital/salaries/slips/1792765327471_salary_slip_Sobia_Javed_2026_09.webp.webp",
+              "date": "2026-10-11",
+              "type": "salary_slip",
+              "month": "2026-09",
+              "amount": 10000,
+              "txId": "vNR2FQBYCWh2NEynY9sd",
+              "salaryRecordId": "lwBSvWXbDJys6X4YRgCp",
+              "createdAt": "2026-10-23T14:22:11.841Z"
+            },
+            {
+              "type": "document",
+              "name": "CamScanner 05-30-2026 17.05_2_result.webp",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780143969/Khan%20Hub/staff/document/1780143966096_CamScanner_05_30_2026_17_05_2_result_webp.webp",
+              "title": "Terms and Conditions"
+            },
+            {
+              "type": "document",
+              "name": "CamScanner 05-30-2026 17.05_1_result.webp",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780143969/Khan%20Hub/staff/document/1780143966094_CamScanner_05_30_2026_17_05_1_result_webp.webp",
+              "title": "Employee joining form"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780143970/Khan%20Hub/staff/document/1780143966097_CamScanner_05_30_2026_17_05_3_result_webp.webp",
+              "name": "CamScanner 05-30-2026 17.05_3_result.webp",
+              "type": "document",
+              "title": "Matric"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780143970/Khan%20Hub/staff/document/1780143966098_CamScanner_05_30_2026_17_05_4_result_webp.webp",
+              "type": "document",
+              "name": "CamScanner 05-30-2026 17.05_4_result.webp",
+              "title": "B-Form"
+            },
+            {
+              "title": "Fine Notice (Rs. 200) - Ref #64",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1792474043/khanhub/staff/hospital/documents/1792474040342_fine_64_2026_10_19.webp.webp",
+              "type": "fine",
+              "date": "2026-10-19",
+              "createdAt": "2026-10-20T05:27:27.696Z"
+            }
+          ],
+          "password": "[REDACTED]",
+          "bloodGroup": "",
+          "secondaryDepts": [
+            "rehab"
+          ],
+          "lastSalaryPaid": "[REDACTED]",
+          "emergencyContact": "",
+          "salary": "[REDACTED]",
+          "seniority": "junior",
+          "todayFines": 0,
+          "dob": "2006-08-20",
+          "loginUserId": "7V0VrSIkLdYAnVuiQwsdyLiFUOu1",
+          "createdBy": "MANAGER",
+          "lastSalaryPaidAt": "[REDACTED]",
+          "uniform": [
+            "Black Uniform",
+            "White Overall",
+            "Hijab",
+            "Black Shoes",
+            "Employee Card"
+          ],
+          "updatedAt": "2026-10-23T14:22:13.433Z",
+          "monthlySalary": "[REDACTED]",
+          "emergencyPhone": "[REDACTED]",
+          "phone": "[REDACTED]",
+          "todayDailyScore": 3,
+          "todayUniformStatus": "yes",
+          "dutyConfig": [
+            {
+              "label": "Pharmacy Duty",
+              "key": "pharmacy_duty"
+            },
+            {
+              "label": "LED On/Off",
+              "key": "led_on/off"
+            },
+            {
+              "key": "office_lights_and_fans",
+              "label": "Office Lights and Fans"
+            },
+            {
+              "key": "ward_lights_and_fans",
+              "label": "Ward Lights and Fans"
+            },
+            {
+              "key": "arrange_bedsheets,_glasses,_and_sir’s_breakfast",
+              "label": "Arrange Bedsheets, Glasses, and Sir’s Breakfast"
+            },
+            {
+              "key": "patients_dealing",
+              "label": "Patients Dealing"
+            },
+            {
+              "key": "patients_checkup",
+              "label": "Patients Checkup"
+            },
+            {
+              "label": "Patients Medicine",
+              "key": "patients_medicine"
+            },
+            {
+              "key": "patients_drips_/_injection",
+              "label": "Patients Drips / Injection"
+            },
+            {
+              "label": "Admit Patients Medication",
+              "key": "admit_patients_medication"
+            },
+            {
+              "label": "Receptions Patients Register",
+              "key": "receptions_patients_register"
+            },
+            {
+              "label": "Fee Record",
+              "key": "fee_record"
+            },
+            {
+              "label": "Did not Manage  Medical Equipment After use",
+              "key": "did_not_manage_medical_equipment_after_use_1788937675711"
+            }
+          ],
+          "gender": "female",
+          "isActive": true,
+          "lastName": "Javed",
+          "fatherName": "M.Javed",
+          "outstandingBalance": 0,
+          "customId": "Sobia-64",
+          "todayDutyStatus": "yes",
+          "skills": [
+            "Teacher"
+          ],
+          "firstName": "Sobia",
+          "lastPayrollMonth": "2026-09",
+          "employeeId": "64",
+          "name": "Sobia Javed",
+          "role": "internee",
+          "experience": [
+            {
+              "title": "Teacher",
+              "company": "Khan School system",
+              "duration": "4 Months"
+            }
+          ],
+          "userId": "7V0VrSIkLdYAnVuiQwsdyLiFUOu1"
+        },
+        "score": 95,
+        "deptMatches": true
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "lzZTOlrP4WeGiIb7RZU6YN5sprG3",
+          "password": "[REDACTED]",
+          "studentId": "FiUaOa3Qwo3tqbc6KEhs",
+          "displayName": "Sobia Javed",
+          "createdAt": "2026-06-01T12:59:44.793Z",
+          "dressCodeConfig": [
+            {
+              "key": "black_uniform",
+              "label": "Black Uniform"
+            },
+            {
+              "key": "white_overall",
+              "label": "White Overall"
+            },
+            {
+              "key": "hijab",
+              "label": "Hijab"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "key": "card",
+              "label": "Employee Card"
+            }
+          ],
+          "role": "student",
+          "customId": "SOBIA-216",
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1784812970/khanhub/spims/students/1784812967254_sobia.webp.webp",
+          "isActive": true
+        },
+        "score": 80,
+        "deptMatches": false
+      }
+    ],
+    "status": "MATCHED"
+  },
+  {
+    "person": {
+      "index": 6,
+      "name": "Tasleem",
+      "role": "REHAB RECEPTIONIST / NURSING STAFF",
+      "dept": "Rehabilitation Center / Hospital",
+      "hint": "rehab"
+    },
+    "candidates": [
+      {
+        "col": "hospital_users",
+        "doc": {
+          "_id": "OXXF06JjBr6mwhNhaBTr",
+          "updatedAt": "2026-10-22T12:38:19.241Z",
+          "status": "active",
+          "photoUrl": null,
+          "todayAttendance": "present",
+          "createdBy": "MANAGER",
+          "loginUserId": "v5nr7DhxblNgD26IBLzAWIl1rk52",
+          "seniority": "",
+          "secondaryDepts": [],
+          "lastDailyAssessmentDate": "2026-10-20",
+          "loginEmail": "tasleem-58@hospital.khanhub",
+          "role": "Internee Staff",
+          "name": "Tasleem ",
+          "address": "",
+          "bloodGroup": "",
+          "emergencyContact": {
+            "phone": "",
+            "name": ""
+          },
+          "dutyStartTime": "08:00",
+          "todayFineReason": "",
+          "department": "hospital",
+          "defaultPassword": "[REDACTED]",
+          "totalGrowthPoints": 1,
+          "basicInfoExtras": {},
+          "dressCodeConfig": [
+            {
+              "key": "id_card",
+              "label": "ID Card"
+            },
+            {
+              "key": "shoes",
+              "label": "Shoes"
+            }
+          ],
+          "firstName": "Tasleem",
+          "dutyConfig": [
+            {
+              "key": "patient_vitals",
+              "label": "Patient Vitals"
+            }
+          ],
+          "joiningDate": "2026-05-01",
+          "gender": "female",
+          "designation": "Nursing Staff",
+          "todayUniformStatus": "yes",
+          "emergencyContactName": {
+            "phone": "",
+            "name": ""
+          },
+          "todayDutyStatus": "yes",
+          "monthlySalary": "[REDACTED]",
+          "salary": "[REDACTED]",
+          "createdAt": "2026-05-01T08:19:27.371Z",
+          "todayFines": 0,
+          "experience": [],
+          "cnic": "[REDACTED]",
+          "phone": "[REDACTED]",
+          "emergencyPhone": "[REDACTED]",
+          "employeeId": "58",
+          "dateOfBirth": "2006-01-07",
+          "userId": "OXXF06JjBr6mwhNhaBTr",
+          "skills": [],
+          "customId": "tasleem-58",
+          "isActive": true,
+          "fatherName": "Ghulam Qadir",
+          "lastName": "",
+          "dob": "",
+          "todayDailyScore": 3,
+          "education": [],
+          "dutyEndTime": "20:00",
+          "documents": []
+        },
+        "score": 100,
+        "deptMatches": false
+      }
+    ],
+    "status": "MATCHED"
+  },
+  {
+    "person": {
+      "index": 7,
+      "name": "Nabia",
+      "role": "NURSING STAFF",
+      "dept": "Khan Hub Hospital",
+      "hint": "hospital"
+    },
+    "candidates": [
+      {
+        "col": "media_users",
+        "doc": {
+          "_id": "9QTsVlOc1yNeiFdfbOUrT9h6bHr1",
+          "todayUniformStatus": "yes",
+          "employeeId": "76",
+          "loginUserId": "9QTsVlOc1yNeiFdfbOUrT9h6bHr1",
+          "cnic": "[REDACTED]",
+          "designation": "Graphics Desgner",
+          "salary": "[REDACTED]",
+          "loginEmail": "nabia-76@media.khanhub",
+          "updatedAt": "2026-10-06T08:48:55.108Z",
+          "experience": [],
+          "userId": "nabia-76",
+          "status": "inactive",
+          "emergencyContact": {
+            "name": "Talha (Brother)",
+            "phone": "03037090664"
+          },
+          "firstName": "Nabia",
+          "createdBy": "SUPER-ADMIN",
+          "todayAttendance": "present",
+          "createdAt": "2026-09-02T06:06:53.892Z",
+          "todayFines": 0,
+          "todayDailyScore": 3,
+          "isVacancy": false,
+          "displayName": "Nabia Liaqat",
+          "documents": [],
+          "lastName": "Liaqat",
+          "fatherName": "Liaqat Ali",
+          "joiningDate": "2026-09-01",
+          "dutyStartTime": "09:00",
+          "phone": "[REDACTED]",
+          "dutyEndTime": "21:00",
+          "gender": "female",
+          "todayFineReason": "",
+          "dutyConfig": [
+            {
+              "key": "morning",
+              "label": "Morning Duty"
+            },
+            {
+              "key": "afternoon",
+              "label": "Afternoon Duty"
+            },
+            {
+              "key": "evening",
+              "label": "Evening Duty"
+            }
+          ],
+          "password": "[REDACTED]",
+          "isActive": false,
+          "dateOfBirth": "2008-09-10",
+          "dressCodeConfig": [
+            {
+              "label": "Employ Card",
+              "key": "employ_card"
+            },
+            {
+              "key": "hijab",
+              "label": "Hijab"
+            },
+            {
+              "label": "Shoes",
+              "key": "shoes"
+            }
+          ],
+          "skills": [
+            "Comunication"
+          ],
+          "todayDutyStatus": "yes",
+          "department": "social-media",
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1788332541/khanhub/staff/social-media/1788332539368_WhatsApp_Image_2026_09_02_at_11.50.44_AM.webp.webp",
+          "name": "Nabia Liaqat",
+          "defaultPassword": "[REDACTED]",
+          "lastDailyAssessmentDate": "2026-09-30",
+          "role": "Internee Staff",
+          "education": [
+            {
+              "degree": "Matric",
+              "institution": "Govt girls higer scandry school",
+              "year": "2024"
+            },
+            {
+              "degree": "Inter",
+              "institution": "Govt Girls high Secondry School",
+              "year": "2026"
+            }
+          ],
+          "customId": "nabia-76"
+        },
+        "score": 80,
+        "deptMatches": false
+      }
+    ],
+    "status": "MATCHED"
+  },
+  {
+    "person": {
+      "index": 8,
+      "name": "Mubashra",
+      "role": "RECEPTIONIST",
+      "dept": "Khan Hub Hospital",
+      "hint": "hospital"
+    },
+    "candidates": [
+      {
+        "col": "hospital_users",
+        "doc": {
+          "_id": "nbaXMSDPT5VnAEHsFg47L81JDNi2",
+          "todayDutyStatus": "yes",
+          "seniority": "junior",
+          "gender": "female",
+          "monthlySalary": "[REDACTED]",
+          "createdBy": "SUPER-ADMIN",
+          "todayUniformStatus": "yes",
+          "updatedAt": "2026-10-23T14:12:45.225Z",
+          "loginEmail": "mubashara-69@hospital.khanhub",
+          "monthlyAdvance": 0,
+          "advanceSalary": "[REDACTED]",
+          "secondaryDepts": [],
+          "lastName": "Kiran",
+          "isActive": true,
+          "lastSalaryPaid": "[REDACTED]",
+          "customId": "mubashara-69",
+          "name": "Mubashra Kiran",
+          "role": "contract",
+          "salary": "[REDACTED]",
+          "phone": "[REDACTED]",
+          "bloodGroup": "O+",
+          "userId": "nbaXMSDPT5VnAEHsFg47L81JDNi2",
+          "uniform": [
+            "Black Uniform",
+            "Lab Coat",
+            "Hijab",
+            "Black Shoes",
+            "Employee Card"
+          ],
+          "skills": [],
+          "firstName": "Mubashra",
+          "outstandingBalance": 0,
+          "securityFeeDeduction": 0,
+          "department": "hospital",
+          "todayDailyScore": 3,
+          "loginUserId": "nbaXMSDPT5VnAEHsFg47L81JDNi2",
+          "remainingBalance": 0,
+          "advance": 0,
+          "password": "[REDACTED]",
+          "dutyConfig": [
+            {
+              "key": "gate/entry_management",
+              "label": "Gate/Entry Management"
+            },
+            {
+              "label": "Complete Entry",
+              "key": "complete_entry"
+            },
+            {
+              "label": "Reception Table Cleaning",
+              "key": "reception_table_cleaning"
+            },
+            {
+              "label": "All Reception Duties",
+              "key": "all_reception_duties"
+            },
+            {
+              "label": "Reception Record",
+              "key": "reception_record"
+            },
+            {
+              "label": "Receptions Patients Register",
+              "key": "receptions_patients_register"
+            },
+            {
+              "key": "receptions_patients_register_evening",
+              "label": "Receptions Patients Register Evening"
+            }
+          ],
+          "dutyEndTime": "20:00",
+          "duties": [
+            "Welcome patients and visitors professionally",
+            "Manage gate/entry and complete entries",
+            "Register new patients and schedule appointments",
+            "Answer phone calls and WhatsApp messages",
+            "Issue OPD tokens",
+            "Collect fees and issue receipts",
+            "Prepare and maintain patient files",
+            "Keep the reception table and area clean",
+            "Maintain morning and evening patient registration registers",
+            "Forward patient complaints to the concerned officer"
+          ],
+          "todayAttendance": "present",
+          "lastSalaryPaidDate": "[REDACTED]",
+          "lastSalaryPaidAt": "[REDACTED]",
+          "createdAt": "2026-06-22T10:13:01.809Z",
+          "todayFines": 100,
+          "emergencyContact": "",
+          "dateOfBirth": "2008-04-12",
+          "isVacancy": false,
+          "lastDailyAssessmentDate": "2026-10-20",
+          "employeeId": "69",
+          "todayFineReason": "Failure to come duty on time",
+          "cnic": "[REDACTED]",
+          "experience": [
+            {
+              "title": "Lecturer",
+              "company": "Oxferd School Vehari",
+              "duration": "2026"
+            }
+          ],
+          "lastPayrollMonth": "2026-09",
+          "lastSalarySlipUrl": "[REDACTED]",
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1782126238/khanhub/staff/hospital/1782126235724_WhatsApp_Image_2026_06_22_at_3_19_01_PM_webp.webp",
+          "displayName": "Mubashra Kiran",
+          "documents": [
+            {
+              "title": "Salary Slip - July 2026 (Rs. 18,466)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790871454/khanhub/staff/hospital/salaries/slips/1790871452379_salary_slip_Mubashra_Kiran_2026_07.webp.webp",
+              "date": "2026-08-11",
+              "type": "salary_slip",
+              "month": "2026-07",
+              "amount": 18466,
+              "txId": "EZAzAUn2rPOleVjgpfvd",
+              "salaryRecordId": "THPNhxA9BfQK0SX3yWG8",
+              "createdAt": "2026-10-01T16:17:37.449Z"
+            },
+            {
+              "title": "Salary Slip - August 2026 (Rs. 19,900)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790329602/khanhub/staff/hospital/salaries/slips/1790329601340_salary_slip_Mubashra_Kiran_2026_08.webp.webp",
+              "date": "2026-09-25",
+              "type": "salary_slip",
+              "month": "2026-08",
+              "amount": 19900,
+              "txId": "1MTZ4zmqFpOQ2n1tpGgW",
+              "salaryRecordId": "sxUKTuabAfGfeAvpv7a8",
+              "createdAt": "2026-09-25T09:46:47.464Z"
+            },
+            {
+              "title": "Fine Notice (Rs. 100) - Ref #69",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1792473684/khanhub/staff/hospital/documents/1792473682124_fine_69_2026_10_20.webp.webp",
+              "type": "fine",
+              "date": "2026-10-20",
+              "createdAt": "2026-10-20T05:21:28.447Z"
+            }
+          ],
+          "emergencyContactName": "Javed Haroon (Father)",
+          "education": [
+            {
+              "degree": "Matric",
+              "institution": "G.G.High School 911 w.b Vehari ",
+              "year": "2024"
+            }
+          ],
+          "designation": "Receptionist",
+          "dob": "2008-04-12",
+          "basicInfoExtras": {},
+          "salaryBalance": "[REDACTED]",
+          "dutyStartTime": "08:00",
+          "dressCodeConfig": [
+            {
+              "key": "black_uniform",
+              "label": "Black Uniform"
+            },
+            {
+              "key": "lab_coat",
+              "label": "Lab Coat"
+            },
+            {
+              "key": "hijab",
+              "label": "Hijab"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "key": "card",
+              "label": "Employee Card"
+            }
+          ],
+          "joiningDate": "2026-06-22",
+          "defaultPassword": "[REDACTED]",
+          "emergencyPhone": "[REDACTED]",
+          "address": "9/11 wb vehari",
+          "fatherName": "Javed Haroon",
+          "dept": "hospital"
+        },
+        "score": 95,
+        "deptMatches": true
+      }
+    ],
+    "status": "MATCHED"
+  },
+  {
+    "person": {
+      "index": 9,
+      "name": "Sara",
+      "role": "ACCOUNTANT",
+      "dept": "Accounts / Hospital / Rehabilitation & Welfare",
+      "hint": "hq"
+    },
+    "candidates": [],
+    "status": "NOT FOUND"
+  },
+  {
+    "person": {
+      "index": 10,
+      "name": "Amna",
+      "role": "SWEEPER",
+      "dept": "Khan Hub Hospital",
+      "hint": "hospital"
+    },
+    "candidates": [],
+    "status": "NOT FOUND"
+  },
+  {
+    "person": {
+      "index": 11,
+      "name": "Mubeen",
+      "role": "IT ADMIN",
+      "dept": "Khan Hub IT Department",
+      "hint": "it"
+    },
+    "candidates": [
+      {
+        "col": "it_users",
+        "doc": {
+          "_id": "ihYUvdBZmUVV1AaGFZAX4lTJ0hG2",
+          "todayDutyStatus": "yes",
+          "bloodGroup": "",
+          "lastSalarySlipUrl": "[REDACTED]",
+          "name": "Mubeen Ahmad",
+          "department": "it",
+          "emergencyContactName": "Muzzamil Muneer",
+          "emergencyPhone": "[REDACTED]",
+          "password": "[REDACTED]",
+          "duties": [
+            "Develop and update the hospital's software/website",
+            "Maintain the website and all online systems",
+            "Troubleshoot computer and network issues",
+            "Ensure patient data security and safety",
+            "Take daily data backups",
+            "Repair and maintain IT equipment",
+            "Install system and software updates",
+            "Train staff on software usage",
+            "Prepare technical reports",
+            "Provide IT support to the Administrator",
+            "Maintain records for all departments (staff, students, customers, patients)",
+            "Overall office cleanliness related to IT area, client management"
+          ],
+          "joiningDate": "2026-04-18",
+          "skills": [],
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1776868432/khanhub/staff/it/1776868429336_217030206_png.png",
+          "employeeId": "51",
+          "updatedAt": "2026-10-22T12:44:40.362Z",
+          "phone": "[REDACTED]",
+          "dressCodeConfig": [
+            {
+              "key": "dress_pant",
+              "label": "Dress Pant"
+            },
+            {
+              "key": "dress_shirt",
+              "label": "Dress Shirt"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "key": "card",
+              "label": "Employee Card"
+            }
+          ],
+          "todayFines": 0,
+          "basicInfoExtras": {},
+          "lastSalaryPaidDate": "[REDACTED]",
+          "secondaryDepts": [],
+          "dutyEndTime": "20:00",
+          "fatherName": "Muneer Ahmad",
+          "seniority": "lead",
+          "dutyStartTime": "08:00",
+          "gender": "male",
+          "patientId": null,
+          "todayFineReason": "",
+          "dutyConfig": [
+            {
+              "key": "website_maintenance",
+              "label": "Website Maintenance"
+            },
+            {
+              "label": "Website Development",
+              "key": "website_development"
+            },
+            {
+              "label": "Client Mangement",
+              "key": "client_mangement"
+            },
+            {
+              "label": "Overall Office Cleaning",
+              "key": "overall_office_cleaning"
+            },
+            {
+              "label": "Patient’s Reports",
+              "key": "patient’s_reports"
+            },
+            {
+              "key": "all_departments_record_maintenance",
+              "label": "All Departments Record Maintenance"
+            },
+            {
+              "key": "staff,_student_,_customer_,patient_record_maintenance",
+              "label": "Staff, Student , customer ,patient Record maintenance"
+            }
+          ],
+          "education": [],
+          "lastSalaryPaid": "[REDACTED]",
+          "documents": [
+            {
+              "title": "Salary Slip - July 2026 (Rs. 15,000)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790871684/khanhub/staff/it/salaries/slips/1790871682753_salary_slip_Mubeen_Ahmad_2026_07.webp.webp",
+              "date": "2026-08-11",
+              "type": "salary_slip",
+              "month": "2026-07",
+              "amount": 15000,
+              "txId": "WsTN8JsTaEQtjVhXGmeR",
+              "salaryRecordId": "JzrgxU00dDQgLfQksD1P",
+              "createdAt": "2026-10-01T16:21:26.556Z"
+            },
+            {
+              "title": "id card front",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780150227/khanhub/staff/it/documents/1780150226417_WhatsApp_Image_2026_05_30_at_2_48_25_PM_result_webp.webp"
+            },
+            {
+              "title": "id card back",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780150432/khanhub/staff/it/documents/1780150430957_WhatsApp_Image_2026_05_30_at_2_48_24_PM__2__result_webp.webp"
+            },
+            {
+              "title": "father id card",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780150456/khanhub/staff/it/documents/1780150454575_WhatsApp_Image_2026_05_30_at_2_48_24_PM__1__result_webp.webp"
+            },
+            {
+              "title": "employee joining form",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780150547/khanhub/staff/it/documents/1780150547168_WhatsApp_Image_2026_05_30_at_2_48_23_PM_result_webp.webp"
+            },
+            {
+              "title": "Terms and Conditions",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780150632/khanhub/staff/it/documents/1780150631808_WhatsApp_Image_2026_05_30_at_2_48_22_PM_result_webp.webp"
+            },
+            {
+              "title": "offer letter",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780150656/khanhub/staff/it/documents/1780150656021_WhatsApp_Image_2026_05_30_at_2_48_22_PM__1__result_webp.webp"
+            },
+            {
+              "title": "Rules and Regulations",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780150689/khanhub/staff/it/documents/1780150688857_WhatsApp_Image_2026_05_30_at_2_48_21_PM_result_webp.webp"
+            },
+            {
+              "title": "Terms and Conditions",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780150735/khanhub/staff/it/documents/1780150734533_WhatsApp_Image_2026_05_30_at_2_48_21_PM__1__result_webp.webp"
+            },
+            {
+              "title": "Rules and Regulations",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780150752/khanhub/staff/it/documents/1780150752105_WhatsApp_Image_2026_05_30_at_2_48_20_PM_result_webp.webp"
+            }
+          ],
+          "cnic": "[REDACTED]",
+          "lastSalaryPaidAt": "[REDACTED]",
+          "totalGrowthPoints": 15,
+          "todayUniformStatus": "yes",
+          "role": "Supervisor",
+          "displayName": "Mubeen Ahmad",
+          "todayAttendance": "present",
+          "uniform": [
+            "Dress Pant",
+            "Dress Shirt",
+            "Black Shoes",
+            "Employee Card"
+          ],
+          "monthlyAdvance": 5000,
+          "salary": "[REDACTED]",
+          "todayDailyScore": 3,
+          "userId": "ihYUvdBZmUVV1AaGFZAX4lTJ0hG2",
+          "designation": "IT Developer",
+          "advanceSalary": "[REDACTED]",
+          "monthlySalary": "[REDACTED]",
+          "isActive": true,
+          "customId": "mubeen-51",
+          "experience": [],
+          "securityFeeDeduction": 0,
+          "salaryBalance": "[REDACTED]",
+          "remainingBalance": 0,
+          "createdAt": "2026-04-18T17:10:59.909Z",
+          "dob": "2005-11-09",
+          "emergencyContact": "",
+          "lastPayrollMonth": "2026-09",
+          "defaultPassword": "[REDACTED]",
+          "advance": 5000,
+          "lastDailyAssessmentDate": "2026-10-20",
+          "dept": "it",
+          "address": "",
+          "outstandingBalance": 0
+        },
+        "score": 95,
+        "deptMatches": true
+      },
+      {
+        "col": "hq_users",
+        "doc": {
+          "_id": "pOu8jjFQhle38PfpUrdDcDoTvun1",
+          "customId": "SUPER-ADMIN",
+          "isActive": true,
+          "dressCodeConfig": [
+            {
+              "key": "dress_pant",
+              "label": "Dress Pant"
+            },
+            {
+              "key": "dress_shirt",
+              "label": "Dress Shirt"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "key": "card",
+              "label": "Employee Card"
+            }
+          ],
+          "email": "mubeenahma1123@gmail.com",
+          "role": "superadmin",
+          "name": "Mubeen Ahmad",
+          "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocIbb92HmVOsAOsQuGP8Jopf5cCFzRFJ7p2F1TqX7PeB067sBeI=s96-c",
+          "createdAt": "2026-05-31T17:14:52.636Z"
+        },
+        "score": 80,
+        "deptMatches": false
+      },
+      {
+        "col": "welfare_users",
+        "doc": {
+          "_id": "1SOv7BFd4EY80kqVq7XQJPda3w53",
+          "role": "donor",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "displayName": "Mubeen Ahmad",
+          "createdAt": "2026-07-06T06:51:27.594Z",
+          "dressCodeConfig": [
+            {
+              "key": "dress_pant",
+              "label": "Dress Pant"
+            },
+            {
+              "key": "dress_shirt",
+              "label": "Dress Shirt"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "key": "card",
+              "label": "Employee Card"
+            }
+          ],
+          "childId": null,
+          "donorId": "BiiBenlWxvQoV2138pbs",
+          "customId": "MUBEEN-DONOR"
+        },
+        "score": 80,
+        "deptMatches": false
+      }
+    ],
+    "status": "MATCHED"
+  },
+  {
+    "person": {
+      "index": 12,
+      "name": "Shehlal",
+      "role": "GRAPHIC DESIGNER (INTERN)",
+      "dept": "Khan Hub IT Department - Marketing & Media Agency",
+      "hint": "media"
+    },
+    "candidates": [],
+    "status": "NOT FOUND"
+  },
+  {
+    "person": {
+      "index": 13,
+      "name": "Shahid Mahmood",
+      "role": "MARKETING MANAGER",
+      "dept": "Khan Hub Marketing & Media Agency",
+      "hint": "media"
+    },
+    "candidates": [
+      {
+        "col": "media_users",
+        "doc": {
+          "_id": "hnX2KMIPYXOSpcBfD8BasaVBNoI2",
+          "department": "social-media",
+          "dutyConfig": [
+            {
+              "key": "morning",
+              "label": "Morning Duty"
+            },
+            {
+              "key": "afternoon",
+              "label": "Afternoon Duty"
+            },
+            {
+              "key": "evening",
+              "label": "Evening Duty"
+            }
+          ],
+          "displayName": "Shahid  Mehmod",
+          "todayAttendance": "present",
+          "isVacancy": false,
+          "salary": "[REDACTED]",
+          "dutyEndTime": "21:00",
+          "userId": "shahid-83",
+          "joiningDate": "2026-10-22",
+          "documents": [],
+          "lastName": "Mehmod",
+          "createdAt": "2026-10-22T05:38:29.954Z",
+          "dutyStartTime": "09:00",
+          "dateOfBirth": "1955-10-07",
+          "todayUniformStatus": "yes",
+          "education": [],
+          "customId": "shahid-83",
+          "todayFines": 0,
+          "role": "Contract Staff",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "fatherName": "-",
+          "name": "Shahid  Mehmod",
+          "photoUrl": null,
+          "phone": "[REDACTED]",
+          "loginEmail": "shahid-83@media.khanhub",
+          "experience": [],
+          "defaultPassword": "[REDACTED]",
+          "lastDailyAssessmentDate": "2026-10-20",
+          "skills": [],
+          "dressCodeConfig": [
+            {
+              "key": "dress_pant",
+              "label": "Dress Pant"
+            },
+            {
+              "key": "dress_shirt",
+              "label": "Dress Shirt"
+            },
+            {
+              "key": "tie",
+              "label": "Tie"
+            },
+            {
+              "key": "shoes",
+              "label": "Shoes"
+            },
+            {
+              "key": "id_card",
+              "label": "ID Card"
+            }
+          ],
+          "todayDutyStatus": "yes",
+          "emergencyContact": {
+            "name": "-",
+            "phone": "-"
+          },
+          "loginUserId": "hnX2KMIPYXOSpcBfD8BasaVBNoI2",
+          "designation": "Marketing Manager",
+          "firstName": "Shahid ",
+          "createdBy": "SUPER-ADMIN",
+          "gender": "male",
+          "cnic": "[REDACTED]",
+          "todayFineReason": "",
+          "updatedAt": "2026-10-22T12:39:59.368Z",
+          "todayDailyScore": 3,
+          "employeeId": "83"
+        },
+        "score": 85,
+        "deptMatches": true
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "WWM0BXHo9wXhUMs37tCCELTCQnu2",
+          "customId": "SHAHID-34",
+          "displayName": "M.SHAHID",
+          "patientId": "iYq7SlbOuceed3ERjGAi",
+          "createdAt": "2026-04-19T12:58:57.422Z",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "role": "family"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "okB9XvuELtUSz9oomzpk5ESv0w53",
+          "password": "[REDACTED]",
+          "patientId": "tkIqMNMmggFqs5fj1xQy",
+          "isActive": true,
+          "createdAt": "2026-10-15T08:30:30.675Z",
+          "displayName": "Shahid Nazir",
+          "role": "family",
+          "customId": "SHAHI-138"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "JHGB3JfuXaZIYPPwNFenAYkwxrC3",
+          "role": "student",
+          "createdAt": "2026-05-11T12:58:47.706Z",
+          "customId": "SHAHID-B-CAT",
+          "studentId": "2HMOmEbqjiHGIMBIlp5H",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "displayName": "M.Shahid"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "jobcenter_users",
+        "doc": {
+          "_id": "diHaad707DOedXorEFzSLpDdDks1",
+          "employerId": null,
+          "seekerId": "r2XfmoQIHs7fjiwz1fLP",
+          "isActive": true,
+          "tsemployerType": null,
+          "password": "[REDACTED]",
+          "createdAt": "2026-07-10T09:16:39.518Z",
+          "displayName": "Hafiz Shahid iqbal",
+          "role": "seeker",
+          "tsjobCategory": "💻 IT / Digital",
+          "jobCategory": "💻 IT / Digital",
+          "customId": "HAFIZ",
+          "employerType": null
+        },
+        "score": 70,
+        "deptMatches": false
+      }
+    ],
+    "status": "MATCHED"
+  },
+  {
+    "person": {
+      "index": 14,
+      "name": "Muhammad Awais",
+      "role": "MANAGER",
+      "dept": "All Khan Hub Departments",
+      "hint": "hq"
+    },
+    "candidates": [
+      {
+        "col": "hq_users",
+        "doc": {
+          "_id": "7EKNppMphvr5Y107dfGN",
+          "experience": [],
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1793177851/khanhub/staff/hq/1793177849210_Professional_Manager_Profile_Badge_result.webp.webp",
+          "documents": [],
+          "skills": [],
+          "education": [],
+          "visibleSections": {},
+          "todayUniformStatus": "no",
+          "password": "[REDACTED]",
+          "status": "active",
+          "dutyStartTime": "08:00",
+          "todayDutyStatus": "yes",
+          "dept": "hq",
+          "updatedAt": "2026-10-28T08:28:42.393Z",
+          "emergencyContactName": "Tabish",
+          "seniority": "managerial",
+          "phone": "[REDACTED]",
+          "designation": "Manager",
+          "basicInfoExtras": {},
+          "dressCodeConfig": [
+            {
+              "key": "employ_card",
+              "label": "Employ Card"
+            }
+          ],
+          "address": "People Colony Vehari",
+          "gender": "male",
+          "todayFineReason": "",
+          "displayName": "Vacant",
+          "todayFines": 0,
+          "cnic": "[REDACTED]",
+          "role": "manager",
+          "fatherName": "muhammad tariq",
+          "monthlySalary": "[REDACTED]",
+          "email": "",
+          "photoURL": "",
+          "userId": "7EKNppMphvr5Y107dfGN",
+          "totalGrowthPoints": 2,
+          "emergencyPhone": "[REDACTED]",
+          "todayAttendance": "present",
+          "createdAt": "2026-10-24T14:00:52.903Z",
+          "dutyConfig": [
+            {
+              "key": "morning_prayer_supervision",
+              "label": "Morning Prayer Supervision"
+            },
+            {
+              "key": "all_departments_management",
+              "label": "All Departments Management"
+            }
+          ],
+          "dutyEndTime": "20:00",
+          "todayDailyScore": 2,
+          "joiningDate": "2026-10-24",
+          "bloodGroup": "B+",
+          "emergencyContact": "",
+          "lastDailyAssessmentDate": "2026-10-28",
+          "department": "hq",
+          "dob": "2001-05-26",
+          "phoneNumber": "[REDACTED]",
+          "name": "Muhammad Awais",
+          "secondaryDepts": [
+            "hq"
+          ],
+          "isActive": true,
+          "customId": "Manager",
+          "employeeId": "81",
+          "defaultPassword": "[REDACTED]"
+        },
+        "score": 115,
+        "deptMatches": true
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "lxOLOPhwC1gt0nOqZtISCw9xZMA2",
+          "role": "family",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "patientId": "gvuodbmyPLKTlNq3bu4p",
+          "customId": "AWAIS-72",
+          "createdAt": "2026-04-08T12:10:30.691Z",
+          "displayName": "Muhammad Awais"
+        },
+        "score": 100,
+        "deptMatches": false
+      },
+      {
+        "col": "hq_users",
+        "doc": {
+          "_id": "05So3kgscRbOliTDXiUr0Kyzvzz2",
+          "customId": "SUPER-ADMIN",
+          "isActive": false,
+          "status": "inactive",
+          "createdAt": "2026-04-20T03:44:12.427Z",
+          "name": "Muhammad Khan",
+          "email": "mk.rana.0301@gmail.com",
+          "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocJrmoTUIeCSgvuJOPuC_Ca9aMPUDFzUWbNTVC5NDd0LHiBpU--Y=s96-c",
+          "role": "superadmin"
+        },
+        "score": 85,
+        "deptMatches": true
+      },
+      {
+        "col": "hq_users",
+        "doc": {
+          "_id": "2Jkxerhg9jgp4GIfXfNGrtl1CKe2",
+          "duties": [
+            "Complete cleaning of the hospital premises"
+          ],
+          "emergencyContactName": "Gahar",
+          "experience": [
+            {
+              "title": "Cooking",
+              "company": "Poltry Farm",
+              "duration": "2 years"
+            }
+          ],
+          "todayUniformStatus": "yes",
+          "skills": [
+            "Cooking"
+          ],
+          "status": "inactive",
+          "documents": [],
+          "education": [],
+          "advanceSalary": "[REDACTED]",
+          "joiningDate": "2026-07-23",
+          "seniority": "",
+          "phone": "[REDACTED]",
+          "lastPayrollMonth": "2026-07",
+          "emergencyContact": "",
+          "defaultPassword": "[REDACTED]",
+          "lastDailyAssessmentDate": "2026-08-08",
+          "isVacancy": false,
+          "customId": "yameen-73",
+          "isActive": false,
+          "remainingBalance": 0,
+          "updatedAt": "2026-08-29T07:15:12.800Z",
+          "dept": "hq",
+          "salaryBalance": "[REDACTED]",
+          "todayAttendance": "present",
+          "loginUserId": "2Jkxerhg9jgp4GIfXfNGrtl1CKe2",
+          "monthlySalary": "[REDACTED]",
+          "dutyEndTime": "20:00",
+          "monthlyAdvance": 13337,
+          "dateOfBirth": "1990-11-29",
+          "gender": "male",
+          "displayName": "Muhammad  Yameen",
+          "firstName": "Muhammad ",
+          "todayDailyScore": 3,
+          "lastName": "Yameen",
+          "dob": "1990-11-29",
+          "fatherName": "M. Ramzan",
+          "secondaryDepts": [],
+          "todayFines": 0,
+          "outstandingBalance": 13337,
+          "salary": "[REDACTED]",
+          "dressCodeConfig": [
+            {
+              "key": "employee_card",
+              "label": "Employee Card"
+            },
+            {
+              "key": "shoes",
+              "label": "Shoes"
+            }
+          ],
+          "uniform": [
+            "Employee Card",
+            "Shoes"
+          ],
+          "basicInfoExtras": {},
+          "userId": "2Jkxerhg9jgp4GIfXfNGrtl1CKe2",
+          "designation": "Office Boy",
+          "cnic": "[REDACTED]",
+          "role": "contract",
+          "dutyConfig": [
+            {
+              "key": "complete_hospital_cleaning",
+              "label": "Complete Hospital Cleaning"
+            }
+          ],
+          "createdAt": "2026-07-29T13:57:37.251Z",
+          "todayFineReason": "",
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1785333806/khanhub/staff/hq/1785333801861_WhatsApp_Image_2026_07_29_at_7.01.13_PM.webp.webp",
+          "bloodGroup": "",
+          "loginEmail": "yameen-73@khanhub.io",
+          "name": "Muhammad  Yameen",
+          "dutyStartTime": "08:00",
+          "createdBy": "SUPER-ADMIN",
+          "password": "[REDACTED]",
+          "todayDutyStatus": "yes",
+          "department": "hq",
+          "securityFeeDeduction": 6670,
+          "address": "",
+          "emergencyPhone": "[REDACTED]",
+          "employeeId": "73",
+          "advance": 13337
+        },
+        "score": 85,
+        "deptMatches": true
+      },
+      {
+        "col": "hq_users",
+        "doc": {
+          "_id": "95JKnYdO29YsecURfGb9YGOTem82",
+          "createdAt": "2026-04-07T06:03:22.254Z",
+          "password": "[REDACTED]",
+          "createdBy": "system",
+          "role": "superadmin",
+          "status": "inactive",
+          "name": "Muhammad Khan ",
+          "isActive": false,
+          "customId": "M-Khan",
+          "email": "m-khan@hq.khanhub.com"
+        },
+        "score": 85,
+        "deptMatches": true
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "x3j5NyvjisP4gjX8TVfzXjC3RVn1",
+          "createdAt": "2026-04-29T11:42:27.121Z",
+          "displayName": "Muhammad Awais Akhtar",
+          "customId": "AWAIS-81",
+          "patientId": "GRoA4j4aAohTQTKKaiAi",
+          "password": "[REDACTED]",
+          "role": "family",
+          "isActive": true
+        },
+        "score": 80,
+        "deptMatches": false
+      },
+      {
+        "col": "hospital_users",
+        "doc": {
+          "_id": "MFp4JhRXrkRTl0GH0zHShkVsbR12",
+          "createdAt": "2026-04-15T06:27:33.566Z",
+          "patientId": null,
+          "password": "[REDACTED]",
+          "isActive": false,
+          "displayName": "Muhammad Khan",
+          "customId": "hospital-admin",
+          "status": "terminated",
+          "role": "admin",
+          "updatedAt": "2026-06-01T04:05:28.486Z"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "0RDhjUwS5VPLjYbzyM6vCt0ImED2",
+          "displayName": "Muhammad Amin",
+          "customId": "M.AMIN-60",
+          "password": "[REDACTED]",
+          "createdAt": "2026-04-08T07:45:44.390Z",
+          "isActive": true,
+          "role": "family",
+          "patientId": "W06pNuUFQBinUBdIssns"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "13ORRH1n3kXrAuJZ3sKA6Nk1eEo1",
+          "displayName": "Muhammad Arshad",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "createdAt": "2026-04-08T10:41:31.923Z",
+          "role": "family",
+          "patientId": "T5uQgyftEbo6vFsl55G6",
+          "customId": "ARSHAD-66"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "13iSbYtwpabORQMaEYzPDs68rux2",
+          "createdAt": "2026-04-09T11:53:37.129Z",
+          "customId": "SOHAIL-78",
+          "patientId": "UT04c87oDKIPX2qICwcS",
+          "displayName": "Muhammad Sohail",
+          "isActive": true,
+          "role": "family",
+          "password": "[REDACTED]"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "41N1rMjX8GeUCDs780yJkIG2Y4n2",
+          "createdAt": "2026-06-06T08:22:56.437Z",
+          "customId": "FAYAZ-93",
+          "role": "family",
+          "patientId": "zmfjJrpKIjT39oLtTyPL",
+          "password": "[REDACTED]",
+          "displayName": "Muhammad Fayaz",
+          "isActive": true
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "9BYBH2DaWcQDimAiHX2LfThgqHi2",
+          "customId": "SULEEMAN-97",
+          "displayName": "Muhammad Suleeman",
+          "patientId": "5AWZAQ75nL2HZdz4qtmP",
+          "isActive": true,
+          "role": "family",
+          "createdAt": "2026-06-12T10:39:15.730Z",
+          "password": "[REDACTED]"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "B9Up50jtKFRpDG3dvErGeGc4vdk1",
+          "customId": "KASHIF-92",
+          "password": "[REDACTED]",
+          "createdAt": "2026-05-30T05:51:48.366Z",
+          "role": "family",
+          "patientId": "Xc3SAaAvSolfQD3gnsOQ",
+          "isActive": true,
+          "displayName": "Muhammad kashif"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "C5PXFXoHk0dHslqemyxI",
+          "dutyEndTime": "20:00",
+          "dateOfBirth": "1980-03-06",
+          "monthlySalary": "[REDACTED]",
+          "dutyStartTime": "08:00",
+          "fatherName": "Gous Khan",
+          "basicInfoExtras": {},
+          "todayFineReason": "",
+          "name": "Muhammad Khalid Javed",
+          "securityFeeDeduction": 0,
+          "education": [],
+          "remainingBalance": 0,
+          "documents": [
+            {
+              "title": "Salary Slip - August 2026 (Rs. 19,800)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790872252/khanhub/staff/rehab/salaries/slips/1790872250143_salary_slip_Muhammad_Khalid_Javed_2026_08.webp.webp",
+              "date": "2026-09-12",
+              "type": "salary_slip",
+              "month": "2026-08",
+              "amount": 19800,
+              "txId": "fvMEz7lPkABopmXu1ex7",
+              "salaryRecordId": "CBCx0lXOv71t56RiCFZv",
+              "createdAt": "2026-10-01T16:30:56.676Z"
+            },
+            {
+              "title": "Salary Slip - July 2026 (Rs. 20,000)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790844343/khanhub/staff/rehab/salaries/slips/1790844342132_salary_slip_Muhammad_Khalid_Javed_2026_07.webp.webp",
+              "date": "2026-10-01",
+              "type": "salary_slip",
+              "month": "2026-07",
+              "amount": 20000,
+              "txId": "xK2rvi4zKM4JnuzBJGE4",
+              "salaryRecordId": "JeKaw4TqfCVUnEE2Ot09",
+              "createdAt": "2026-10-01T08:45:46.214Z"
+            },
+            {
+              "title": "id card front",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780148598/khanhub/staff/rehab/documents/1780148596579_CamScanner_05_30_2026_17_31_2_result_webp.webp"
+            },
+            {
+              "title": "offer letter",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780148620/khanhub/staff/rehab/documents/1780148620024_CamScanner_05_30_2026_17_31_1_result_webp.webp"
+            },
+            {
+              "title": "id card back",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780148638/khanhub/staff/rehab/documents/1780148637650_CamScanner_05_30_2026_17_31_3_result_webp.webp"
+            }
+          ],
+          "dob": "1980-03-06",
+          "lastPayrollMonth": "2026-09",
+          "emergencyContact": {
+            "name": "",
+            "phone": ""
+          },
+          "department": "rehab",
+          "lastSalaryPaidDate": "[REDACTED]",
+          "joiningDate": "2026-05-01",
+          "customId": "khalid-60",
+          "emergencyPhone": "[REDACTED]",
+          "lastName": "Javed",
+          "experience": [],
+          "createdAt": "2026-05-01T08:52:20.989Z",
+          "lastSalaryPaid": "[REDACTED]",
+          "address": "Chak No 79Wb dakkahna Khas tehsel Vehari",
+          "createdBy": "MANAGER",
+          "dutyConfig": [
+            {
+              "key": "morning",
+              "label": "Morning Duty"
+            },
+            {
+              "key": "afternoon",
+              "label": "Afternoon Duty"
+            },
+            {
+              "key": "evening",
+              "label": "Evening Duty"
+            },
+            {
+              "label": "Complete Patient Security",
+              "key": "complete_patient_security"
+            },
+            {
+              "label": "Responsibility for Any Emergency Situation",
+              "key": "responsibility_for_any_emergency_situation"
+            },
+            {
+              "label": "Indoor Cleaning Responsibilities",
+              "key": "indoor_cleaning_responsibilities"
+            },
+            {
+              "key": "patients_security",
+              "label": "Patients security"
+            },
+            {
+              "key": "all_patient_responsibilities",
+              "label": "All Patient Responsibilities"
+            }
+          ],
+          "salary": "[REDACTED]",
+          "todayDailyScore": 3,
+          "todayDutyStatus": "yes",
+          "emergencyContactName": "",
+          "seniority": "intermediate",
+          "gender": "male",
+          "isActive": true,
+          "secondaryDepts": [
+            "hospital"
+          ],
+          "todayUniformStatus": "yes",
+          "dept": "rehab",
+          "skills": [],
+          "password": "[REDACTED]",
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780329288/khanhub/staff/rehab/1780329281817_WhatsApp_Image_2026_06_01_at_8_07_09_PM_webp.webp",
+          "loginEmail": "staff-4844@rehab.khanhub",
+          "lastDailyAssessmentDate": "2026-10-28",
+          "phone": "[REDACTED]",
+          "loginUserId": "yOfUecGwnWYfoAJf5W3AHdTOOIh1",
+          "salaryBalance": "[REDACTED]",
+          "duties": [
+            "Maintain full alertness during security duty",
+            "Monitor entry and exit points",
+            "Inspect all areas of the hospital at night",
+            "Protect parking and ambulance areas",
+            "Allow visitors in only during designated hours",
+            "Protect hospital equipment and assets",
+            "Keep emergency exits clear at all times",
+            "Assist doctors and administration in emergencies",
+            "Monitor CCTV (if available)",
+            "Complete the daily security log book",
+            "Support cleanliness and discipline",
+            "Follow the Administrator's instructions",
+            "Take full responsibility for rehab-patient security"
+          ],
+          "userId": "C5PXFXoHk0dHslqemyxI",
+          "firstName": "Muhammad Khalid",
+          "bloodGroup": "",
+          "lastSalaryPaidAt": "[REDACTED]",
+          "cnic": "[REDACTED]",
+          "lastSalarySlipUrl": "[REDACTED]",
+          "outstandingBalance": 0,
+          "employeeId": "60",
+          "role": "Worker",
+          "updatedAt": "2026-10-28T08:29:18.222Z",
+          "defaultPassword": "[REDACTED]",
+          "designation": "Security Guard",
+          "dressCodeConfig": [
+            {
+              "key": "security_uniform",
+              "label": "Security Uniform"
+            },
+            {
+              "key": "security_cap",
+              "label": "Security Cap"
+            },
+            {
+              "key": "whistle",
+              "label": "Whistle"
+            },
+            {
+              "key": "torch",
+              "label": "Torch"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "key": "card",
+              "label": "Employee Card"
+            }
+          ],
+          "uniform": [
+            "Security Uniform",
+            "Security Cap",
+            "Whistle",
+            "Torch",
+            "Black Shoes",
+            "Employee Card"
+          ],
+          "todayAttendance": "present",
+          "todayFines": 0
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "EkVCEOMnGMWiLETgEM4ntU8Qles1",
+          "customId": "ZAHID-76",
+          "patientId": "CucKHfRJIoNUfEDLQem9",
+          "displayName": "Muhammad Zahid",
+          "role": "family",
+          "createdAt": "2026-04-09T11:42:59.897Z",
+          "isActive": true,
+          "password": "[REDACTED]"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "ElQvr9uvFvQeuVtdMS7TvWIrXRl2",
+          "role": "family",
+          "displayName": "M.Awais",
+          "createdAt": "2026-04-20T04:36:41.976Z",
+          "customId": "AWAIS-50",
+          "patientId": "qHtEQaVSaD5QMu4alcde",
+          "password": "[REDACTED]",
+          "isActive": true
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "HiJ0oCG5TOdIJxEi9trrm7ORYfi1",
+          "role": "family",
+          "customId": "SHEHZAD-67",
+          "displayName": "Muhammad Shehzad",
+          "password": "[REDACTED]",
+          "createdAt": "2026-04-08T11:07:14.699Z",
+          "isActive": true,
+          "patientId": "2XhiWn6bEWjq6aF7HAuo"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "PJDRIJl74HX6h8cKam88kvlnqs12",
+          "role": "family",
+          "customId": "SHAFQAT-65",
+          "createdAt": "2026-04-08T10:20:04.957Z",
+          "patientId": "6Eph6dALTFVnOHO3fV9D",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "displayName": "Muhammad Shafqat"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "Slg6uFtulON9bUQUVb9uJATtcOj1",
+          "password": "[REDACTED]",
+          "role": "family",
+          "displayName": "Muhammad Irfan Ashraf",
+          "createdAt": "2026-04-29T11:50:58.049Z",
+          "isActive": true,
+          "patientId": "3NtTLU7HC7DNNJFVBim4",
+          "customId": "IRFAN-82"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "TA2dvyK7jdaDEWaRl80K2uf8kTS2",
+          "createdAt": "2026-04-09T13:29:11.995Z",
+          "customId": "ASHRAF-79",
+          "patientId": "sr0SAbVO0dl44yCpcqj8",
+          "role": "family",
+          "isActive": true,
+          "displayName": "Muhammad Ashraf",
+          "password": "[REDACTED]"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "Y3zZ9bD0vaf89T165gFTGpkLZaK2",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "role": "family",
+          "customId": "FAHEEM-8",
+          "patientId": "mOYkxVkMXJRhiMuHjlVt",
+          "createdAt": "2026-04-08T11:24:11.566Z",
+          "displayName": "Muhammad Faheem"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "ayy0qeNgheUSHsV67xr0SGBZrt32",
+          "phone": "[REDACTED]",
+          "dutyConfig": [
+            {
+              "key": "attendance_portal",
+              "label": "Attendance Entry"
+            },
+            {
+              "key": "patient_vitals",
+              "label": "Patient Vitals"
+            },
+            {
+              "key": "ward_round",
+              "label": "Ward Round"
+            },
+            {
+              "key": "cleanliness",
+              "label": "Area Cleanliness"
+            }
+          ],
+          "status": "resigned",
+          "updatedAt": "2026-04-13T15:10:47.222Z",
+          "displayName": "Muhammad Hanif",
+          "dutyEndTime": "17:00",
+          "createdAt": "2026-03-30T12:31:20.573Z",
+          "employeeId": "REHAB-STF-002",
+          "designation": "Security",
+          "isActive": false,
+          "dressCodeConfig": [
+            {
+              "key": "pant",
+              "label": "Dress Pant"
+            },
+            {
+              "key": "shirt",
+              "label": "Uniform Shirt"
+            },
+            {
+              "key": "shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "key": "id_card",
+              "label": "ID Card"
+            }
+          ],
+          "role": "staff",
+          "customId": "REHAB-STF-002",
+          "totalGrowthPoints": 2,
+          "name": "Muhammad Hanif",
+          "dutyStartTime": "09:00",
+          "userId": "ayy0qeNgheUSHsV67xr0SGBZrt32",
+          "monthlySalary": "[REDACTED]"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "sCrGuhX014VejojvNIXSs4mvBaU2",
+          "password": "[REDACTED]",
+          "patientId": "4gQL6a1RwL8eqOcWEH3d",
+          "role": "family",
+          "isActive": true,
+          "createdAt": "2026-05-16T07:19:54.766Z",
+          "displayName": "Muhammad Ilyas",
+          "customId": "ILYAS-88"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "vfFsp7IXyrX8Zarefpy6bqnFsti2",
+          "customId": "JAMEEL-91",
+          "displayName": "Muhammad Jameel",
+          "createdAt": "2026-05-31T12:46:29.308Z",
+          "isActive": true,
+          "role": "family",
+          "patientId": "c1MRDsDV5w1BPw8UXOOf",
+          "password": "[REDACTED]"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "xBLuqK3YfXaFvtEj6ckLVYKzePG3",
+          "createdAt": "2026-04-08T13:28:45.713Z",
+          "dressCodeConfig": [
+            {
+              "key": "security_uniform",
+              "label": "Security Uniform"
+            },
+            {
+              "key": "security_cap",
+              "label": "Security Cap"
+            },
+            {
+              "key": "whistle",
+              "label": "Whistle"
+            },
+            {
+              "key": "torch",
+              "label": "Torch"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "key": "card",
+              "label": "Employee Card"
+            }
+          ],
+          "displayName": "Muhammad Khalid",
+          "customId": "KHALID-75",
+          "patientId": "0xgrop2bqaYlVkCfdlSR",
+          "role": "family",
+          "password": "[REDACTED]",
+          "isActive": true
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "4kVyUQbha2cxa1G6k1d5Gq4Sg622",
+          "studentId": "6oEo4po7YyxKloCakpFD",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "displayName": "Muhammad Imran",
+          "createdAt": "2026-04-10T11:20:52.776Z",
+          "customId": "IMRAN-OTT",
+          "role": "student"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "6hUqG12sLBMgMQ0hdD7VtGavtMs2",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "createdAt": "2026-04-16T12:53:26.677Z",
+          "role": "student",
+          "studentId": "LRN6cZdafdUD8Llkolbe",
+          "displayName": "Muhammad Rizwan",
+          "customId": "M.RIZWAN"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "9NVevacDKYW78nNgyBzEm5jD1gg2",
+          "studentId": "rTtLRiOqQ9nrVoACheVo",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "role": "student",
+          "displayName": "Muhammad mohsin",
+          "createdAt": "2026-04-17T11:43:00.402Z",
+          "customId": "MOHSIN-DISP"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "B4LBW9jDbBhbnZ0kMthTWhIkGjj2",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "displayName": "Muhammad fiaz",
+          "createdAt": "2026-04-16T13:08:12.901Z",
+          "role": "student",
+          "studentId": "5mbVyasEWFurBpjjEaz9",
+          "customId": "M.FAIZ-B-CAT"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "Bf9NuZs8HRVJnRtLSdOVXxYwfpa2",
+          "customId": "EJAZ-DISP",
+          "studentId": "amt13YQOBtYXx4WFsLAK",
+          "displayName": "Muhammad Ejaz ul hassan",
+          "createdAt": "2026-04-17T11:30:57.734Z",
+          "role": "student",
+          "password": "[REDACTED]",
+          "isActive": true
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "D2v7QRnY9QSMVK4LGdWflpjF5dH3",
+          "displayName": "Muhammad Khan",
+          "customId": "MUHAMMADKHAN-OTT",
+          "studentId": "TYWoebksAz24ZXqgsnbH",
+          "createdAt": "2026-04-18T10:50:17.490Z",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "role": "student"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "EiuTdk9Y0He92LRnuF0FFQVTS7g2",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "createdAt": "2026-04-10T11:02:33.871Z",
+          "customId": "SALMAN-DISP",
+          "studentId": "W0AhZxNjdo6xfPou88IZ",
+          "role": "student",
+          "displayName": "Muhammad Salman"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "L8cOGkK8k8fzquZ9fDmhTqR0xz12",
+          "createdAt": "2026-04-16T13:23:01.121Z",
+          "password": "[REDACTED]",
+          "displayName": "Muhammad asmad",
+          "isActive": true,
+          "customId": "M.ASMAD-B-CAT",
+          "role": "student",
+          "studentId": "iz3kISgXLBnxUgMe0MJg"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "LV20BXFM3oS4IOCZrvH7uCnnjDG3",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "studentId": "eObhCQnr9pMWdLuXy2jf",
+          "customId": "ALI-B-CAT",
+          "displayName": "Ali Muhammad",
+          "createdAt": "2026-04-16T11:25:34.617Z",
+          "role": "student"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "Rg8RM4SAbEUoUEKLeZp4LL42v2D3",
+          "customId": "AWAISBCAT",
+          "studentId": "Seh7BrgZWj3o8IW5cobX",
+          "role": "student",
+          "displayName": "Awais Yasir",
+          "createdAt": "2026-10-26T09:12:47.148Z",
+          "password": "[REDACTED]",
+          "isActive": true
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "UCHzRBpx8DRE3ER2Tj9yyksq21F2",
+          "createdAt": "2026-04-16T12:07:31.909Z",
+          "customId": "M.YASIR-B-CAT",
+          "role": "student",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "studentId": "a2RzfETMyMbo6elG1Pj3",
+          "displayName": "Muhammad Yasir ali"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "aUPAOhLQihbKrhUaf326yhQcsV83",
+          "customId": "BILAL-DISP",
+          "createdAt": "2026-04-18T09:24:00.106Z",
+          "displayName": "Muhammad Bilal",
+          "studentId": "pIHQMqasJXHIgXWVBEVx",
+          "role": "student",
+          "password": "[REDACTED]",
+          "isActive": true
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "bHPwf4Y8EjdB5nf5hXoE9KfrpL83",
+          "role": "student",
+          "displayName": "Muhammad Ramzan",
+          "createdAt": "2026-04-16T13:30:22.454Z",
+          "isActive": true,
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1784812460/khanhub/spims/students/1784812458745_ramzan.webp.webp",
+          "password": "[REDACTED]",
+          "customId": "M.RAMZAN-B-CAT",
+          "studentId": "trKn2XMGX2wyNHtAdK9c"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "byuWqCB66jXeJgzLyYSlqWtC5l72",
+          "studentId": "xgi8UthKYvnV5AOMKsFs",
+          "customId": "USMAN-OTT",
+          "role": "student",
+          "displayName": "Muhammad Usman",
+          "createdAt": "2026-04-10T11:49:00.877Z",
+          "password": "[REDACTED]",
+          "isActive": true
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "cNG66sLqgTNof6SRvp5vTuqybeE3",
+          "displayName": "Muhammad amin",
+          "createdAt": "2026-04-16T11:47:47.647Z",
+          "customId": "M.AMIN-B-CAT",
+          "studentId": "z5Z4Pfh70pY7fqWL18QF",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "role": "student"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "inlvtuYZVBYQODpbiVeYV2s8VIA2",
+          "role": "student",
+          "displayName": "Muhammad Qaiser",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "studentId": "I9G0VnlohsZKrlNV1FVA",
+          "customId": "QAISAR-OTT",
+          "createdAt": "2026-04-15T12:44:20.043Z"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "irBZ5ACO51RMJY4735xH9ju8wIw1",
+          "customId": "RAHEEL-OTT",
+          "displayName": "Muhammad Raheel Nasir",
+          "studentId": "lzy0UkDEW6z4B1uQ8obF",
+          "role": "student",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "createdAt": "2026-04-10T11:38:24.649Z"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "jkDGeY4VgjNGpdzhnkIfje35Ewx2",
+          "displayName": "Muhammad Nawaz",
+          "studentId": "1Y6mb66SfW4OehlnGFSo",
+          "customId": "NAWAZ-192",
+          "role": "student",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "createdAt": "2026-06-11T10:48:42.550Z"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "kzd06E0jmYNilcaaETafOw52Nio2",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "createdAt": "2026-07-10T11:49:36.361Z",
+          "displayName": "Muhammad Aftab Khab",
+          "customId": "AFTAB-227",
+          "role": "student",
+          "studentId": "Xh6KgApAiA9TcX6sWLVo"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "m2Z2byPO9Eh2QiI1puJa5JIJbzC2",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "role": "student",
+          "createdAt": "2026-04-17T11:22:52.015Z",
+          "displayName": "Muhammad asif",
+          "studentId": "hZ4H8Ri8dvSfsfuWSsHc",
+          "customId": "ASIF-DISP"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "nV8bfSbLefS3BU6kqZIuoT2DWly1",
+          "customId": "SHEHBAZ-OTT",
+          "role": "student",
+          "displayName": "Muhammad Shehbaz",
+          "createdAt": "2026-04-10T11:27:45.555Z",
+          "studentId": "GaSvtTbzkm3IRg0ucWx6",
+          "password": "[REDACTED]",
+          "isActive": true
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "rLXL5rGus0QiEVk9R58yUAZs6mJ2",
+          "createdAt": "2026-04-18T07:57:50.453Z",
+          "displayName": "Muhammad Burhan",
+          "customId": "BURHAN-MLT",
+          "studentId": "OVgSR848fVRiVWrKW9vF",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "role": "student"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "rnNOZ3IzezauIis8JiTFfK7aWTG2",
+          "studentId": "Xs4koZ0uFmvYvnVRwexv",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "role": "student",
+          "displayName": "Muhammad Umar Hayyat",
+          "createdAt": "2026-04-18T10:13:50.127Z",
+          "customId": "UMAR-DISP"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "sueIKIkDB6PLElVoXguMZlJ6dkI2",
+          "displayName": "Muhammad Faheem Shehbaz",
+          "createdAt": "2026-04-10T11:15:08.138Z",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "customId": "FAHEEM-OTT",
+          "role": "student",
+          "studentId": "sxbHbsxedVBZGcnsT4KK"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "uMZ1tSWUgiM5YNAqEt9bAfbUuz02",
+          "customId": "HUSSAIN-MLT",
+          "createdAt": "2026-04-18T09:00:22.018Z",
+          "displayName": "Muhammad Hussain",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "role": "student",
+          "studentId": "QNJzj7rErLziJC3JFL46"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "ucSQKpuJ0eWliTdlbS8YbaKZ7Dt1",
+          "createdAt": "2026-04-18T09:00:25.116Z",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "customId": "SAFYAN-PT",
+          "studentId": "ZVcLsHKn9UZ4GSzuAe4g",
+          "role": "student",
+          "displayName": "Muhammad Sufyan"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "un5oCD1gzoNFXJ2AF5XMEOdNopE3",
+          "studentId": "W2v35hiXbvTw2fa0luhd",
+          "displayName": "Awais maqbool",
+          "role": "student",
+          "customId": "AWAIS-OTT",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "createdAt": "2026-04-18T11:42:45.509Z"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "jobcenter_users",
+        "doc": {
+          "_id": "1k6D4ppRn9gRZsvcJH2ir7pEZSJ3",
+          "createdAt": "2026-07-21T09:33:55.213Z",
+          "displayName": "MUHAMMAD HASEEB ASLAM ",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "seekerId": "vosYmk0lwkT9CFpNjntV",
+          "employerId": null,
+          "tsjobCategory": "OFFICE MANAGEMENT",
+          "tsemployerType": null,
+          "jobCategory": "OFFICE MANAGEMENT",
+          "role": "seeker",
+          "employerType": null,
+          "customId": "HASEEB"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "jobcenter_users",
+        "doc": {
+          "_id": "IwZgJTiO05b2VeHSXZYpUekcWAm2",
+          "employerId": null,
+          "tsemployerType": null,
+          "employerType": null,
+          "seekerId": "tc2MbPRB8HucP3XvYVTJ",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "createdAt": "2026-06-30T09:02:39.120Z",
+          "jobCategory": "💼 Office / Corporate",
+          "tsjobCategory": "💼 Office / Corporate",
+          "role": "seeker",
+          "displayName": "Muhammad nadeem",
+          "customId": "NADEEM"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "jobcenter_users",
+        "doc": {
+          "_id": "KmXBNh5S57ZwuJDPFlcWN5Rmoa52",
+          "displayName": "MUHAMMAD ASIF ",
+          "employerType": null,
+          "customId": "ASIF",
+          "employerId": null,
+          "role": "seeker",
+          "seekerId": "BNdhduAqewPxnx7iWpLk",
+          "createdAt": "2026-07-11T15:42:08.424Z",
+          "jobCategory": "🔄 Other",
+          "isActive": true,
+          "tsemployerType": null,
+          "password": "[REDACTED]",
+          "tsjobCategory": "🔄 Other"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "jobcenter_users",
+        "doc": {
+          "_id": "WbnW5UHElwcVxEjt1d084sohgCr1",
+          "createdAt": "2026-07-10T09:22:03.497Z",
+          "password": "[REDACTED]",
+          "displayName": "Muhammad muzmil Hussain ",
+          "tsemployerType": null,
+          "isActive": true,
+          "seekerId": "p9qrusjcD5hixU6G7in7",
+          "employerType": null,
+          "employerId": null,
+          "tsjobCategory": "💼 Office / Corporate",
+          "role": "seeker",
+          "jobCategory": "💼 Office / Corporate",
+          "customId": "MUZMIL19"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "jobcenter_users",
+        "doc": {
+          "_id": "iRnvTAsa2gUCG79Lw24cSHCgd413",
+          "customId": "UMAIR",
+          "displayName": "MUHAMMAD UMAIR NASIR",
+          "createdAt": "2026-07-11T16:01:49.055Z",
+          "tsemployerType": null,
+          "employerId": null,
+          "employerType": null,
+          "tsjobCategory": "🛡️ Security / Guard",
+          "role": "seeker",
+          "seekerId": "6xeuJrAJFCOUPhHZA3ij",
+          "jobCategory": "🛡️ Security / Guard",
+          "isActive": true,
+          "password": "[REDACTED]"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "jobcenter_users",
+        "doc": {
+          "_id": "vqu09HPZrEZLn5GVtLuh33CGXj82",
+          "tsjobCategory": "💼 Office / Corporate",
+          "seekerId": "BAqIfmA5lSFZTntlBIoz",
+          "displayName": "Sheikh Muhammad Usman",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "createdAt": "2026-06-16T16:04:22.838Z",
+          "tsemployerType": null,
+          "employerId": null,
+          "employerType": null,
+          "jobCategory": "💼 Office / Corporate",
+          "customId": "USMAN006",
+          "role": "seeker"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "welfare_users",
+        "doc": {
+          "_id": "QrypeFanBMdkfKspr605EbbCM5y1",
+          "joiningDate": "2026-04-12",
+          "lastDailyAssessmentDate": "2026-06-16",
+          "phone": "[REDACTED]",
+          "todayDutyStatus": "no",
+          "password": "[REDACTED]",
+          "department": "welfare",
+          "designation": "admin Orphan Center",
+          "todayAttendance": "leave",
+          "address": "",
+          "displayName": "Siddique Shah",
+          "patientId": null,
+          "createdAt": "2026-04-12T13:31:03.357Z",
+          "fatherName": "",
+          "userId": "QrypeFanBMdkfKspr605EbbCM5y1",
+          "monthlySalary": "[REDACTED]",
+          "todayUniformStatus": "no",
+          "role": "admin",
+          "name": "Muhammad Siddique Shah",
+          "bloodGroup": "",
+          "employeeId": "welfare-admin",
+          "isActive": false,
+          "secondaryDepts": [],
+          "updatedAt": "2026-06-16T07:47:53.247Z",
+          "dob": "",
+          "seniority": "",
+          "customId": "welfare-admin",
+          "todayFineReason": "",
+          "duties": [
+            {
+              "key": "attendance_portal",
+              "label": "Attendance Entry",
+              "status": "not_done"
+            },
+            {
+              "key": "cleanliness",
+              "label": "Area Cleanliness",
+              "status": "not_done"
+            },
+            {
+              "key": "chield_cear",
+              "label": "Chield cear",
+              "status": "not_done"
+            }
+          ],
+          "status": "inactive",
+          "todayFines": 0,
+          "cnic": "[REDACTED]",
+          "gender": "male",
+          "emergencyContactName": "",
+          "dutyConfig": [
+            {
+              "label": "Attendance Entry",
+              "key": "attendance_portal"
+            },
+            {
+              "key": "cleanliness",
+              "label": "Area Cleanliness"
+            },
+            {
+              "key": "chield_cear",
+              "label": "Chield cear"
+            }
+          ],
+          "dutyStartTime": "08:00",
+          "dressCodeConfig": [
+            {
+              "key": "pant",
+              "label": "Dress Pant",
+              "status": "no"
+            },
+            {
+              "key": "drees_shirt",
+              "label": "Drees Shirt",
+              "status": "no"
+            },
+            {
+              "key": "shoes",
+              "label": "Shoes",
+              "status": "no"
+            },
+            {
+              "key": "employ_card",
+              "label": "Employ Card",
+              "status": "no"
+            },
+            {
+              "key": "tie",
+              "label": "tie",
+              "status": "no"
+            }
+          ],
+          "emergencyContact": "",
+          "basicInfoExtras": {},
+          "todayDailyScore": 0,
+          "defaultPassword": "[REDACTED]",
+          "totalGrowthPoints": 2,
+          "dutyEndTime": "20:00",
+          "emergencyPhone": "[REDACTED]"
+        },
+        "score": 70,
+        "deptMatches": false
+      }
+    ],
+    "status": "MATCHED"
+  },
+  {
+    "person": {
+      "index": 15,
+      "name": "Miss Noor",
+      "role": "INSTRUCTOR",
+      "dept": "Khan Hub Educational Complex",
+      "hint": "spims"
+    },
+    "candidates": [
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "M2OdyekyhWYvL9DWByLFnFTaP5u2",
+          "dob": "",
+          "displayName": "Noor Maham",
+          "bloodGroup": "",
+          "education": [
+            {
+              "degree": "MLT",
+              "institution": "Riphah International University Islamabad Pakistan",
+              "year": "2023"
+            }
+          ],
+          "photoUrl": null,
+          "lastSalarySlipUrl": "[REDACTED]",
+          "seniority": "",
+          "experience": [],
+          "emergencyContact": "",
+          "defaultPassword": "[REDACTED]",
+          "cnic": "[REDACTED]",
+          "customId": "noor-71",
+          "gender": "female",
+          "weeklyOffDay": "sunday",
+          "dutyConfig": [
+            {
+              "key": "morning",
+              "label": "Morning Duty"
+            },
+            {
+              "key": "afternoon",
+              "label": "Afternoon Duty"
+            },
+            {
+              "key": "evening",
+              "label": "Evening Duty"
+            }
+          ],
+          "todayUniformStatus": "yes",
+          "todayDutyStatus": "yes",
+          "emergencyContactName": {
+            "phone": "",
+            "name": ""
+          },
+          "dutyStartTime": "08:00",
+          "userId": "M2OdyekyhWYvL9DWByLFnFTaP5u2",
+          "lastSalaryPaidDate": "[REDACTED]",
+          "dressCodeConfig": [
+            {
+              "key": "card",
+              "label": "Employee Card"
+            }
+          ],
+          "designation": "Admin",
+          "fatherName": "Muhammad Sher",
+          "role": "admin",
+          "dateOfBirth": "2001-10-20",
+          "employeeId": "71",
+          "lastDailyAssessmentDate": "2026-10-09",
+          "isVacancy": false,
+          "loginEmail": "noor-71@spims.khanhub",
+          "basicInfoExtras": {},
+          "dutyEndTime": "14:00",
+          "joiningDate": "2026-06-28",
+          "todayAttendance": "present",
+          "lastPayrollMonth": "2026-09",
+          "lastSalaryPaidAt": "[REDACTED]",
+          "uniform": [
+            "Employee Card"
+          ],
+          "salaryBalance": "[REDACTED]",
+          "loginUserId": "M2OdyekyhWYvL9DWByLFnFTaP5u2",
+          "monthlySalary": "[REDACTED]",
+          "todayFineReason": "",
+          "name": "Noor Maham",
+          "secondaryDepts": [],
+          "lastName": "Maham",
+          "password": "[REDACTED]",
+          "firstName": "Noor",
+          "phone": "[REDACTED]",
+          "skills": [],
+          "emergencyPhone": "[REDACTED]",
+          "duties": [
+            "Take classes according to the prescribed curriculum",
+            "Prepare daily lecture plans",
+            "Maintain student attendance",
+            "Conduct assignments, quizzes and tests",
+            "Evaluate student performance",
+            "Conduct practical training sessions",
+            "Maintain discipline in the classroom",
+            "Provide ethical and professional guidance to students",
+            "Inform parents/guardians of student performance when needed",
+            "Present a monthly teaching report to the Administrator",
+            "Maintain academic records and results",
+            "Fully follow the institute's educational policy and SOPs"
+          ],
+          "isActive": true,
+          "lastSalaryPaid": "[REDACTED]",
+          "updatedAt": "2026-10-25T04:07:02.498Z",
+          "documents": [
+            {
+              "title": "Salary Slip - September 2026 (Rs. 23,967)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1792401411/khanhub/staff/spims/salaries/slips/1792401409963_salary_slip_Noor_Maham_2026_09.webp.webp",
+              "date": "2026-09-11",
+              "type": "salary_slip",
+              "month": "2026-09",
+              "amount": 23967,
+              "txId": "DFFioiCLP0hShWQGpd2E",
+              "salaryRecordId": "2Tu0kDUWiD80StQz7xsz",
+              "createdAt": "2026-10-19T09:16:56.692Z"
+            },
+            {
+              "title": "Salary Slip - July 2026 (Rs. 20,900)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790871345/khanhub/staff/spims/salaries/slips/1790871342566_salary_slip_Noor_Maham_2026_07.webp.webp",
+              "date": "2026-08-11",
+              "type": "salary_slip",
+              "month": "2026-07",
+              "amount": 20900,
+              "txId": "9N8ErARySpYRQ5L7EGXX",
+              "salaryRecordId": "rhVxRwnYm3i6xpEjYFsb",
+              "createdAt": "2026-10-01T16:15:49.970Z"
+            },
+            {
+              "title": "Fine Notice (Rs. 100) - Ref #71",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790138884/khanhub/staff/spims/documents/1790138882729_fine_71_2026_09_23.webp.webp",
+              "type": "fine",
+              "date": "2026-09-23",
+              "createdAt": "2026-09-23T04:48:08.473Z"
+            }
+          ],
+          "todayFines": 0,
+          "salary": "[REDACTED]",
+          "dept": "spims",
+          "createdBy": "MANAGER",
+          "address": "",
+          "outstandingBalance": 0,
+          "createdAt": "2026-06-28T14:15:48.956Z",
+          "department": "spims",
+          "todayDailyScore": 3
+        },
+        "score": 85,
+        "deptMatches": true
+      },
+      {
+        "col": "hq_users",
+        "doc": {
+          "_id": "FVgczzfCD9ZajoCHNO3SnAcULOA3",
+          "lastName": "Noor",
+          "secondaryDepts": [
+            "hospital"
+          ],
+          "dutyConfig": [
+            {
+              "key": "doctor_assitat_in_daily_task",
+              "label": "Doctor assitat In daily Task"
+            },
+            {
+              "key": "driving_car_for_doctor_khan",
+              "label": "Driving car For Doctor Khan"
+            },
+            {
+              "key": "take_work_staff",
+              "label": "Take work Staff"
+            }
+          ],
+          "advanceSalary": "[REDACTED]",
+          "defaultPassword": "[REDACTED]",
+          "emergencyContactName": "Wheed (Taya)",
+          "emergencyContact": "",
+          "lastPayrollMonth": "2026-09",
+          "fatherName": "Muhammad Hussain",
+          "designation": "Personal Assistant (PA)",
+          "lastSalaryPaid": "[REDACTED]",
+          "todayFines": 0,
+          "name": "Faisal  Noor",
+          "outstandingBalance": 0,
+          "remainingBalance": 0,
+          "firstName": "Faisal ",
+          "customId": "faisal-67",
+          "isActive": true,
+          "education": [
+            {
+              "degree": "Matric",
+              "institution": "Pilot secondary school phalia",
+              "year": "2016"
+            }
+          ],
+          "userId": "FVgczzfCD9ZajoCHNO3SnAcULOA3",
+          "phone": "[REDACTED]",
+          "employeeId": "67",
+          "role": "trial",
+          "cnic": "[REDACTED]",
+          "documents": [
+            {
+              "title": "Salary Slip - August 2026 (Rs. 18,800)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790871990/khanhub/staff/hq/salaries/slips/1790871987250_salary_slip_Faisal__Noor_2026_08.webp.webp",
+              "date": "2026-09-12",
+              "type": "salary_slip",
+              "month": "2026-08",
+              "amount": 18800,
+              "txId": "qLt4QMoh3JrFi9etAJA9",
+              "salaryRecordId": "2tuSFS62ZdbH9ADdrVIy",
+              "createdAt": "2026-10-01T16:26:35.296Z"
+            },
+            {
+              "title": "Salary Slip - July 2026 (Rs. 19,900)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790844225/khanhub/staff/hq/salaries/slips/1790844223042_salary_slip_Faisal__Noor_2026_07.webp.webp",
+              "date": "2026-10-01",
+              "type": "salary_slip",
+              "month": "2026-07",
+              "amount": 19900,
+              "txId": "hvTuIjysglRR6ApTSEzP",
+              "salaryRecordId": "KzEwAyLBDUi2aKSVIOku",
+              "createdAt": "2026-10-01T08:43:50.362Z"
+            },
+            {
+              "title": "Police certifiacte",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1782024429/khanhub/staff/hq/documents/1782024428128_Police_certifiacte_webp.webp"
+            },
+            {
+              "title": "ID card Front",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1782024446/khanhub/staff/hq/documents/1782024445837_ID_card_Front_webp.webp"
+            },
+            {
+              "title": "ID card Back",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1782024454/khanhub/staff/hq/documents/1782024454233_ID_card_Back_webp.webp"
+            }
+          ],
+          "todayDailyScore": 3,
+          "salary": "[REDACTED]",
+          "loginEmail": "faisal-67@khanhub.io",
+          "bloodGroup": "A+",
+          "salaryBalance": "[REDACTED]",
+          "seniority": "intermediate",
+          "lastSalarySlipUrl": "[REDACTED]",
+          "emergencyPhone": "[REDACTED]",
+          "monthlySalary": "[REDACTED]",
+          "department": "hq",
+          "updatedAt": "2026-10-28T08:28:52.570Z",
+          "isVacancy": false,
+          "todayAttendance": "present",
+          "uniform": [
+            "Black PA Uniform",
+            "Black Shoes",
+            "Employee Card"
+          ],
+          "dob": "2000-04-02",
+          "lastSalaryPaidDate": "[REDACTED]",
+          "lastSalaryPaidAt": "[REDACTED]",
+          "createdBy": "SUPER-ADMIN",
+          "todayFineReason": "",
+          "joiningDate": "2026-06-15",
+          "lastDailyAssessmentDate": "2026-10-28",
+          "gender": "male",
+          "password": "[REDACTED]",
+          "experience": [
+            {
+              "title": "Driving",
+              "company": "Hajji and sons",
+              "duration": "2 years"
+            },
+            {
+              "title": "Sales man ",
+              "company": "Emporium mall Lahore",
+              "duration": "1.5 years"
+            }
+          ],
+          "basicInfoExtras": {},
+          "todayUniformStatus": "yes",
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1781675854/khanhub/staff/hq/1781675853289_WhatsApp_Image_2026_06_17_at_10_55_31_AM_webp.webp",
+          "dressCodeConfig": [
+            {
+              "key": "black_pa_uniform",
+              "label": "Black PA Uniform"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "key": "employee_card",
+              "label": "Employee Card"
+            }
+          ],
+          "skills": [
+            "Driving",
+            "Sales",
+            "Assistance"
+          ],
+          "dept": "hq",
+          "securityFeeDeduction": 0,
+          "duties": [
+            "Manage the CEO/Doctor's daily schedule",
+            "Arrange meetings and appointments",
+            "Prepare official correspondence, letters and emails",
+            "Coordinate between different departments",
+            "Prepare daily reports",
+            "Maintain files and documents securely",
+            "Manage the doctor's visits and meetings",
+            "Welcome official visitors",
+            "Follow up on assigned tasks and instructions",
+            "Drive the car for Doctor Khan when required",
+            "Assign and follow up on staff work",
+            "Maintain full confidentiality"
+          ],
+          "dutyEndTime": "20:00",
+          "monthlyAdvance": 0,
+          "loginUserId": "FVgczzfCD9ZajoCHNO3SnAcULOA3",
+          "dateOfBirth": "2000-04-02",
+          "advance": 0,
+          "address": "Kachi Mandi Vehari",
+          "dutyStartTime": "08:00",
+          "todayDutyStatus": "yes",
+          "createdAt": "2026-06-15T06:17:35.940Z"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "hospital_users",
+        "doc": {
+          "_id": "0i7qpkaQgSahrITPKxxJXikxvCn1",
+          "basicInfoExtras": {},
+          "dressCodeConfig": [
+            {
+              "key": "hijab",
+              "label": "Hijab"
+            },
+            {
+              "key": "black_ot_kit",
+              "label": "Black OT Kit"
+            },
+            {
+              "key": "white_overall",
+              "label": "White Overall"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "label": "Employ Card",
+              "key": "employ_card"
+            }
+          ],
+          "status": "resigned",
+          "emergencyContactName": {
+            "phone": "",
+            "name": ""
+          },
+          "fatherName": "Noor Muhmamad",
+          "dob": "2001-03-04",
+          "defaultPassword": "[REDACTED]",
+          "secondaryDepts": [],
+          "experience": [],
+          "todayFineReason": "No responsible ",
+          "employeeId": "63",
+          "emergencyContact": {
+            "name": "",
+            "phone": ""
+          },
+          "visibleSections": {
+            "salary": true,
+            "designation": true,
+            "uniform": true,
+            "duties": true,
+            "attendance": true,
+            "canteenWallet": true,
+            "growthPoints": true,
+            "reports": true
+          },
+          "name": "Ayesha Noor",
+          "role": "Contract Staff",
+          "education": [
+            {
+              "degree": "ICS",
+              "institution": "Govt College For Women Vehari",
+              "year": "2020"
+            }
+          ],
+          "documents": [
+            {
+              "title": "ID Card Front",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780163533/khanhub/staff/hospital/documents/1780163531745_WhatsApp_Image_2026_05_30_at_10_46_27_PM_webp.webp"
+            },
+            {
+              "title": "ID Card Back",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780163548/khanhub/staff/hospital/documents/1780163546448_WhatsApp_Image_2026_05_30_at_10_46_26_PM_webp.webp"
+            },
+            {
+              "title": "Inter Result Card",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780163652/khanhub/staff/hospital/documents/1780163650585_WhatsApp_Image_2026_05_30_at_10_46_22_PM__1__webp.webp"
+            },
+            {
+              "title": "Domicile",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780163664/khanhub/staff/hospital/documents/1780163662697_WhatsApp_Image_2026_05_30_at_10_46_22_PM_webp.webp"
+            },
+            {
+              "title": "Board Certifiaace of Intermide",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780163693/khanhub/staff/hospital/documents/1780163689631_WhatsApp_Image_2026_05_30_at_10_46_23_PM_webp.webp"
+            },
+            {
+              "title": "2nd Year Result",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780163715/khanhub/staff/hospital/documents/1780163711538_WhatsApp_Image_2026_05_30_at_10_46_24_PM_webp.webp"
+            },
+            {
+              "title": "Matric result Card",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780163748/khanhub/staff/hospital/documents/1780163745804_WhatsApp_Image_2026_05_30_at_10_46_25_PM_webp.webp"
+            }
+          ],
+          "totalGrowthPoints": 3,
+          "address": "",
+          "dutyStartTime": "08:00",
+          "todayFines": 300,
+          "customId": "ayesha-63",
+          "dutyConfig": [
+            {
+              "key": "area_cleanliness",
+              "label": "Area Cleanliness"
+            },
+            {
+              "key": "vital_signs_check",
+              "label": "Vital Signs Check"
+            },
+            {
+              "label": "chair arrange",
+              "key": "chair_arrange"
+            },
+            {
+              "label": "Dustbin Cleaning",
+              "key": "dustbin_cleaning"
+            },
+            {
+              "label": "Reception Table Cleaning",
+              "key": "reception_table_cleaning"
+            },
+            {
+              "label": "Report Information and Samples",
+              "key": "report_information_and_samples"
+            },
+            {
+              "key": "patients_dealing",
+              "label": "Patients Dealing"
+            },
+            {
+              "key": "patients_checkup",
+              "label": "Patients Checkup"
+            },
+            {
+              "key": "patients_medicine",
+              "label": "Patients Medicine"
+            },
+            {
+              "key": "patients_drips_/_injection",
+              "label": "Patients Drips / Injection"
+            },
+            {
+              "key": "admit_patients_medication",
+              "label": "Admit Patients Medication"
+            },
+            {
+              "key": "receptions_patients_register",
+              "label": "Receptions Patients Register"
+            },
+            {
+              "key": "fee_record",
+              "label": "Fee Record"
+            }
+          ],
+          "isActive": false,
+          "lastName": "Noor",
+          "createdAt": "2026-05-24T12:47:57.990Z",
+          "todayAttendance": "present",
+          "loginUserId": "0i7qpkaQgSahrITPKxxJXikxvCn1",
+          "todayDailyScore": 1,
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780472401/khanhub/staff/hospital/1780472401199_184ba274530f9bb7b7cbccfaa5348523_webp.webp",
+          "department": "hospital",
+          "dutyEndTime": "20:00",
+          "gender": "female",
+          "monthlySalary": "[REDACTED]",
+          "bloodGroup": "",
+          "salary": "[REDACTED]",
+          "dateOfBirth": "2001-03-04",
+          "firstName": "Ayesha",
+          "updatedAt": "2026-06-13T04:08:56.404Z",
+          "cnic": "[REDACTED]",
+          "createdBy": "SUPER-ADMIN",
+          "phone": "[REDACTED]",
+          "emergencyPhone": "[REDACTED]",
+          "userId": "0i7qpkaQgSahrITPKxxJXikxvCn1",
+          "loginEmail": "ayesha-63@hospital.khanhub",
+          "skills": [],
+          "password": "[REDACTED]",
+          "seniority": "junior",
+          "lastDailyAssessmentDate": "2026-06-06",
+          "designation": "Nurse",
+          "todayDutyStatus": "no",
+          "dept": "hospital",
+          "todayUniformStatus": "no",
+          "joiningDate": "2026-05-24"
+        },
+        "score": 70,
+        "deptMatches": false
+      }
+    ],
+    "status": "MATCHED"
+  },
+  {
+    "person": {
+      "index": 16,
+      "name": "Kamran",
+      "role": "REHAB ADMIN",
+      "dept": "Khan Hub Rehabilitation Center",
+      "hint": "rehab"
+    },
+    "candidates": [
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "OoxHqc3do7SZL0Lnt9Ok3TP5i7n2",
+          "customId": "KAMRAN-09",
+          "patientId": "fGuOa7Alm82kGDBnSu7b",
+          "displayName": "M.Kamran",
+          "isActive": true,
+          "createdAt": "2026-04-20T06:06:27.385Z",
+          "password": "[REDACTED]",
+          "role": "family"
+        },
+        "score": 95,
+        "deptMatches": true
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "sVIhFs8tnNVn4vVL91YP7U8VGWz2",
+          "customId": "KAMRAN-56",
+          "displayName": "M.Kamran Ali",
+          "patientId": "37BOy33qBRGNEUD91B25",
+          "role": "family",
+          "createdAt": "2026-04-20T05:14:50.455Z",
+          "isActive": true,
+          "password": "[REDACTED]"
+        },
+        "score": 95,
+        "deptMatches": true
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "yaXa11Vh5sSMh5gT3LubGQhuL8P2",
+          "bloodGroup": "",
+          "monthlyAdvance": 46998,
+          "salaryBalance": "[REDACTED]",
+          "outstandingBalance": 32198,
+          "customId": "rehab-admin",
+          "designation": "Administrator",
+          "defaultPassword": "[REDACTED]",
+          "dressCodeConfig": [
+            {
+              "key": "dress_pant",
+              "label": "Dress Pant"
+            },
+            {
+              "key": "dress_shirt",
+              "label": "Dress Shirt"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "key": "card",
+              "label": "Employee Card"
+            }
+          ],
+          "todayFines": 0,
+          "employeeId": "42",
+          "displayName": "Kamran",
+          "cnic": "[REDACTED]",
+          "secondaryDepts": [
+            "rehab"
+          ],
+          "lastDailyAssessmentDate": "2026-10-28",
+          "lastSalarySlipUrl": "[REDACTED]",
+          "lastSalaryPaidAt": "[REDACTED]",
+          "createdAt": "2026-04-08T06:47:43.379Z",
+          "todayAttendance": "present",
+          "role": "admin",
+          "salary": "[REDACTED]",
+          "todayDailyScore": 3,
+          "status": "active",
+          "todayDutyStatus": "yes",
+          "phone": "[REDACTED]",
+          "todayUniformStatus": "yes",
+          "address": "chak no 122 mailsi",
+          "documents": [
+            {
+              "title": "Salary Slip - July 2026 (Rs. -46,998)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790870800/khanhub/staff/rehab/salaries/slips/1790870796947_salary_slip_Saif_Ullah_Kamran_2026_07.webp.webp",
+              "date": "2026-08-11",
+              "type": "salary_slip",
+              "month": "2026-07",
+              "amount": -46998,
+              "txId": "ehwp1eQgg4MC0EZVVp0L",
+              "salaryRecordId": "JDusdu2c1onZd3j8aAmA",
+              "createdAt": "2026-10-01T16:06:46.091Z"
+            },
+            {
+              "title": "id card front",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780147674/khanhub/staff/rehab/documents/1780147672372_WhatsApp_Image_2026_05_30_at_2_36_02_PM_result_webp.webp"
+            },
+            {
+              "title": "id card back",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780147712/khanhub/staff/rehab/documents/1780147712330_WhatsApp_Image_2026_05_30_at_2_36_01_PM_result_webp.webp"
+            },
+            {
+              "title": "Rules and Regulations",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780147779/khanhub/staff/rehab/documents/1780147778177_WhatsApp_Image_2026_05_30_at_2_36_00_PM_result_webp.webp"
+            },
+            {
+              "title": "offer letter",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780147889/khanhub/staff/rehab/documents/1780147887059_WhatsApp_Image_2026_05_30_at_2_36_00_PM__1__result_webp.webp"
+            },
+            {
+              "title": "Job Description",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780147928/khanhub/staff/rehab/documents/1780147928103_WhatsApp_Image_2026_05_30_at_2_35_59_PM_result_webp.webp"
+            },
+            {
+              "title": "Employee Joining Form",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780147971/khanhub/staff/rehab/documents/1780147970514_WhatsApp_Image_2026_05_30_at_2_35_58_PM_result_webp.webp"
+            },
+            {
+              "title": "Terms and Conditions",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780148032/khanhub/staff/rehab/documents/1780148031839_WhatsApp_Image_2026_05_30_at_2_35_57_PM_result_webp.webp"
+            }
+          ],
+          "securityFeeDeduction": 0,
+          "education": [],
+          "dept": "rehab",
+          "department": "rehab",
+          "joiningDate": "2026-04-08",
+          "advanceSalary": "[REDACTED]",
+          "gender": "male",
+          "updatedAt": "2026-10-28T08:29:31.425Z",
+          "lastSalaryPaidDate": "[REDACTED]",
+          "dutyConfig": [
+            {
+              "key": "attendance_portal",
+              "label": "Attendance Entry"
+            },
+            {
+              "label": "Patient Vitals",
+              "key": "patient_vitals"
+            },
+            {
+              "label": "Ward Round",
+              "key": "ward_round"
+            },
+            {
+              "key": "cleanliness",
+              "label": "Area Cleanliness"
+            },
+            {
+              "key": "complete_patient_care",
+              "label": "Complete Patient Care"
+            },
+            {
+              "key": "medicine_management",
+              "label": "Medicine Management"
+            },
+            {
+              "key": "meal_arrangement_for_patients",
+              "label": "Meal Arrangement for Patients"
+            },
+            {
+              "key": "assisting_family_visits",
+              "label": "Assisting Family Visits"
+            },
+            {
+              "key": "responsibility_for_patient_belongings",
+              "label": "Responsibility for Patient Belongings"
+            },
+            {
+              "key": "overall_ward_responsibilities",
+              "label": "Overall Ward Responsibilities"
+            }
+          ],
+          "lastPayrollMonth": "2026-08",
+          "emergencyContact": "",
+          "experience": [],
+          "visibleSections": {
+            "canteenWallet": true,
+            "salary": true,
+            "duties": true,
+            "attendance": true,
+            "growthPoints": true,
+            "reports": true,
+            "designation": true,
+            "uniform": true
+          },
+          "advance": 46998,
+          "password": "[REDACTED]",
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780150096/khanhub/staff/rehab/1780150093228_WhatsApp_Image_2026_05_30_at_7_00_46_PM_result_webp.webp",
+          "monthlySalary": "[REDACTED]",
+          "dutyStartTime": "08:00",
+          "isActive": true,
+          "remainingBalance": 0,
+          "forceLogoutAt": "2026-04-19T12:57:22.666Z",
+          "emergencyContactName": "",
+          "totalGrowthPoints": 7,
+          "dob": "1991-10-15",
+          "basicInfoExtras": {},
+          "lastSalaryPaid": "[REDACTED]",
+          "userId": "yaXa11Vh5sSMh5gT3LubGQhuL8P2",
+          "todayFineReason": "",
+          "duties": [
+            "Supervise all hospital/rehab departments",
+            "Check staff attendance and duty roster",
+            "Ensure SOPs are implemented",
+            "Resolve patient complaints promptly",
+            "Review daily performance of all departments",
+            "Ensure availability of medicines, equipment and supplies",
+            "Oversee HR and administrative matters",
+            "Review financial and operational reports",
+            "Train and evaluate new employees",
+            "Present daily, weekly and monthly reports to the CEO",
+            "Manage attendance entry and patient vitals/ward rounds",
+            "Arrange meals for patients and assist family visits"
+          ],
+          "seniority": "lead",
+          "uniform": [
+            "Dress Pant",
+            "Dress Shirt",
+            "Black Shoes",
+            "Employee Card"
+          ],
+          "dutyEndTime": "20:00",
+          "fatherName": "Bashir Ahmad",
+          "emergencyPhone": "[REDACTED]",
+          "patientId": null,
+          "name": "Saif Ullah Kamran"
+        },
+        "score": 95,
+        "deptMatches": true
+      }
+    ],
+    "status": "AMBIGUOUS"
+  },
+  {
+    "person": {
+      "index": 17,
+      "name": "Mehwish",
+      "role": "PSYCHOLOGY STAFF",
+      "dept": "Khan Hub Rehabilitation Center",
+      "hint": "rehab"
+    },
+    "candidates": [
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "2gECkX6diDWyzGGg9TSbWbofmNx1",
+          "lastSalaryPaid": "[REDACTED]",
+          "createdBy": "SUPER-ADMIN",
+          "createdAt": "2026-06-03T09:00:30.802Z",
+          "emergencyPhone": "[REDACTED]",
+          "todayFineReason": "",
+          "basicInfoExtras": {},
+          "department": "rehab",
+          "name": "Mehwish Batool",
+          "experience": [],
+          "salaryBalance": "[REDACTED]",
+          "dob": "2002-06-02",
+          "dutyConfig": [
+            {
+              "key": "responsibility_for_patient_belongings",
+              "label": "Responsibility for Patient Belongings"
+            },
+            {
+              "label": "Patient Responsibilty",
+              "key": "patient_responsibilty"
+            },
+            {
+              "label": "Daily routine mangment",
+              "key": "daily_routine_mangment"
+            },
+            {
+              "key": "maintate_profiles_of_paitents_in_rehab_portal",
+              "label": "Maintate profiles of paitents in rehab portal"
+            }
+          ],
+          "documents": [
+            {
+              "title": "Salary Slip - August 2026 (Rs. 20,000)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790872119/khanhub/staff/rehab/salaries/slips/1790872117896_salary_slip_Mehwish_Batool_2026_08.webp.webp",
+              "date": "2026-09-12",
+              "type": "salary_slip",
+              "month": "2026-08",
+              "amount": 20000,
+              "txId": "TdoC43MXHPNueRRbPRtH",
+              "salaryRecordId": "qtiLwzBrCetR04Pj9TWd",
+              "createdAt": "2026-10-01T16:28:42.705Z"
+            },
+            {
+              "title": "Salary Slip - July 2026 (Rs. 13,130)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790844291/khanhub/staff/rehab/salaries/slips/1790844289069_salary_slip_Mehwish_Batool_2026_07.webp.webp",
+              "date": "2026-10-01",
+              "type": "salary_slip",
+              "month": "2026-07",
+              "amount": 13130,
+              "txId": "fTLvpH8MxxyT8mngKmE7",
+              "salaryRecordId": "9K0CCtzFJz0sycXLQAWy",
+              "createdAt": "2026-10-01T08:44:55.762Z"
+            },
+            {
+              "title": "Internship Certificate",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780476669/Khan%20Hub/staff/document/1780476662019_WhatsApp_Image_2026_06_03_at_1_17_08_PM_webp.webp"
+            },
+            {
+              "title": "Domicile",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780476759/Khan%20Hub/staff/document/1780476755447_WhatsApp_Image_2026_06_03_at_1_17_09_PM_webp.webp"
+            },
+            {
+              "title": "Transcript BZU",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780476783/Khan%20Hub/staff/document/1780476773213_WhatsApp_Image_2026_06_03_at_1_17_10_PM_webp.webp"
+            },
+            {
+              "title": "Inter Certificate",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780476817/Khan%20Hub/staff/document/1780476814592_WhatsApp_Image_2026_06_03_at_1_17_11_PM_webp.webp"
+            },
+            {
+              "title": "Matric Reult Certificate",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780476853/Khan%20Hub/staff/document/1780476851617_WhatsApp_Image_2026_06_03_at_1_17_12_PM_webp.webp"
+            },
+            {
+              "title": "CV",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780476888/Khan%20Hub/staff/document/1780476886768_WhatsApp_Image_2026_06_03_at_1_17_14_PM_webp.webp"
+            },
+            {
+              "title": "Terms And condition",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780476912/Khan%20Hub/staff/document/1780476910527_WhatsApp_Image_2026_06_03_at_1_17_18_PM__1__webp.webp"
+            },
+            {
+              "title": "Joining Form",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780476933/Khan%20Hub/staff/document/1780476931417_WhatsApp_Image_2026_06_03_at_1_17_18_PM__2__webp.webp"
+            },
+            {
+              "title": "Terms and Conditions 2",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780476960/Khan%20Hub/staff/document/1780476959262_WhatsApp_Image_2026_06_03_at_1_17_18_PM_webp.webp"
+            },
+            {
+              "title": "Father Id Card Front",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780476979/Khan%20Hub/staff/document/1780476977911_WhatsApp_Image_2026_06_03_at_1_17_19_PM__1__webp.webp"
+            },
+            {
+              "title": "Father Id Card Back",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780477118/Khan%20Hub/staff/document/1780477115083_WhatsApp_Image_2026_06_03_at_1_17_19_PM_webp.webp"
+            },
+            {
+              "title": "Id Card Back",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780477130/Khan%20Hub/staff/document/1780477128254_WhatsApp_Image_2026_06_03_at_1_17_20_PM_webp.webp"
+            },
+            {
+              "title": "Id Card Front",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780477147/Khan%20Hub/staff/document/1780477146442_WhatsApp_Image_2026_06_03_at_1_17_20_PM__1__webp.webp"
+            },
+            {
+              "title": "Internship Leter Back view",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780477192/Khan%20Hub/staff/document/1780477191281_WhatsApp_Image_2026_06_03_at_1_17_20_PM__3__webp.webp"
+            }
+          ],
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1781965247/khanhub/staff/rehab/1781965244715_WhatsApp_Image_2026_06_20_at_6_09_34_PM_webp.webp",
+          "password": "[REDACTED]",
+          "education": [],
+          "salary": "[REDACTED]",
+          "lastSalarySlipUrl": "[REDACTED]",
+          "designation": "Psychologist",
+          "isActive": true,
+          "lastSalaryPaidDate": "[REDACTED]",
+          "fatherName": " M Tahir",
+          "address": "Peer muraad colony multan road Vehari",
+          "lastPayrollMonth": "2026-08",
+          "emergencyContact": "",
+          "loginUserId": "2gECkX6diDWyzGGg9TSbWbofmNx1",
+          "lastDailyAssessmentDate": "2026-10-28",
+          "skills": [],
+          "lastName": "Batool",
+          "todayUniformStatus": "yes",
+          "bloodGroup": "",
+          "gender": "female",
+          "updatedAt": "2026-10-28T08:29:05.124Z",
+          "dept": "rehab",
+          "customId": "mehwish-65",
+          "todayDutyStatus": "yes",
+          "firstName": "Mehwish",
+          "phone": "[REDACTED]",
+          "employeeId": "65",
+          "todayDailyScore": 3,
+          "todayFines": 0,
+          "emergencyContactName": "Tahir (Father)",
+          "dateOfBirth": "2002-06-04",
+          "dutyEndTime": "20:00",
+          "todayAttendance": "present",
+          "isVacancy": false,
+          "dressCodeConfig": [
+            {
+              "key": "black_uniform",
+              "label": "Black Uniform"
+            },
+            {
+              "key": "lab_coat",
+              "label": "Lab Coat"
+            },
+            {
+              "key": "hijab",
+              "label": "Hijab"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "key": "card",
+              "label": "Employee Card"
+            }
+          ],
+          "cnic": "[REDACTED]",
+          "defaultPassword": "[REDACTED]",
+          "role": "internee",
+          "outstandingBalance": 0,
+          "secondaryDepts": [
+            "rehab"
+          ],
+          "joiningDate": "2026-06-03",
+          "seniority": "junior",
+          "userId": "2gECkX6diDWyzGGg9TSbWbofmNx1",
+          "duties": [
+            "Conduct mental health assessments",
+            "Provide individual counselling sessions",
+            "Guide patients with anxiety, depression and stress",
+            "Prepare treatment/therapy plans",
+            "Counsel children, adolescents and adults",
+            "Keep confidential information secure",
+            "Conduct follow-up sessions",
+            "Coordinate treatment planning with doctors",
+            "Prepare patient progress reports",
+            "Participate in mental-health awareness programs",
+            "Maintain responsibility for patient belongings and daily routine management",
+            "Maintain patient profiles in the rehab portal"
+          ],
+          "lastSalaryPaidAt": "[REDACTED]",
+          "uniform": [
+            "Black Uniform",
+            "Lab Coat",
+            "Hijab",
+            "Black Shoes",
+            "Employee Card"
+          ],
+          "loginEmail": "mehwish-65@rehab.khanhub",
+          "monthlySalary": "[REDACTED]",
+          "dutyStartTime": "08:00"
+        },
+        "score": 95,
+        "deptMatches": true
+      }
+    ],
+    "status": "MATCHED"
+  },
+  {
+    "person": {
+      "index": 18,
+      "name": "Mahkaif Fatima",
+      "role": "REHAB INTERN",
+      "dept": "Khan Hub Rehabilitation Center",
+      "hint": "rehab"
+    },
+    "candidates": [
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "Q6IyOQaMMcTIcyXX5ABMEZU6F3s2",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "displayName": "Rameen Fatima",
+          "role": "student",
+          "studentId": "mvzo0YYLaAZIjRSDEcsY",
+          "customId": "RAMEEN-L.H.V",
+          "createdAt": "2026-04-19T05:57:08.518Z"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "TOZQ0ytlsrMaCwUAISrarZVqNdg1",
+          "studentId": "1nj4rzqTVaOEtqbJMddX",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1784811383/khanhub/spims/students/1784811380693_arbeel.webp.webp",
+          "displayName": "Arbeel Fatima",
+          "createdAt": "2026-04-10T12:09:36.930Z",
+          "customId": "ARBEEL-LHV",
+          "role": "student"
+        },
+        "score": 70,
+        "deptMatches": false
+      }
+    ],
+    "status": "AMBIGUOUS"
+  },
+  {
+    "person": {
+      "index": 19,
+      "name": "Nahid Irfan",
+      "role": "ADMIN - JOB CENTER",
+      "dept": "Khan Hub Job Center",
+      "hint": "jobcenter"
+    },
+    "candidates": [
+      {
+        "col": "jobcenter_users",
+        "doc": {
+          "_id": "YUd033ObzASLSmNJqTz0ZEmmmoq1",
+          "bloodGroup": "",
+          "displayName": "Nahid Ishaq",
+          "status": "active",
+          "dutyEndTime": "18:00",
+          "advance": 0,
+          "secondaryDepts": [
+            "sukoon"
+          ],
+          "uniform": [
+            "Employee Card"
+          ],
+          "totalGrowthPoints": 11,
+          "employeeId": "46",
+          "name": "Nahid Irfan",
+          "customId": "nahid-46",
+          "lastDailyAssessmentDate": "2026-10-20",
+          "experience": [],
+          "role": "admin",
+          "dept": "job-center",
+          "emergencyContact": "0333-4250839",
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780159325/khanhub/staff/job-center/1780159322581_WhatsApp_Image_2026_05_30_at_9_04_11_PM__1__webp.webp",
+          "monthlyAdvance": 0,
+          "defaultPassword": "[REDACTED]",
+          "lastPayrollMonth": "2026-09",
+          "documents": [
+            {
+              "title": "Salary Slip - September 2026 (Rs. 26,650)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1792761169/khanhub/staff/jobcenter/salaries/slips/1792761167687_salary_slip_Nahid_Irfan_2026_09.webp.webp",
+              "date": "2026-10-11",
+              "type": "salary_slip",
+              "month": "2026-09",
+              "amount": 26650,
+              "txId": "7IPoQDrjr4FYuqCyusIw",
+              "salaryRecordId": "QqylCYQZgy2nLNLZCn1X",
+              "createdAt": "2026-10-23T13:12:51.397Z"
+            },
+            {
+              "title": "Salary Slip - July 2026 (Rs. 18,517)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790871565/khanhub/staff/jobcenter/salaries/slips/1790871563311_salary_slip_Nahid_Irfan_2026_07.webp.webp",
+              "date": "2026-08-11",
+              "type": "salary_slip",
+              "month": "2026-07",
+              "amount": 18517,
+              "txId": "uAH0eq7vbquJ03slFuoF",
+              "salaryRecordId": "uPG4umFYxLItefdoMjkq",
+              "createdAt": "2026-10-01T16:19:27.057Z"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155067/khanhub/staff/job-center/documents/1780155065915_WhatsApp_Image_2026_05_30_at_2_19_03_PM_result_webp.webp",
+              "title": "transcript"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155086/khanhub/staff/job-center/documents/1780155086241_WhatsApp_Image_2026_05_30_at_2_19_05_PM__1__result_webp.webp",
+              "title": "Degree"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155121/khanhub/staff/job-center/documents/1780155120308_WhatsApp_Image_2026_05_30_at_2_19_05_PM_result_webp.webp",
+              "title": "inter Certificate"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155144/khanhub/staff/job-center/documents/1780155143692_WhatsApp_Image_2026_05_30_at_2_19_06_PM_result_webp.webp",
+              "title": "Domicile"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155224/khanhub/staff/job-center/documents/1780155223573_WhatsApp_Image_2026_05_30_at_2_19_07_PM__1__result_webp.webp",
+              "title": "job"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155260/khanhub/staff/job-center/documents/1780155259633_WhatsApp_Image_2026_05_30_at_2_19_07_PM_result_webp.webp",
+              "title": "internship"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155282/khanhub/staff/job-center/documents/1780155281813_WhatsApp_Image_2026_05_30_at_2_19_08_PM__1__result_webp.webp",
+              "title": "Roles and Responsibilities"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155309/khanhub/staff/job-center/documents/1780155308915_WhatsApp_Image_2026_05_30_at_2_19_08_PM_result_webp.webp",
+              "title": "Diploma"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155328/khanhub/staff/job-center/documents/1780155327751_WhatsApp_Image_2026_05_30_at_2_19_09_PM__1__result_webp.webp",
+              "title": "id card front"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155338/khanhub/staff/job-center/documents/1780155337689_WhatsApp_Image_2026_05_30_at_2_19_09_PM__2__result_webp.webp",
+              "title": "id card back"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155368/khanhub/staff/job-center/documents/1780155368090_WhatsApp_Image_2026_05_30_at_2_19_09_PM_result_webp.webp",
+              "title": "job description"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155444/khanhub/staff/job-center/documents/1780155444301_WhatsApp_Image_2026_05_30_at_2_19_10_PM_result_webp.webp",
+              "title": "Husband id card front"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155483/khanhub/staff/job-center/documents/1780155483329_WhatsApp_Image_2026_05_30_at_2_19_17_PM__1__result_webp.webp",
+              "title": "Employee joining form"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155514/khanhub/staff/job-center/documents/1780155513136_WhatsApp_Image_2026_05_30_at_2_19_17_PM_result_webp.webp",
+              "title": "husband id card back"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155544/khanhub/staff/job-center/documents/1780155539152_WhatsApp_Image_2026_05_30_at_2_19_18_PM__1__result_webp.webp",
+              "title": "Offer letter"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155563/khanhub/staff/job-center/documents/1780155561530_WhatsApp_Image_2026_05_30_at_2_19_18_PM_result_webp.webp",
+              "title": "Terms and Conditions"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155591/khanhub/staff/job-center/documents/1780155586872_WhatsApp_Image_2026_05_30_at_2_21_58_PM__1__result_webp.webp",
+              "title": "Transcript"
+            },
+            {
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780155601/khanhub/staff/job-center/documents/1780155600042_WhatsApp_Image_2026_05_30_at_2_21_58_PM_result_webp.webp",
+              "title": "CV"
+            }
+          ],
+          "fatherName": "m ishaq",
+          "createdAt": "2026-04-17T08:49:24.841Z",
+          "seniority": "lead",
+          "department": "job-center",
+          "basicInfoExtras": {},
+          "dutyConfig": [
+            {
+              "label": "Managing All Activates",
+              "key": "managing_all_activates"
+            },
+            {
+              "label": "Maintain Income and Expense Record",
+              "key": "maintain_income_and_expense_record"
+            },
+            {
+              "label": "Conduct All Interviews",
+              "key": "conduct_all_interviews"
+            },
+            {
+              "label": "All Walking and Online Customer  Dealing",
+              "key": "all_walking_and_online_customer_dealing"
+            },
+            {
+              "label": "All Assets Responsibilty",
+              "key": "all_assets_responsibilty"
+            },
+            {
+              "label": "MAintain Reception Record",
+              "key": "maintain_reception_record"
+            },
+            {
+              "key": "new_registrations",
+              "label": "New Registrations"
+            },
+            {
+              "key": "provide_jobs",
+              "label": "Provide Jobs"
+            },
+            {
+              "key": "fee_collections",
+              "label": "Fee Collections"
+            },
+            {
+              "key": "staff_attendance_records",
+              "label": "Staff Attendance Records"
+            },
+            {
+              "key": "departments_assets_responsibilities",
+              "label": "Departments Assets Responsibilities"
+            },
+            {
+              "key": "social_media_marketing",
+              "label": "Social Media Marketing"
+            }
+          ],
+          "salaryBalance": "[REDACTED]",
+          "todayDailyScore": 3,
+          "duties": [
+            "Manage all Job Center activities",
+            "Maintain income and expense records",
+            "Conduct all interviews",
+            "Handle all walk-in and online customer dealing",
+            "Take responsibility for all departmental assets",
+            "Maintain reception records",
+            "Process new registrations",
+            "Provide job placements to candidates",
+            "Collect fees",
+            "Maintain staff attendance records",
+            "Oversee department assets' responsibilities",
+            "Handle social media marketing"
+          ],
+          "securityFeeDeduction": 0,
+          "todayAttendance": "present",
+          "lastSalarySlipUrl": "[REDACTED]",
+          "userId": "YUd033ObzASLSmNJqTz0ZEmmmoq1",
+          "salary": "[REDACTED]",
+          "joiningDate": "2026-04-17",
+          "todayUniformStatus": "yes",
+          "lastSalaryPaid": "[REDACTED]",
+          "dutyStartTime": "09:00",
+          "monthlySalary": "[REDACTED]",
+          "emergencyContactName": "HAfiz Irfan",
+          "updatedAt": "2026-10-23T13:12:51.908Z",
+          "lastSalaryPaidAt": "[REDACTED]",
+          "isActive": true,
+          "password": "[REDACTED]",
+          "patientId": null,
+          "todayFines": 0,
+          "remainingBalance": 0,
+          "phone": "[REDACTED]",
+          "dressCodeConfig": [
+            {
+              "key": "card",
+              "label": "Employee Card"
+            }
+          ],
+          "advanceSalary": "[REDACTED]",
+          "address": "Tariq Bin zayad Colony Vehari ",
+          "todayDutyStatus": "yes",
+          "lastSalaryPaidDate": "[REDACTED]",
+          "education": [],
+          "designation": "Admin",
+          "todayFineReason": "",
+          "gender": "female",
+          "emergencyPhone": "[REDACTED]",
+          "dob": "1996-12-09",
+          "cnic": "[REDACTED]",
+          "outstandingBalance": 0
+        },
+        "score": 115,
+        "deptMatches": true
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "Slg6uFtulON9bUQUVb9uJATtcOj1",
+          "password": "[REDACTED]",
+          "role": "family",
+          "displayName": "Muhammad Irfan Ashraf",
+          "createdAt": "2026-04-29T11:50:58.049Z",
+          "isActive": true,
+          "patientId": "3NtTLU7HC7DNNJFVBim4",
+          "customId": "IRFAN-82"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "KJhIPakZlvRWfGUfBIkPPtznHXu2",
+          "studentId": "xtPryZqfXRFMN8SEpcqX",
+          "role": "student",
+          "customId": "IRFAN-PT",
+          "displayName": "M.Irfan Ashraf",
+          "createdAt": "2026-04-18T10:53:48.851Z",
+          "password": "[REDACTED]",
+          "isActive": true
+        },
+        "score": 70,
+        "deptMatches": false
+      }
+    ],
+    "status": "MATCHED"
+  },
+  {
+    "person": {
+      "index": 20,
+      "name": "Faisal",
+      "role": "CEO PERSONAL ASSISTANT (PA) & DRIVER",
+      "dept": "Head Office",
+      "hint": "hq",
+      "alias": "Faisal Noor"
+    },
+    "candidates": [
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "TmNq4CoY6UgyM9PHnhM2HKXuFAX2",
+          "displayName": "Faisal",
+          "studentId": "nBaTHgaYKQ30FlqHce1j",
+          "customId": "FAISAL-B-CAT",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "dressCodeConfig": [
+            {
+              "key": "black_pa_uniform",
+              "label": "Black PA Uniform"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "key": "card",
+              "label": "Employee Card"
+            }
+          ],
+          "createdAt": "2026-05-11T08:04:48.089Z",
+          "role": "student"
+        },
+        "score": 100,
+        "deptMatches": false
+      },
+      {
+        "col": "hq_users",
+        "doc": {
+          "_id": "FVgczzfCD9ZajoCHNO3SnAcULOA3",
+          "lastName": "Noor",
+          "secondaryDepts": [
+            "hospital"
+          ],
+          "dutyConfig": [
+            {
+              "key": "doctor_assitat_in_daily_task",
+              "label": "Doctor assitat In daily Task"
+            },
+            {
+              "key": "driving_car_for_doctor_khan",
+              "label": "Driving car For Doctor Khan"
+            },
+            {
+              "key": "take_work_staff",
+              "label": "Take work Staff"
+            }
+          ],
+          "advanceSalary": "[REDACTED]",
+          "defaultPassword": "[REDACTED]",
+          "emergencyContactName": "Wheed (Taya)",
+          "emergencyContact": "",
+          "lastPayrollMonth": "2026-09",
+          "fatherName": "Muhammad Hussain",
+          "designation": "Personal Assistant (PA)",
+          "lastSalaryPaid": "[REDACTED]",
+          "todayFines": 0,
+          "name": "Faisal  Noor",
+          "outstandingBalance": 0,
+          "remainingBalance": 0,
+          "firstName": "Faisal ",
+          "customId": "faisal-67",
+          "isActive": true,
+          "education": [
+            {
+              "degree": "Matric",
+              "institution": "Pilot secondary school phalia",
+              "year": "2016"
+            }
+          ],
+          "userId": "FVgczzfCD9ZajoCHNO3SnAcULOA3",
+          "phone": "[REDACTED]",
+          "employeeId": "67",
+          "role": "trial",
+          "cnic": "[REDACTED]",
+          "documents": [
+            {
+              "title": "Salary Slip - August 2026 (Rs. 18,800)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790871990/khanhub/staff/hq/salaries/slips/1790871987250_salary_slip_Faisal__Noor_2026_08.webp.webp",
+              "date": "2026-09-12",
+              "type": "salary_slip",
+              "month": "2026-08",
+              "amount": 18800,
+              "txId": "qLt4QMoh3JrFi9etAJA9",
+              "salaryRecordId": "2tuSFS62ZdbH9ADdrVIy",
+              "createdAt": "2026-10-01T16:26:35.296Z"
+            },
+            {
+              "title": "Salary Slip - July 2026 (Rs. 19,900)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790844225/khanhub/staff/hq/salaries/slips/1790844223042_salary_slip_Faisal__Noor_2026_07.webp.webp",
+              "date": "2026-10-01",
+              "type": "salary_slip",
+              "month": "2026-07",
+              "amount": 19900,
+              "txId": "hvTuIjysglRR6ApTSEzP",
+              "salaryRecordId": "KzEwAyLBDUi2aKSVIOku",
+              "createdAt": "2026-10-01T08:43:50.362Z"
+            },
+            {
+              "title": "Police certifiacte",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1782024429/khanhub/staff/hq/documents/1782024428128_Police_certifiacte_webp.webp"
+            },
+            {
+              "title": "ID card Front",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1782024446/khanhub/staff/hq/documents/1782024445837_ID_card_Front_webp.webp"
+            },
+            {
+              "title": "ID card Back",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1782024454/khanhub/staff/hq/documents/1782024454233_ID_card_Back_webp.webp"
+            }
+          ],
+          "todayDailyScore": 3,
+          "salary": "[REDACTED]",
+          "loginEmail": "faisal-67@khanhub.io",
+          "bloodGroup": "A+",
+          "salaryBalance": "[REDACTED]",
+          "seniority": "intermediate",
+          "lastSalarySlipUrl": "[REDACTED]",
+          "emergencyPhone": "[REDACTED]",
+          "monthlySalary": "[REDACTED]",
+          "department": "hq",
+          "updatedAt": "2026-10-28T08:28:52.570Z",
+          "isVacancy": false,
+          "todayAttendance": "present",
+          "uniform": [
+            "Black PA Uniform",
+            "Black Shoes",
+            "Employee Card"
+          ],
+          "dob": "2000-04-02",
+          "lastSalaryPaidDate": "[REDACTED]",
+          "lastSalaryPaidAt": "[REDACTED]",
+          "createdBy": "SUPER-ADMIN",
+          "todayFineReason": "",
+          "joiningDate": "2026-06-15",
+          "lastDailyAssessmentDate": "2026-10-28",
+          "gender": "male",
+          "password": "[REDACTED]",
+          "experience": [
+            {
+              "title": "Driving",
+              "company": "Hajji and sons",
+              "duration": "2 years"
+            },
+            {
+              "title": "Sales man ",
+              "company": "Emporium mall Lahore",
+              "duration": "1.5 years"
+            }
+          ],
+          "basicInfoExtras": {},
+          "todayUniformStatus": "yes",
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1781675854/khanhub/staff/hq/1781675853289_WhatsApp_Image_2026_06_17_at_10_55_31_AM_webp.webp",
+          "dressCodeConfig": [
+            {
+              "key": "black_pa_uniform",
+              "label": "Black PA Uniform"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "key": "employee_card",
+              "label": "Employee Card"
+            }
+          ],
+          "skills": [
+            "Driving",
+            "Sales",
+            "Assistance"
+          ],
+          "dept": "hq",
+          "securityFeeDeduction": 0,
+          "duties": [
+            "Manage the CEO/Doctor's daily schedule",
+            "Arrange meetings and appointments",
+            "Prepare official correspondence, letters and emails",
+            "Coordinate between different departments",
+            "Prepare daily reports",
+            "Maintain files and documents securely",
+            "Manage the doctor's visits and meetings",
+            "Welcome official visitors",
+            "Follow up on assigned tasks and instructions",
+            "Drive the car for Doctor Khan when required",
+            "Assign and follow up on staff work",
+            "Maintain full confidentiality"
+          ],
+          "dutyEndTime": "20:00",
+          "monthlyAdvance": 0,
+          "loginUserId": "FVgczzfCD9ZajoCHNO3SnAcULOA3",
+          "dateOfBirth": "2000-04-02",
+          "advance": 0,
+          "address": "Kachi Mandi Vehari",
+          "dutyStartTime": "08:00",
+          "todayDutyStatus": "yes",
+          "createdAt": "2026-06-15T06:17:35.940Z"
+        },
+        "score": 95,
+        "deptMatches": true
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "BOMz8VxWnzP5BgloOtudXSgxolD3",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "displayName": "Faisal Azam",
+          "createdAt": "2026-04-20T06:15:48.751Z",
+          "patientId": "Bwb05I84Z8dAzs9oNYxq",
+          "customId": "FAISAL-10",
+          "role": "family"
+        },
+        "score": 80,
+        "deptMatches": false
+      },
+      {
+        "col": "hospital_users",
+        "doc": {
+          "_id": "0i7qpkaQgSahrITPKxxJXikxvCn1",
+          "basicInfoExtras": {},
+          "dressCodeConfig": [
+            {
+              "key": "hijab",
+              "label": "Hijab"
+            },
+            {
+              "key": "black_ot_kit",
+              "label": "Black OT Kit"
+            },
+            {
+              "key": "white_overall",
+              "label": "White Overall"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "label": "Employ Card",
+              "key": "employ_card"
+            }
+          ],
+          "status": "resigned",
+          "emergencyContactName": {
+            "phone": "",
+            "name": ""
+          },
+          "fatherName": "Noor Muhmamad",
+          "dob": "2001-03-04",
+          "defaultPassword": "[REDACTED]",
+          "secondaryDepts": [],
+          "experience": [],
+          "todayFineReason": "No responsible ",
+          "employeeId": "63",
+          "emergencyContact": {
+            "name": "",
+            "phone": ""
+          },
+          "visibleSections": {
+            "salary": true,
+            "designation": true,
+            "uniform": true,
+            "duties": true,
+            "attendance": true,
+            "canteenWallet": true,
+            "growthPoints": true,
+            "reports": true
+          },
+          "name": "Ayesha Noor",
+          "role": "Contract Staff",
+          "education": [
+            {
+              "degree": "ICS",
+              "institution": "Govt College For Women Vehari",
+              "year": "2020"
+            }
+          ],
+          "documents": [
+            {
+              "title": "ID Card Front",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780163533/khanhub/staff/hospital/documents/1780163531745_WhatsApp_Image_2026_05_30_at_10_46_27_PM_webp.webp"
+            },
+            {
+              "title": "ID Card Back",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780163548/khanhub/staff/hospital/documents/1780163546448_WhatsApp_Image_2026_05_30_at_10_46_26_PM_webp.webp"
+            },
+            {
+              "title": "Inter Result Card",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780163652/khanhub/staff/hospital/documents/1780163650585_WhatsApp_Image_2026_05_30_at_10_46_22_PM__1__webp.webp"
+            },
+            {
+              "title": "Domicile",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780163664/khanhub/staff/hospital/documents/1780163662697_WhatsApp_Image_2026_05_30_at_10_46_22_PM_webp.webp"
+            },
+            {
+              "title": "Board Certifiaace of Intermide",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780163693/khanhub/staff/hospital/documents/1780163689631_WhatsApp_Image_2026_05_30_at_10_46_23_PM_webp.webp"
+            },
+            {
+              "title": "2nd Year Result",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780163715/khanhub/staff/hospital/documents/1780163711538_WhatsApp_Image_2026_05_30_at_10_46_24_PM_webp.webp"
+            },
+            {
+              "title": "Matric result Card",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780163748/khanhub/staff/hospital/documents/1780163745804_WhatsApp_Image_2026_05_30_at_10_46_25_PM_webp.webp"
+            }
+          ],
+          "totalGrowthPoints": 3,
+          "address": "",
+          "dutyStartTime": "08:00",
+          "todayFines": 300,
+          "customId": "ayesha-63",
+          "dutyConfig": [
+            {
+              "key": "area_cleanliness",
+              "label": "Area Cleanliness"
+            },
+            {
+              "key": "vital_signs_check",
+              "label": "Vital Signs Check"
+            },
+            {
+              "label": "chair arrange",
+              "key": "chair_arrange"
+            },
+            {
+              "label": "Dustbin Cleaning",
+              "key": "dustbin_cleaning"
+            },
+            {
+              "label": "Reception Table Cleaning",
+              "key": "reception_table_cleaning"
+            },
+            {
+              "label": "Report Information and Samples",
+              "key": "report_information_and_samples"
+            },
+            {
+              "key": "patients_dealing",
+              "label": "Patients Dealing"
+            },
+            {
+              "key": "patients_checkup",
+              "label": "Patients Checkup"
+            },
+            {
+              "key": "patients_medicine",
+              "label": "Patients Medicine"
+            },
+            {
+              "key": "patients_drips_/_injection",
+              "label": "Patients Drips / Injection"
+            },
+            {
+              "key": "admit_patients_medication",
+              "label": "Admit Patients Medication"
+            },
+            {
+              "key": "receptions_patients_register",
+              "label": "Receptions Patients Register"
+            },
+            {
+              "key": "fee_record",
+              "label": "Fee Record"
+            }
+          ],
+          "isActive": false,
+          "lastName": "Noor",
+          "createdAt": "2026-05-24T12:47:57.990Z",
+          "todayAttendance": "present",
+          "loginUserId": "0i7qpkaQgSahrITPKxxJXikxvCn1",
+          "todayDailyScore": 1,
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780472401/khanhub/staff/hospital/1780472401199_184ba274530f9bb7b7cbccfaa5348523_webp.webp",
+          "department": "hospital",
+          "dutyEndTime": "20:00",
+          "gender": "female",
+          "monthlySalary": "[REDACTED]",
+          "bloodGroup": "",
+          "salary": "[REDACTED]",
+          "dateOfBirth": "2001-03-04",
+          "firstName": "Ayesha",
+          "updatedAt": "2026-06-13T04:08:56.404Z",
+          "cnic": "[REDACTED]",
+          "createdBy": "SUPER-ADMIN",
+          "phone": "[REDACTED]",
+          "emergencyPhone": "[REDACTED]",
+          "userId": "0i7qpkaQgSahrITPKxxJXikxvCn1",
+          "loginEmail": "ayesha-63@hospital.khanhub",
+          "skills": [],
+          "password": "[REDACTED]",
+          "seniority": "junior",
+          "lastDailyAssessmentDate": "2026-06-06",
+          "designation": "Nurse",
+          "todayDutyStatus": "no",
+          "dept": "hospital",
+          "todayUniformStatus": "no",
+          "joiningDate": "2026-05-24"
+        },
+        "score": 70,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "M2OdyekyhWYvL9DWByLFnFTaP5u2",
+          "dob": "",
+          "displayName": "Noor Maham",
+          "bloodGroup": "",
+          "education": [
+            {
+              "degree": "MLT",
+              "institution": "Riphah International University Islamabad Pakistan",
+              "year": "2023"
+            }
+          ],
+          "photoUrl": null,
+          "lastSalarySlipUrl": "[REDACTED]",
+          "seniority": "",
+          "experience": [],
+          "emergencyContact": "",
+          "defaultPassword": "[REDACTED]",
+          "cnic": "[REDACTED]",
+          "customId": "noor-71",
+          "gender": "female",
+          "weeklyOffDay": "sunday",
+          "dutyConfig": [
+            {
+              "key": "morning",
+              "label": "Morning Duty"
+            },
+            {
+              "key": "afternoon",
+              "label": "Afternoon Duty"
+            },
+            {
+              "key": "evening",
+              "label": "Evening Duty"
+            }
+          ],
+          "todayUniformStatus": "yes",
+          "todayDutyStatus": "yes",
+          "emergencyContactName": {
+            "phone": "",
+            "name": ""
+          },
+          "dutyStartTime": "08:00",
+          "userId": "M2OdyekyhWYvL9DWByLFnFTaP5u2",
+          "lastSalaryPaidDate": "[REDACTED]",
+          "dressCodeConfig": [
+            {
+              "key": "card",
+              "label": "Employee Card"
+            }
+          ],
+          "designation": "Admin",
+          "fatherName": "Muhammad Sher",
+          "role": "admin",
+          "dateOfBirth": "2001-10-20",
+          "employeeId": "71",
+          "lastDailyAssessmentDate": "2026-10-09",
+          "isVacancy": false,
+          "loginEmail": "noor-71@spims.khanhub",
+          "basicInfoExtras": {},
+          "dutyEndTime": "14:00",
+          "joiningDate": "2026-06-28",
+          "todayAttendance": "present",
+          "lastPayrollMonth": "2026-09",
+          "lastSalaryPaidAt": "[REDACTED]",
+          "uniform": [
+            "Employee Card"
+          ],
+          "salaryBalance": "[REDACTED]",
+          "loginUserId": "M2OdyekyhWYvL9DWByLFnFTaP5u2",
+          "monthlySalary": "[REDACTED]",
+          "todayFineReason": "",
+          "name": "Noor Maham",
+          "secondaryDepts": [],
+          "lastName": "Maham",
+          "password": "[REDACTED]",
+          "firstName": "Noor",
+          "phone": "[REDACTED]",
+          "skills": [],
+          "emergencyPhone": "[REDACTED]",
+          "duties": [
+            "Take classes according to the prescribed curriculum",
+            "Prepare daily lecture plans",
+            "Maintain student attendance",
+            "Conduct assignments, quizzes and tests",
+            "Evaluate student performance",
+            "Conduct practical training sessions",
+            "Maintain discipline in the classroom",
+            "Provide ethical and professional guidance to students",
+            "Inform parents/guardians of student performance when needed",
+            "Present a monthly teaching report to the Administrator",
+            "Maintain academic records and results",
+            "Fully follow the institute's educational policy and SOPs"
+          ],
+          "isActive": true,
+          "lastSalaryPaid": "[REDACTED]",
+          "updatedAt": "2026-10-25T04:07:02.498Z",
+          "documents": [
+            {
+              "title": "Salary Slip - September 2026 (Rs. 23,967)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1792401411/khanhub/staff/spims/salaries/slips/1792401409963_salary_slip_Noor_Maham_2026_09.webp.webp",
+              "date": "2026-09-11",
+              "type": "salary_slip",
+              "month": "2026-09",
+              "amount": 23967,
+              "txId": "DFFioiCLP0hShWQGpd2E",
+              "salaryRecordId": "2Tu0kDUWiD80StQz7xsz",
+              "createdAt": "2026-10-19T09:16:56.692Z"
+            },
+            {
+              "title": "Salary Slip - July 2026 (Rs. 20,900)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790871345/khanhub/staff/spims/salaries/slips/1790871342566_salary_slip_Noor_Maham_2026_07.webp.webp",
+              "date": "2026-08-11",
+              "type": "salary_slip",
+              "month": "2026-07",
+              "amount": 20900,
+              "txId": "9N8ErARySpYRQ5L7EGXX",
+              "salaryRecordId": "rhVxRwnYm3i6xpEjYFsb",
+              "createdAt": "2026-10-01T16:15:49.970Z"
+            },
+            {
+              "title": "Fine Notice (Rs. 100) - Ref #71",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790138884/khanhub/staff/spims/documents/1790138882729_fine_71_2026_09_23.webp.webp",
+              "type": "fine",
+              "date": "2026-09-23",
+              "createdAt": "2026-09-23T04:48:08.473Z"
+            }
+          ],
+          "todayFines": 0,
+          "salary": "[REDACTED]",
+          "dept": "spims",
+          "createdBy": "MANAGER",
+          "address": "",
+          "outstandingBalance": 0,
+          "createdAt": "2026-06-28T14:15:48.956Z",
+          "department": "spims",
+          "todayDailyScore": 3
+        },
+        "score": 70,
+        "deptMatches": false
+      }
+    ],
+    "status": "AMBIGUOUS"
+  },
+  {
+    "person": {
+      "index": 21,
+      "name": "Khalid",
+      "role": "SECURITY GUARD (HOSPITAL - NIGHT)",
+      "dept": "Khan Hub Private Limited - Security",
+      "hint": "hospital"
+    },
+    "candidates": [
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "C5PXFXoHk0dHslqemyxI",
+          "dutyEndTime": "20:00",
+          "dateOfBirth": "1980-03-06",
+          "monthlySalary": "[REDACTED]",
+          "dutyStartTime": "08:00",
+          "fatherName": "Gous Khan",
+          "basicInfoExtras": {},
+          "todayFineReason": "",
+          "name": "Muhammad Khalid Javed",
+          "securityFeeDeduction": 0,
+          "education": [],
+          "remainingBalance": 0,
+          "documents": [
+            {
+              "title": "Salary Slip - August 2026 (Rs. 19,800)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790872252/khanhub/staff/rehab/salaries/slips/1790872250143_salary_slip_Muhammad_Khalid_Javed_2026_08.webp.webp",
+              "date": "2026-09-12",
+              "type": "salary_slip",
+              "month": "2026-08",
+              "amount": 19800,
+              "txId": "fvMEz7lPkABopmXu1ex7",
+              "salaryRecordId": "CBCx0lXOv71t56RiCFZv",
+              "createdAt": "2026-10-01T16:30:56.676Z"
+            },
+            {
+              "title": "Salary Slip - July 2026 (Rs. 20,000)",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1790844343/khanhub/staff/rehab/salaries/slips/1790844342132_salary_slip_Muhammad_Khalid_Javed_2026_07.webp.webp",
+              "date": "2026-10-01",
+              "type": "salary_slip",
+              "month": "2026-07",
+              "amount": 20000,
+              "txId": "xK2rvi4zKM4JnuzBJGE4",
+              "salaryRecordId": "JeKaw4TqfCVUnEE2Ot09",
+              "createdAt": "2026-10-01T08:45:46.214Z"
+            },
+            {
+              "title": "id card front",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780148598/khanhub/staff/rehab/documents/1780148596579_CamScanner_05_30_2026_17_31_2_result_webp.webp"
+            },
+            {
+              "title": "offer letter",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780148620/khanhub/staff/rehab/documents/1780148620024_CamScanner_05_30_2026_17_31_1_result_webp.webp"
+            },
+            {
+              "title": "id card back",
+              "url": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780148638/khanhub/staff/rehab/documents/1780148637650_CamScanner_05_30_2026_17_31_3_result_webp.webp"
+            }
+          ],
+          "dob": "1980-03-06",
+          "lastPayrollMonth": "2026-09",
+          "emergencyContact": {
+            "name": "",
+            "phone": ""
+          },
+          "department": "rehab",
+          "lastSalaryPaidDate": "[REDACTED]",
+          "joiningDate": "2026-05-01",
+          "customId": "khalid-60",
+          "emergencyPhone": "[REDACTED]",
+          "lastName": "Javed",
+          "experience": [],
+          "createdAt": "2026-05-01T08:52:20.989Z",
+          "lastSalaryPaid": "[REDACTED]",
+          "address": "Chak No 79Wb dakkahna Khas tehsel Vehari",
+          "createdBy": "MANAGER",
+          "dutyConfig": [
+            {
+              "key": "morning",
+              "label": "Morning Duty"
+            },
+            {
+              "key": "afternoon",
+              "label": "Afternoon Duty"
+            },
+            {
+              "key": "evening",
+              "label": "Evening Duty"
+            },
+            {
+              "label": "Complete Patient Security",
+              "key": "complete_patient_security"
+            },
+            {
+              "label": "Responsibility for Any Emergency Situation",
+              "key": "responsibility_for_any_emergency_situation"
+            },
+            {
+              "label": "Indoor Cleaning Responsibilities",
+              "key": "indoor_cleaning_responsibilities"
+            },
+            {
+              "key": "patients_security",
+              "label": "Patients security"
+            },
+            {
+              "key": "all_patient_responsibilities",
+              "label": "All Patient Responsibilities"
+            }
+          ],
+          "salary": "[REDACTED]",
+          "todayDailyScore": 3,
+          "todayDutyStatus": "yes",
+          "emergencyContactName": "",
+          "seniority": "intermediate",
+          "gender": "male",
+          "isActive": true,
+          "secondaryDepts": [
+            "hospital"
+          ],
+          "todayUniformStatus": "yes",
+          "dept": "rehab",
+          "skills": [],
+          "password": "[REDACTED]",
+          "photoUrl": "https://res.cloudinary.com/dhshtdrjp/image/upload/v1780329288/khanhub/staff/rehab/1780329281817_WhatsApp_Image_2026_06_01_at_8_07_09_PM_webp.webp",
+          "loginEmail": "staff-4844@rehab.khanhub",
+          "lastDailyAssessmentDate": "2026-10-28",
+          "phone": "[REDACTED]",
+          "loginUserId": "yOfUecGwnWYfoAJf5W3AHdTOOIh1",
+          "salaryBalance": "[REDACTED]",
+          "duties": [
+            "Maintain full alertness during security duty",
+            "Monitor entry and exit points",
+            "Inspect all areas of the hospital at night",
+            "Protect parking and ambulance areas",
+            "Allow visitors in only during designated hours",
+            "Protect hospital equipment and assets",
+            "Keep emergency exits clear at all times",
+            "Assist doctors and administration in emergencies",
+            "Monitor CCTV (if available)",
+            "Complete the daily security log book",
+            "Support cleanliness and discipline",
+            "Follow the Administrator's instructions",
+            "Take full responsibility for rehab-patient security"
+          ],
+          "userId": "C5PXFXoHk0dHslqemyxI",
+          "firstName": "Muhammad Khalid",
+          "bloodGroup": "",
+          "lastSalaryPaidAt": "[REDACTED]",
+          "cnic": "[REDACTED]",
+          "lastSalarySlipUrl": "[REDACTED]",
+          "outstandingBalance": 0,
+          "employeeId": "60",
+          "role": "Worker",
+          "updatedAt": "2026-10-28T08:29:18.222Z",
+          "defaultPassword": "[REDACTED]",
+          "designation": "Security Guard",
+          "dressCodeConfig": [
+            {
+              "key": "security_uniform",
+              "label": "Security Uniform"
+            },
+            {
+              "key": "security_cap",
+              "label": "Security Cap"
+            },
+            {
+              "key": "whistle",
+              "label": "Whistle"
+            },
+            {
+              "key": "torch",
+              "label": "Torch"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "key": "card",
+              "label": "Employee Card"
+            }
+          ],
+          "uniform": [
+            "Security Uniform",
+            "Security Cap",
+            "Whistle",
+            "Torch",
+            "Black Shoes",
+            "Employee Card"
+          ],
+          "todayAttendance": "present",
+          "todayFines": 0
+        },
+        "score": 80,
+        "deptMatches": false
+      },
+      {
+        "col": "rehab_users",
+        "doc": {
+          "_id": "xBLuqK3YfXaFvtEj6ckLVYKzePG3",
+          "createdAt": "2026-04-08T13:28:45.713Z",
+          "dressCodeConfig": [
+            {
+              "key": "security_uniform",
+              "label": "Security Uniform"
+            },
+            {
+              "key": "security_cap",
+              "label": "Security Cap"
+            },
+            {
+              "key": "whistle",
+              "label": "Whistle"
+            },
+            {
+              "key": "torch",
+              "label": "Torch"
+            },
+            {
+              "key": "black_shoes",
+              "label": "Black Shoes"
+            },
+            {
+              "key": "card",
+              "label": "Employee Card"
+            }
+          ],
+          "displayName": "Muhammad Khalid",
+          "customId": "KHALID-75",
+          "patientId": "0xgrop2bqaYlVkCfdlSR",
+          "role": "family",
+          "password": "[REDACTED]",
+          "isActive": true
+        },
+        "score": 80,
+        "deptMatches": false
+      },
+      {
+        "col": "spims_users",
+        "doc": {
+          "_id": "ONRoN5Kt2sRJUBXP5xJcLza3iSm2",
+          "studentId": "FGToTlZElKtI92iGlJgp",
+          "role": "student",
+          "displayName": "Zamin Khalid",
+          "customId": "ZAMIN-PT",
+          "password": "[REDACTED]",
+          "isActive": true,
+          "createdAt": "2026-04-18T07:39:22.174Z"
+        },
+        "score": 80,
+        "deptMatches": false
+      }
+    ],
+    "status": "AMBIGUOUS"
+  },
+  {
+    "person": {
+      "index": 22,
+      "name": "Mazar",
+      "role": "SECURITY GUARD",
+      "dept": "Khan Hub Private Limited - Security",
+      "hint": "hospital"
+    },
+    "candidates": [],
+    "status": "NOT FOUND"
+  }
+]

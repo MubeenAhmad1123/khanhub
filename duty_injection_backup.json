@@ -1,0 +1,288 @@
+{
+  "hq_users/FVgczzfCD9ZajoCHNO3SnAcULOA3": {
+    "arrayValue": {
+      "values": [
+        {
+          "stringValue": "Manage the CEO/Doctor's daily schedule"
+        },
+        {
+          "stringValue": "Arrange meetings and appointments"
+        },
+        {
+          "stringValue": "Prepare official correspondence, letters and emails"
+        },
+        {
+          "stringValue": "Coordinate between different departments"
+        },
+        {
+          "stringValue": "Prepare daily reports"
+        },
+        {
+          "stringValue": "Maintain files and documents securely"
+        },
+        {
+          "stringValue": "Manage the doctor's visits and meetings"
+        },
+        {
+          "stringValue": "Welcome official visitors"
+        },
+        {
+          "stringValue": "Follow up on assigned tasks and instructions"
+        },
+        {
+          "stringValue": "Drive the car for Doctor Khan when required"
+        },
+        {
+          "stringValue": "Assign and follow up on staff work"
+        },
+        {
+          "stringValue": "Maintain full confidentiality"
+        }
+      ]
+    }
+  },
+  "hospital_users/U9vnWCqHIkdOqfbXQ3g8B0er0Mo2": null,
+  "hospital_users/j5Y7GrFVyScc9bOVtC2oMcMTIkk1": null,
+  "hospital_users/rLi8t3IW3DS0BUG7Z3EGcqLNuqK2": null,
+  "hospital_users/R7u0vLKp85QXSu8bRWxisPN68Ew2": null,
+  "hospital_users/7V0VrSIkLdYAnVuiQwsdyLiFUOu1": {
+    "arrayValue": {
+      "values": [
+        {
+          "stringValue": "Assist senior nurses and doctors in patient care"
+        },
+        {
+          "stringValue": "Help monitor patients' vital signs"
+        },
+        {
+          "stringValue": "Assist with injections, dressings and IV drips"
+        },
+        {
+          "stringValue": "Administer medicines to patients on time"
+        },
+        {
+          "stringValue": "Provide basic nursing care to patients"
+        },
+        {
+          "stringValue": "Keep the ward clean and organized"
+        },
+        {
+          "stringValue": "Maintain complete nursing records"
+        },
+        {
+          "stringValue": "Clean and arrange medical equipment"
+        },
+        {
+          "stringValue": "Monitor admitted patients"
+        },
+        {
+          "stringValue": "Assist doctor/nurse during emergencies"
+        },
+        {
+          "stringValue": "Handle pharmacy duty and arrange bedsheets/supplies"
+        },
+        {
+          "stringValue": "Switch office/ward lights and fans on/off as needed"
+        }
+      ]
+    }
+  },
+  "hospital_users/OXXF06JjBr6mwhNhaBTr": null,
+  "hospital_users/T83G2cKPMzQKkMqScJOE1rasmHk1": null,
+  "hospital_users/nbaXMSDPT5VnAEHsFg47L81JDNi2": {
+    "arrayValue": {
+      "values": [
+        {
+          "stringValue": "Welcome patients and visitors professionally"
+        },
+        {
+          "stringValue": "Manage gate/entry and complete entries"
+        },
+        {
+          "stringValue": "Register new patients and schedule appointments"
+        },
+        {
+          "stringValue": "Answer phone calls and WhatsApp messages"
+        },
+        {
+          "stringValue": "Issue OPD tokens"
+        },
+        {
+          "stringValue": "Collect fees and issue receipts"
+        },
+        {
+          "stringValue": "Prepare and maintain patient files"
+        },
+        {
+          "stringValue": "Keep the reception table and area clean"
+        },
+        {
+          "stringValue": "Maintain morning and evening patient registration registers"
+        },
+        {
+          "stringValue": "Forward patient complaints to the concerned officer"
+        }
+      ]
+    }
+  },
+  "hospital_users/3CC7w9DfklPVwjiOpUtt": null,
+  "hospital_users/vacancy_1780234030306_9ec9nup": null,
+  "it_users/ihYUvdBZmUVV1AaGFZAX4lTJ0hG2": {
+    "arrayValue": {
+      "values": [
+        {
+          "stringValue": "Develop and update the hospital's software/website"
+        },
+        {
+          "stringValue": "Maintain the website and all online systems"
+        },
+        {
+          "stringValue": "Troubleshoot computer and network issues"
+        },
+        {
+          "stringValue": "Ensure patient data security and safety"
+        },
+        {
+          "stringValue": "Take daily data backups"
+        },
+        {
+          "stringValue": "Repair and maintain IT equipment"
+        },
+        {
+          "stringValue": "Install system and software updates"
+        },
+        {
+          "stringValue": "Train staff on software usage"
+        },
+        {
+          "stringValue": "Prepare technical reports"
+        },
+        {
+          "stringValue": "Provide IT support to the Administrator"
+        },
+        {
+          "stringValue": "Maintain records for all departments (staff, students, customers, patients)"
+        },
+        {
+          "stringValue": "Overall office cleanliness related to IT area, client management"
+        }
+      ]
+    }
+  },
+  "media_users/vacancy_1780222300584_spbinsl": null,
+  "hq_users/2Jkxerhg9jgp4GIfXfNGrtl1CKe2": {
+    "arrayValue": {
+      "values": [
+        {
+          "stringValue": "Complete cleaning of the hospital premises"
+        }
+      ]
+    }
+  },
+  "hq_users/jDEFrV1sZuMl1DXYOjCtEl895hw2": null,
+  "hq_users/siOALqAayNYDUbQ5Q99IPsEPt3l1": null,
+  "hq_users/p5fGxfF6uUajqk7TdLNZGdgnlwJ2": {
+    "arrayValue": {
+      "values": [
+        {
+          "mapValue": {
+            "fields": {
+              "key": {
+                "stringValue": "morning_prayer_supervision"
+              },
+              "label": {
+                "stringValue": "Morning Prayer Supervision"
+              },
+              "status": {
+                "stringValue": "done"
+              }
+            }
+          }
+        },
+        {
+          "mapValue": {
+            "fields": {
+              "key": {
+                "stringValue": "all_departments_management"
+              },
+              "label": {
+                "stringValue": "All Departments Management"
+              },
+              "status": {
+                "stringValue": "done"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "sukoon_users/5K0uqAnheFTneo2K3eko": null,
+  "hq_users/zOZHk8xzM8aCeoV4dhLg31cRD943": {
+    "arrayValue": {
+      "values": [
+        {
+          "mapValue": {
+            "fields": {
+              "key": {
+                "stringValue": "income_&expense_record"
+              },
+              "label": {
+                "stringValue": "Income &Expense Record"
+              },
+              "status": {
+                "stringValue": "done"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "rehab_users/C5PXFXoHk0dHslqemyxI": {
+    "arrayValue": {
+      "values": [
+        {
+          "stringValue": "Maintain full alertness during security duty"
+        },
+        {
+          "stringValue": "Monitor entry and exit points"
+        },
+        {
+          "stringValue": "Inspect all areas of the hospital at night"
+        },
+        {
+          "stringValue": "Protect parking and ambulance areas"
+        },
+        {
+          "stringValue": "Allow visitors in only during designated hours"
+        },
+        {
+          "stringValue": "Protect hospital equipment and assets"
+        },
+        {
+          "stringValue": "Keep emergency exits clear at all times"
+        },
+        {
+          "stringValue": "Assist doctors and administration in emergencies"
+        },
+        {
+          "stringValue": "Monitor CCTV (if available)"
+        },
+        {
+          "stringValue": "Complete the daily security log book"
+        },
+        {
+          "stringValue": "Support cleanliness and discipline"
+        },
+        {
+          "stringValue": "Follow the Administrator's instructions"
+        },
+        {
+          "stringValue": "Take full responsibility for rehab-patient security"
+        }
+      ]
+    }
+  },
+  "hospital_users/Zr0kyrZCVpNv8om4r8F2QjeaEnA2": null
+}
