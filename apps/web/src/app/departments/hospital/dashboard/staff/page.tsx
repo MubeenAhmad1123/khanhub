@@ -553,7 +553,7 @@ export default function StaffSelfPage() {
                 <div className="space-y-2.5">
                   {staffProfile.duties.map((duty: any, idx: number) => {
                     const isDone = duty.status === 'done';
-                    const label = duty.label || duty.description || 'Duty item';
+                    const label = duty.label || duty.name || duty.dutyName || duty.description || (typeof duty === 'string' ? duty : 'Duty item');
                     return (
                       <div key={idx} className={`flex items-center justify-between p-3.5 rounded-2xl border text-xs font-bold transition-all duration-200
                         ${isDone 
