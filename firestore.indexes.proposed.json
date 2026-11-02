@@ -1,0 +1,52 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "public_media",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "campusId", "order": "ASCENDING" },
+        { "fieldPath": "departmentId", "order": "ASCENDING" },
+        { "fieldPath": "visible", "order": "ASCENDING" },
+        { "fieldPath": "publishedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "public_media",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "campusId", "order": "ASCENDING" },
+        { "fieldPath": "visible", "order": "ASCENDING" },
+        { "fieldPath": "publishedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "upload_items",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "campusId", "order": "ASCENDING" },
+        { "fieldPath": "month", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "upload_items",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "campusId", "order": "ASCENDING" },
+        { "fieldPath": "month", "order": "ASCENDING" },
+        { "fieldPath": "departmentId", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "upload_audit_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uploadItemId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
+
