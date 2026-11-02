@@ -600,3 +600,199 @@ export async function getUploadAuditLogs(
   }
 }
 
+/**
+ * Saves task row customizations (title, media type, department, enabled platforms)
+ * and updates all corresponding upload_items for this month.
+ */
+export async function saveTaskRowOverride(
+  params: {
+    rowId: string;
+    month: string;
+    title: string;
+    originalTitle?: string;
+    contentType: 'image' | 'video';
+    departmentId?: CanonicalDeptId | null;
+    enabledPlatforms?: UploadPlatformKey[];
+  },
+  idToken?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const caller = await verifyUploadCaller(idToken);
+    const adminDb = getAdminDb();
+
+    // 1. Update config_vehari settings
+    const settingsRef = adminDb.collection('upload_settings').doc('config_vehari');
+    const settingsSnap = await settingsRef.get();
+    const settingsData = settingsSnap.exists ? (settingsSnap.data() as UploadSettingsDoc) : ({} as any);
+    const taskRowOverrides = settingsData.taskRowOverrides || {};
+
+    taskRowOverrides[params.rowId] = {
+      title: params.title,
+      contentType: params.contentType,
+      departmentId: params.departmentId,
+      enabledPlatforms: params.enabledPlatforms
+    };
+
+    await settingsRef.set(
+      {
+        taskRowOverrides,
+        updatedAt: new Date().toISOString(),
+        updatedBy: caller.name
+      },
+      { merge: true }
+    );
+
+    // 2. Batch update matching upload_items for this month
+    const snap = await adminDb
+      .collection('upload_items')
+      .where('month', '==', params.month)
+      .get();
+
+    const batch = adminDb.batch();
+    let updatedCount = 0;
+
+    snap.docs.forEach((docSnap) => {
+      const data = docSnap.data() as UploadItemDoc;
+      const matchesCat = data.creationCategoryId === params.rowId;
+      const matchesTitle =
+        params.originalTitle && data.title.toLowerCase().trim() === params.originalTitle.toLowerCase().trim();
+
+      if (matchesCat || matchesTitle) {
+        batch.update(docSnap.ref, {
+          title: params.title,
+          contentType: params.contentType,
+          departmentId: params.departmentId !== undefined ? params.departmentId : data.departmentId,
+          updatedAt: new Date().toISOString()
+        });
+        updatedCount++;
+      }
+    });
+
+    if (updatedCount > 0) {
+      await batch.commit();
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[saveTaskRowOverride] Error:', err);
+    return { success: false, error: err.message || 'Failed to save task overrides.' };
+  }
+}
+
+/**
+ * Deletes a task row and all its platform items from the upload sheet for the given month.
+ * Also remembers the deletion in upload_settings so it stays removed across syncs.
+ */
+export async function deleteUploadTaskRow(
+  month: string,
+  rowId: string,
+  taskTitle: string,
+  idToken?: string
+): Promise<{ success: boolean; countDeleted?: number; error?: string }> {
+  try {
+    const caller = await verifyUploadCaller(idToken);
+    const adminDb = getAdminDb();
+
+    // 1. Delete matching upload_items documents for this month
+    const snap = await adminDb
+      .collection('upload_items')
+      .where('month', '==', month)
+      .get();
+
+    const batch = adminDb.batch();
+    let countDeleted = 0;
+
+    snap.docs.forEach((docSnap) => {
+      const data = docSnap.data() as UploadItemDoc;
+      const matchesCat = data.creationCategoryId === rowId;
+      const matchesTitle = data.title.toLowerCase().trim() === taskTitle.toLowerCase().trim();
+
+      if (matchesCat || matchesTitle) {
+        batch.delete(docSnap.ref);
+        countDeleted++;
+      }
+    });
+
+    if (countDeleted > 0) {
+      await batch.commit();
+    }
+
+    // 2. Record deletion in upload_settings/config_vehari
+    const settingsRef = adminDb.collection('upload_settings').doc('config_vehari');
+    const settingsSnap = await settingsRef.get();
+    const settingsData = settingsSnap.exists ? (settingsSnap.data() as UploadSettingsDoc) : ({} as any);
+    const deletedByMonth = settingsData.deletedTaskRowIdsByMonth || {};
+    const monthDeleted = new Set(deletedByMonth[month] || []);
+
+    if (rowId) monthDeleted.add(rowId);
+    if (taskTitle) monthDeleted.add(taskTitle.toLowerCase().trim());
+    deletedByMonth[month] = Array.from(monthDeleted);
+
+    await settingsRef.set(
+      {
+        deletedTaskRowIdsByMonth: deletedByMonth,
+        updatedAt: new Date().toISOString(),
+        updatedBy: caller.name
+      },
+      { merge: true }
+    );
+
+    return { success: true, countDeleted };
+  } catch (err: any) {
+    console.error('[deleteUploadTaskRow] Error:', err);
+    return { success: false, error: err.message || 'Failed to delete task from upload sheet.' };
+  }
+}
+
+/**
+ * Adds a new custom task row to the upload sheet and saves it in upload_settings.
+ */
+export async function addCustomUploadTaskRow(
+  params: {
+    month: string;
+    name: string;
+    type: 'video' | 'graphic';
+    departmentId?: CanonicalDeptId | null;
+    enabledPlatforms?: UploadPlatformKey[];
+  },
+  idToken?: string
+): Promise<{ success: boolean; newId?: string; error?: string }> {
+  try {
+    const caller = await verifyUploadCaller(idToken);
+    const adminDb = getAdminDb();
+
+    const newId = `custom_${Date.now()}`;
+    const settingsRef = adminDb.collection('upload_settings').doc('config_vehari');
+    const settingsSnap = await settingsRef.get();
+    const settingsData = settingsSnap.exists ? (settingsSnap.data() as UploadSettingsDoc) : ({} as any);
+    const customTaskRows = settingsData.customTaskRows || [];
+
+    const nextSerial =
+      customTaskRows.length > 0 ? Math.max(...customTaskRows.map((c: any) => c.serialNo || 0)) + 1 : 20;
+
+    customTaskRows.push({
+      id: newId,
+      serialNo: nextSerial,
+      name: params.name,
+      type: params.type,
+      departmentId: params.departmentId || null,
+      enabledPlatforms: params.enabledPlatforms || ALL_PLATFORM_KEYS,
+      createdAt: new Date().toISOString()
+    });
+
+    await settingsRef.set(
+      {
+        customTaskRows,
+        updatedAt: new Date().toISOString(),
+        updatedBy: caller.name
+      },
+      { merge: true }
+    );
+
+    return { success: true, newId };
+  } catch (err: any) {
+    console.error('[addCustomUploadTaskRow] Error:', err);
+    return { success: false, error: err.message || 'Failed to add custom upload task row.' };
+  }
+}
+

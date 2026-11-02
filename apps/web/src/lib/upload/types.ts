@@ -83,11 +83,31 @@ export interface UploadAuditLogDoc {
   createdAt: string;                     // ISO Timestamp
 }
 
+export interface TaskRowOverride {
+  title?: string;
+  contentType?: 'image' | 'video';
+  departmentId?: CanonicalDeptId | null;
+  enabledPlatforms?: UploadPlatformKey[];
+}
+
+export interface CustomUploadTaskRow {
+  id: string;
+  serialNo: number;
+  name: string;
+  type: 'video' | 'graphic';
+  departmentId?: CanonicalDeptId | null;
+  enabledPlatforms?: UploadPlatformKey[];
+  createdAt: string;
+}
+
 export interface UploadSettingsDoc {
   id: 'config_vehari';
   campusId: CanonicalCampusId;
   categoryDepartmentMap: Record<string, CanonicalDeptId>; // Category ID or Name -> CanonicalDeptId
   allowedVideoDomains: string[];
+  taskRowOverrides?: Record<string, TaskRowOverride>;
+  deletedTaskRowIdsByMonth?: Record<string, string[]>;
+  customTaskRows?: CustomUploadTaskRow[];
   updatedAt: string;
   updatedBy: string;
 }

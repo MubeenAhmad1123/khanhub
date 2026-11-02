@@ -22,8 +22,10 @@ import {
 } from '@/lib/upload/departmentRegistry';
 import {
   generateUploadSheet,
-  syncFromCreation
+  syncFromCreation,
+  deleteUploadTaskRow
 } from '@/lib/upload/uploadActions';
+import { EditUploadTaskModal } from './EditUploadTaskModal';
 import { UploadMatrixTable } from './UploadMatrixTable';
 import {
   UploadCalendarMatrix,
@@ -86,51 +88,103 @@ export function UploadingSheetView() {
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [isMappingModalOpen, setIsMappingModalOpen] = useState<boolean>(false);
   const [categories, setCategories] = useState<UploadCategoryRow[]>([]);
+  const [editingTaskRow, setEditingTaskRow] = useState<UploadCategoryRow | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [deletedSet, setDeletedSet] = useState<Set<string>>(new Set());
 
-  // Load Categories & Mappings from Firestore
+  // Load Categories, Overrides, Custom Tasks & Deleted Filters from Firestore
   const loadCategories = useCallback(async () => {
     try {
-      // 1. Fetch saved mapping config
       let savedMapping: Record<string, string> = {};
+      let taskOverrides: Record<string, any> = {};
+      let monthDeletedSet = new Set<string>();
+      let customRows: any[] = [];
+
       try {
         const settingsSnap = await getDoc(doc(db, 'upload_settings', 'config_vehari'));
         if (settingsSnap.exists()) {
-          savedMapping = (settingsSnap.data() as any).categoryDepartmentMap || {};
+          const sData = settingsSnap.data() as any;
+          savedMapping = sData.categoryDepartmentMap || {};
+          taskOverrides = sData.taskRowOverrides || {};
+          const monthDeleted = sData.deletedTaskRowIdsByMonth?.[selectedMonth] || [];
+          monthDeletedSet = new Set(monthDeleted.map((s: string) => s.toLowerCase().trim()));
+          customRows = sData.customTaskRows || [];
         }
       } catch (err) {
-        console.warn('Could not load upload_settings for category mapping:', err);
+        console.warn('Could not load upload_settings:', err);
       }
 
-      // 2. Fetch media_content_categories
+      setDeletedSet(monthDeletedSet);
+
+      // Fetch media_content_categories
       const catSnap = await getDocs(collection(db, 'media_content_categories')).catch(() => ({ docs: [] } as any));
       let loadedCats: UploadCategoryRow[] = catSnap.docs.map((d: any) => {
         const data = d.data();
-        const mappedDept = savedMapping[d.id] || resolveCanonicalDept(data.name || '');
+        const override = taskOverrides[d.id] || taskOverrides[data.name] || {};
+        const title = override.title || data.name || 'Untitled Task';
+        const type = override.contentType || data.type || 'post';
+        const mappedDept = override.departmentId !== undefined
+          ? override.departmentId
+          : (savedMapping[d.id] || resolveCanonicalDept(title || ''));
+        const enabledPlatforms = override.enabledPlatforms;
+
         return {
           id: d.id,
           serialNo: data.serialNo || 0,
-          name: data.name || 'Untitled Task',
-          type: data.type || 'post',
+          name: title,
+          type: type,
           defaultRole: data.defaultRole || 'all',
-          departmentId: mappedDept
+          departmentId: mappedDept,
+          enabledPlatforms
         };
       });
 
-      // Fallback to default categories if none loaded
+      // Fallback to default categories if none exist in creation
       if (loadedCats.length === 0) {
-        loadedCats = DEFAULT_CATEGORIES.map((def, idx) => ({
-          id: `default_${idx + 1}`,
-          ...def,
-          departmentId: resolveCanonicalDept(def.name)
-        }));
+        loadedCats = DEFAULT_CATEGORIES.map((def, idx) => {
+          const override = taskOverrides[`default_${idx + 1}`] || taskOverrides[def.name] || {};
+          const title = override.title || def.name;
+          const type = override.contentType || def.type;
+          const mappedDept = override.departmentId !== undefined
+            ? override.departmentId
+            : resolveCanonicalDept(title);
+          return {
+            id: `default_${idx + 1}`,
+            serialNo: def.serialNo,
+            name: title,
+            type: type,
+            defaultRole: def.defaultRole,
+            departmentId: mappedDept,
+            enabledPlatforms: override.enabledPlatforms
+          };
+        });
       }
+
+      // Append custom upload task rows
+      customRows.forEach((cr: any) => {
+        const override = taskOverrides[cr.id] || taskOverrides[cr.name] || {};
+        loadedCats.push({
+          id: cr.id,
+          serialNo: cr.serialNo || loadedCats.length + 1,
+          name: override.title || cr.name,
+          type: override.contentType || cr.type || 'graphic',
+          departmentId: override.departmentId !== undefined ? override.departmentId : cr.departmentId,
+          enabledPlatforms: override.enabledPlatforms || cr.enabledPlatforms,
+          isCustom: true
+        });
+      });
+
+      // Filter out rows deleted for this month
+      loadedCats = loadedCats.filter(
+        (c) => !monthDeletedSet.has(c.id.toLowerCase()) && !monthDeletedSet.has(c.name.toLowerCase().trim())
+      );
 
       loadedCats.sort((a, b) => (a.serialNo || 0) - (b.serialNo || 0));
       setCategories(loadedCats);
     } catch (err) {
       console.warn('Error loading categories:', err);
     }
-  }, []);
+  }, [selectedMonth]);
 
   useEffect(() => {
     void loadCategories();
@@ -176,7 +230,10 @@ export function UploadingSheetView() {
 
     items.forEach((it) => {
       const taskName = (it.title || it.creationCategoryName || '').trim();
-      if (taskName && !knownNames.has(taskName.toLowerCase())) {
+      const isDeleted =
+        (it.creationCategoryId && deletedSet.has(it.creationCategoryId.toLowerCase())) ||
+        deletedSet.has(taskName.toLowerCase());
+      if (taskName && !isDeleted && !knownNames.has(taskName.toLowerCase())) {
         knownNames.add(taskName.toLowerCase());
         list.push({
           id: it.creationCategoryId || `item_cat_${taskName}`,
@@ -247,6 +304,39 @@ export function UploadingSheetView() {
       toast.error(err.message || 'Error syncing calendar');
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleEditTask = (task: UploadCategoryRow) => {
+    setEditingTaskRow(task);
+    setIsEditModalOpen(true);
+  };
+
+  const handleAddTask = () => {
+    setEditingTaskRow(null);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeleteTask = async (task: UploadCategoryRow) => {
+    if (
+      !window.confirm(
+        `Delete "${task.name}" and all its upload items from the ${selectedMonth} upload sheet?\n\nThis will remove the task rows from this month's matrix.`
+      )
+    ) {
+      return;
+    }
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const res = await deleteUploadTaskRow(selectedMonth, task.id, task.name, idToken);
+      if (res.success) {
+        toast.success(`Task "${task.name}" deleted from Upload Sheet.`);
+        await loadCategories();
+        await loadMonthItems();
+      } else {
+        toast.error(res.error || 'Failed to delete task.');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error deleting task.');
     }
   };
 
@@ -575,6 +665,9 @@ export function UploadingSheetView() {
           setMatrixRange={setMatrixRange}
           todayKarachi={todayKarachi}
           onCellClick={handleCellClick}
+          onEditTask={handleEditTask}
+          onDeleteTask={handleDeleteTask}
+          onAddTask={handleAddTask}
           departmentFilter={deptFilter}
           searchQuery={searchQuery}
         />
@@ -594,6 +687,18 @@ export function UploadingSheetView() {
         item={selectedDrawerItem}
         focusedPlatform={focusedPlatform}
         onItemUpdated={handleItemUpdated}
+      />
+
+      {/* ── Edit Upload Task Modal ── */}
+      <EditUploadTaskModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        task={editingTaskRow}
+        month={selectedMonth}
+        onSaved={async () => {
+          await loadCategories();
+          await loadMonthItems();
+        }}
       />
 
       {/* ── Category Mapping Modal ── */}

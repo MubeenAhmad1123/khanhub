@@ -10,7 +10,8 @@ import {
 } from '@/lib/upload/types';
 import {
   Check, CheckSquare, ExternalLink, Clock, AlertTriangle,
-  Ban, Layers, Printer, ChevronRight, Video, Image as ImageIcon
+  Ban, Layers, Printer, ChevronRight, Video, Image as ImageIcon,
+  Edit3, Trash2, Plus
 } from 'lucide-react';
 import {
   FaFacebook,
@@ -28,6 +29,8 @@ export interface UploadCategoryRow {
   type?: 'video' | 'graphic' | 'post' | 'custom' | string;
   defaultRole?: 'editor' | 'designer' | 'all' | string;
   departmentId?: string | null;
+  enabledPlatforms?: UploadPlatformKey[];
+  isCustom?: boolean;
 }
 
 interface UploadCalendarMatrixProps {
@@ -39,6 +42,9 @@ interface UploadCalendarMatrixProps {
   todayKarachi: string; // 'YYYY-MM-DD'
   onCellClick: (item: UploadItemDoc, platform: UploadPlatformKey) => void;
   onEmptyCellClick?: (date: string, category: UploadCategoryRow) => void;
+  onEditTask?: (task: UploadCategoryRow) => void;
+  onDeleteTask?: (task: UploadCategoryRow) => void;
+  onAddTask?: () => void;
   departmentFilter?: string;
   searchQuery?: string;
 }
@@ -126,6 +132,9 @@ export function UploadCalendarMatrix({
   todayKarachi,
   onCellClick,
   onEmptyCellClick,
+  onEditTask,
+  onDeleteTask,
+  onAddTask,
   departmentFilter = 'all',
   searchQuery = ''
 }: UploadCalendarMatrixProps) {
@@ -441,6 +450,19 @@ export function UploadCalendarMatrix({
             </button>
           </div>
 
+          {/* Add Task Row Button */}
+          {onAddTask && (
+            <button
+              type="button"
+              onClick={onAddTask}
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
+              title="Add a new custom task row to the upload sheet"
+            >
+              <Plus size={15} />
+              <span>Add Task Row</span>
+            </button>
+          )}
+
           {/* Print / Save PDF Button */}
           <button
             type="button"
@@ -539,11 +561,18 @@ export function UploadCalendarMatrix({
                   cat.name.toLowerCase().includes('clip');
                 const typeLabel = isContentTypeVideo ? 'VIDEO' : 'GRAPHIC';
 
+                const activePlatforms = PLATFORM_CONFIGS.filter(
+                  (p) =>
+                    !cat.enabledPlatforms ||
+                    cat.enabledPlatforms.length === 0 ||
+                    cat.enabledPlatforms.includes(p.key)
+                );
+
                 return (
                   <React.Fragment key={cat.id || cat.name}>
-                    {PLATFORM_CONFIGS.map((platform, pIdx) => {
+                    {activePlatforms.map((platform, pIdx) => {
                       const isFirstPlatformInGroup = pIdx === 0;
-                      const streamlinedSr = `${catSr}.${platform.subSr}`;
+                      const streamlinedSr = `${catSr}.${pIdx + 1}`;
                       const PlatformIcon = platform.icon;
 
                       return (
@@ -597,16 +626,50 @@ export function UploadCalendarMatrix({
                                 </div>
                               </div>
 
-                              {/* Content Type Indicator (Video / Graphic badge) */}
-                              <span
-                                className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border shrink-0 ${
-                                  isContentTypeVideo
-                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                    : 'bg-purple-50 text-purple-700 border-purple-200'
-                                }`}
-                              >
-                                {typeLabel}
-                              </span>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {/* Content Type Indicator (Video / Graphic badge) */}
+                                <span
+                                  className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border shrink-0 ${
+                                    isContentTypeVideo
+                                      ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                      : 'bg-purple-50 text-purple-700 border-purple-200'
+                                  }`}
+                                >
+                                  {typeLabel}
+                                </span>
+
+                                {/* Edit & Delete Action Buttons (First row of group only) */}
+                                {isFirstPlatformInGroup && (onEditTask || onDeleteTask) && (
+                                  <div className="flex items-center gap-0.5 shrink-0">
+                                    {onEditTask && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onEditTask(cat);
+                                        }}
+                                        className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition cursor-pointer"
+                                        title={`Edit "${cat.name}" title, media tag & platforms`}
+                                      >
+                                        <Edit3 size={12} />
+                                      </button>
+                                    )}
+                                    {onDeleteTask && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onDeleteTask(cat);
+                                        }}
+                                        className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                        title={`Delete "${cat.name}" from upload sheet`}
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
 
                             {/* Paper Print View: [PLATFORM] Task Name [TYPE] */}
