@@ -91,3 +91,4 @@ export interface UploadSettingsDoc {
   updatedAt: string;
   updatedBy: string;
 }
+

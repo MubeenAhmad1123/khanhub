@@ -66,3 +66,4 @@ export function validatePlatformPostUrl(
     return { valid: false, error: 'Invalid URL format.' };
   }
 }
+
