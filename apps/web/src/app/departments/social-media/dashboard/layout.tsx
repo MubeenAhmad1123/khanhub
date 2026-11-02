@@ -300,20 +300,20 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
   return (
     <div className="min-h-screen flex bg-[#FCFBF8] text-black font-sans">
       {/* Sidebar Desktop */}
-      <aside className="hidden lg:flex flex-col w-72 fixed left-0 top-0 h-screen z-30">
+      <aside className="hidden lg:flex flex-col w-72 fixed left-0 top-0 h-screen z-30 print:hidden">
         <SidebarContent />
       </aside>
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-xl z-40 lg:hidden animate-in fade-in duration-500" 
+          className="fixed inset-0 bg-black/60 backdrop-blur-xl z-40 lg:hidden animate-in fade-in duration-500 print:hidden" 
           onClick={() => setSidebarOpen(false)} 
         />
       )}
 
       {/* Mobile Sidebar */}
-      <aside className={`fixed left-0 top-0 h-screen w-80 z-50 lg:hidden transform transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${
+      <aside className={`fixed left-0 top-0 h-screen w-80 z-50 lg:hidden print:hidden transform transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full shadow-none'
       } bg-[#FCFBF8] shadow-2xl`}>
         <button 
@@ -326,13 +326,13 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 lg:ml-72 flex flex-col min-h-screen relative">
+      <div className="flex-1 lg:ml-72 flex flex-col min-h-screen relative print:ml-0 print:min-h-0 print:p-0">
         {/* Decorative Background Circles */}
-        <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-[120px] -mr-64 -mt-64 pointer-events-none" />
-        <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[120px] -ml-64 -mb-64 pointer-events-none" />
+        <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-[120px] -mr-64 -mt-64 pointer-events-none print:hidden" />
+        <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[120px] -ml-64 -mb-64 pointer-events-none print:hidden" />
 
         {/* Top Header */}
-        <header className="sticky top-0 z-20 bg-[#FCFBF8]/80 lg:bg-[#FCFBF8]/80 backdrop-blur-xl border-b border-gray-100 px-6 lg:px-12 py-4 lg:py-6 flex items-center justify-between">
+        <header className="sticky top-0 z-20 bg-[#FCFBF8]/80 lg:bg-[#FCFBF8]/80 backdrop-blur-xl border-b border-gray-100 px-6 lg:px-12 py-4 lg:py-6 flex items-center justify-between print:hidden">
           <div className="flex items-center gap-6">
             <button 
               onClick={() => setSidebarOpen(true)} 
@@ -377,7 +377,7 @@ export default function SocialMediaDashboardLayout({ children }: { children: Rea
         </header>
 
         {/* Page Content Container */}
-        <main className={`flex-1 p-6 lg:p-12 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+        <main className={`flex-1 p-6 lg:p-12 transition-all duration-1000 print:p-0 print:m-0 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
           <div className="max-w-7xl mx-auto relative">
             {children}
           </div>

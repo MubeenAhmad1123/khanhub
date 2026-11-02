@@ -31,7 +31,7 @@ export default function MediaCalendarPage() {
   return (
     <div className="space-y-6">
       {/* ── Sub-Navigation Tab Bar ── */}
-      <div className="bg-white p-2 rounded-3xl border border-gray-100 shadow-xs flex items-center justify-between gap-2 max-w-xl mx-auto sm:mx-0">
+      <div className="bg-white p-2 rounded-3xl border border-gray-100 shadow-xs flex items-center justify-between gap-2 max-w-xl mx-auto sm:mx-0 print:hidden">
         <button
           type="button"
           onClick={() => handleTabChange('creation')}

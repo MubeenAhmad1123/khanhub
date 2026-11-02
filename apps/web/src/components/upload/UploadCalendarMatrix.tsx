@@ -277,6 +277,7 @@ export function UploadCalendarMatrix({
           input,
           select,
           div[class*="fixed"],
+          div[class*="sticky"],
           div[class*="toast"],
           div[class*="drawer"],
           div[class*="modal"] {
@@ -457,16 +458,21 @@ export function UploadCalendarMatrix({
       <div className="hidden print:block mb-3 pb-2 border-b-2 border-black">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-base font-black uppercase tracking-tight text-black">
-              KHANHUB — SOCIAL MEDIA CONTENT UPLOADING SHEET
-            </h1>
-            <p className="text-[8pt] font-bold text-gray-800 mt-0.5">
-              Month/Cycle: {monthTitle} · Multi-Platform Social & Web Publishing Matrix (6 Channels / Task)
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-black uppercase tracking-tight text-black">
+                KHANHUB — CONTENT UPLOADING SHEET
+              </h1>
+              <span className="text-[7.5pt] font-black uppercase px-2 py-0.5 bg-black text-white rounded">
+                {monthTitle}
+              </span>
+            </div>
+            <p className="text-[7.5pt] font-bold text-gray-800 mt-0.5">
+              Monthly Multi-Platform Publishing & Distribution Matrix · 6 Targets Per Content Task
             </p>
           </div>
           <div className="text-right text-[7pt] font-mono font-bold text-black leading-tight">
-            <p>Generated: {new Date().toLocaleDateString('en-GB')}</p>
-            <p>Legend: [✓] Posted  [—] Skipped  [ ] Pending</p>
+            <p>Printed: {new Date().toLocaleDateString('en-GB')}</p>
+            <p className="mt-0.5">Legend: [ ✓ ] Posted &nbsp; [ — ] Skipped &nbsp; [ &nbsp; ] Pending</p>
           </div>
         </div>
       </div>
