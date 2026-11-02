@@ -355,11 +355,11 @@ export function UploadCalendarMatrix({
 
           /* Task & Platform column on paper */
           .print-col-task {
-            width: 125px !important;
-            min-width: 125px !important;
-            max-width: 125px !important;
+            width: 250px !important;
+            min-width: 250px !important;
+            max-width: 250px !important;
             text-align: left !important;
-            padding-left: 3px !important;
+            padding: 2px 4px !important;
             font-size: 6.5pt !important;
           }
 
@@ -491,9 +491,9 @@ export function UploadCalendarMatrix({
               </th>
               <th
                 scope="col"
-                className="px-3 sm:px-4 py-3 text-left border-r border-slate-700 min-w-[200px] sm:min-w-[280px] sticky left-12 z-20 bg-slate-900 print:border-black print:w-[125px] print:min-w-[125px] print:max-w-[125px] print:bg-slate-100 print:text-black print:static print:p-1"
+                className="px-3 sm:px-4 py-3 text-left border-r border-slate-700 min-w-[200px] sm:min-w-[280px] sticky left-12 z-20 bg-slate-900 print:border-black print:w-[250px] print:min-w-[250px] print:max-w-[250px] print:bg-slate-100 print:text-black print:static print:p-1 print-col-task"
               >
-                Content Task & Target Platform
+                Content Task, Target Platform & Type
               </th>
               {matrixDays.map((dayStr) => {
                 const dayNum = parseInt(dayStr.split('-')[2], 10);
@@ -532,6 +532,12 @@ export function UploadCalendarMatrix({
               filteredCategories.map((cat, catIdx) => {
                 const catSr = cat.serialNo || catIdx + 1;
                 const isEvenCategory = catIdx % 2 === 0;
+                const isContentTypeVideo =
+                  cat.type === 'video' ||
+                  cat.name.toLowerCase().includes('video') ||
+                  cat.name.toLowerCase().includes('reel') ||
+                  cat.name.toLowerCase().includes('clip');
+                const typeLabel = isContentTypeVideo ? 'VIDEO' : 'GRAPHIC';
 
                 return (
                   <React.Fragment key={cat.id || cat.name}>
@@ -558,7 +564,7 @@ export function UploadCalendarMatrix({
 
                           {/* ── Task Name + Platform (Sticky Left 12) ── */}
                           <td
-                            className={`px-3 py-2 border-r border-gray-200 sticky left-12 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] print:border-black print:static print:shadow-none print:w-[125px] print:min-w-[125px] print:max-w-[125px] print:p-1 ${
+                            className={`px-3 py-2 border-r border-gray-200 sticky left-12 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] print:border-black print:static print:shadow-none print:w-[250px] print:min-w-[250px] print:max-w-[250px] print:p-1 print-col-task ${
                               isEvenCategory ? 'bg-white' : 'bg-[#fafafa]'
                             }`}
                           >
@@ -591,17 +597,35 @@ export function UploadCalendarMatrix({
                                 </div>
                               </div>
 
-                              {/* Content Type Indicator on first row of category */}
-                              {isFirstPlatformInGroup && (
-                                <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200 shrink-0">
-                                  {cat.type || 'task'}
-                                </span>
-                              )}
+                              {/* Content Type Indicator (Video / Graphic badge) */}
+                              <span
+                                className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border shrink-0 ${
+                                  isContentTypeVideo
+                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                    : 'bg-purple-50 text-purple-700 border-purple-200'
+                                }`}
+                              >
+                                {typeLabel}
+                              </span>
                             </div>
 
-                            {/* Paper Print View (Clean, readable text) */}
-                            <div className="hidden print:block text-black font-bold text-[6.5pt] leading-tight truncate">
-                              {cat.name} · {platform.label}
+                            {/* Paper Print View: [PLATFORM] Task Name [TYPE] */}
+                            <div className="hidden print:flex items-center justify-between gap-1 w-full text-black">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                {/* Platform Name Badge in bold border */}
+                                <span className="font-black text-[6pt] uppercase tracking-wider text-black shrink-0 px-1 py-0.5 border border-black rounded-[2px] bg-slate-100">
+                                  {platform.label}
+                                </span>
+                                {/* Task Name */}
+                                <span className="font-bold text-[6.5pt] text-black truncate max-w-[155px]" title={cat.name}>
+                                  {cat.name}
+                                </span>
+                              </div>
+
+                              {/* Content Type Badge: VIDEO or GRAPHIC */}
+                              <span className="text-[5.5pt] font-black uppercase px-1 py-0.2 rounded border border-black text-black shrink-0">
+                                {typeLabel}
+                              </span>
                             </div>
                           </td>
 
