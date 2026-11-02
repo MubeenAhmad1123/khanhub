@@ -239,8 +239,154 @@ export function UploadCalendarMatrix({
     return undefined;
   };
 
+  // Handler for Print / PDF Export — ensures all days are rendered
+  const handlePrintSheet = () => {
+    setMatrixRange('full');
+    setTimeout(() => {
+      window.print();
+    }, 120);
+  };
+
   return (
     <div className="space-y-4">
+      {/* ── Printable CSS Rules for Paper & PDF Export (Pure B&W Landscape A4) ── */}
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: landscape A4;
+            margin: 5mm;
+          }
+          
+          html, body {
+            background: #ffffff !important;
+            color: #000000 !important;
+            font-family: Arial, Helvetica, sans-serif !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          /* Hide UI Chrome, sidebars, navigation, drawers, modals */
+          header, footer, nav, aside,
+          .print\\:hidden,
+          button,
+          input,
+          select,
+          div[class*="fixed"],
+          div[class*="toast"],
+          div[class*="drawer"],
+          div[class*="modal"] {
+            display: none !important;
+          }
+
+          /* Reset layout wrappers to eliminate sidebar offset (margin-left: 16rem) */
+          div[class*="min-h-screen"],
+          div[class*="lg\\:ml-"],
+          div[class*="max-w-"],
+          main {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-height: 0 !important;
+            position: static !important;
+            box-shadow: none !important;
+            background: transparent !important;
+          }
+
+          .print\\:block {
+            display: block !important;
+          }
+          .print\\:flex {
+            display: flex !important;
+          }
+
+          /* Table Container with clean 1.5px black border */
+          .matrix-table-container {
+            overflow: visible !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            border: 1.5px solid #000000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+          }
+
+          .matrix-table {
+            border-collapse: collapse !important;
+            width: 100% !important;
+            font-size: 7pt !important;
+            table-layout: auto !important;
+          }
+
+          .matrix-table th,
+          .matrix-table td {
+            border: 1px solid #000000 !important;
+            padding: 2px 1px !important;
+            text-align: center !important;
+            color: #000000 !important;
+            position: static !important;
+            box-shadow: none !important;
+            background: #ffffff !important;
+            min-width: 0 !important;
+          }
+
+          .matrix-table th {
+            background-color: #f1f5f9 !important;
+            font-weight: 800 !important;
+            font-size: 6.5pt !important;
+            color: #000000 !important;
+          }
+
+          /* S.No column on paper */
+          .print-col-sr {
+            width: 26px !important;
+            min-width: 26px !important;
+            max-width: 26px !important;
+            font-weight: 800 !important;
+            font-size: 6.5pt !important;
+          }
+
+          /* Task & Platform column on paper */
+          .print-col-task {
+            width: 125px !important;
+            min-width: 125px !important;
+            max-width: 125px !important;
+            text-align: left !important;
+            padding-left: 3px !important;
+            font-size: 6.5pt !important;
+          }
+
+          /* Square Checkbox Box - "Good boxes" matching Creation sheet */
+          .print-checkbox {
+            width: 11px !important;
+            height: 11px !important;
+            min-width: 11px !important;
+            min-height: 11px !important;
+            border: 1px solid #000000 !important;
+            border-radius: 1.5px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-weight: 900 !important;
+            font-size: 7.5pt !important;
+            line-height: 1 !important;
+            margin: 0 auto !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+          }
+
+          tr {
+            page-break-inside: avoid !important;
+          }
+        }
+      `}</style>
+
       {/* ── Section Header with Range Switcher & Print Button ── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4 print:hidden">
         <div>
@@ -294,31 +440,33 @@ export function UploadCalendarMatrix({
             </button>
           </div>
 
-          {/* Print Button */}
+          {/* Print / Save PDF Button */}
           <button
             type="button"
-            onClick={() => window.print()}
-            className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="Print or export as PDF"
+            onClick={handlePrintSheet}
+            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-black text-xs flex items-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer"
+            title="Print or export all days as black & white PDF with checkbox boxes"
           >
-            <Printer size={14} />
-            <span>Print Sheet</span>
+            <Printer size={15} />
+            <span>Print / Save PDF (All Days)</span>
           </button>
         </div>
       </div>
 
       {/* ── Printable Header Banner (Only visible on paper printout) ── */}
-      <div className="hidden print:block mb-4 pb-2 border-b-2 border-black">
+      <div className="hidden print:block mb-3 pb-2 border-b-2 border-black">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-black uppercase tracking-tight">KHANHUB — SOCIAL MEDIA CONTENT UPLOADING SHEET</h1>
-            <p className="text-xs font-bold text-gray-700 mt-0.5">
+            <h1 className="text-base font-black uppercase tracking-tight text-black">
+              KHANHUB — SOCIAL MEDIA CONTENT UPLOADING SHEET
+            </h1>
+            <p className="text-[8pt] font-bold text-gray-800 mt-0.5">
               Month/Cycle: {monthTitle} · Multi-Platform Social & Web Publishing Matrix (6 Channels / Task)
             </p>
           </div>
-          <div className="text-right text-xs font-mono font-bold">
+          <div className="text-right text-[7pt] font-mono font-bold text-black leading-tight">
             <p>Generated: {new Date().toLocaleDateString('en-GB')}</p>
-            <p>Status: Active Publishing Sheet</p>
+            <p>Legend: [✓] Posted  [—] Skipped  [ ] Pending</p>
           </div>
         </div>
       </div>
@@ -331,13 +479,13 @@ export function UploadCalendarMatrix({
             <tr>
               <th
                 scope="col"
-                className="px-2 sm:px-3 py-3 text-center border-r border-slate-700 w-12 sticky left-0 z-20 bg-slate-900 print:border-black print:w-10 print:static"
+                className="px-2 sm:px-3 py-3 text-center border-r border-slate-700 w-12 sticky left-0 z-20 bg-slate-900 print:border-black print:w-[26px] print:min-w-[26px] print:max-w-[26px] print:bg-slate-100 print:text-black print:static print:p-1"
               >
                 S.No
               </th>
               <th
                 scope="col"
-                className="px-3 sm:px-4 py-3 text-left border-r border-slate-700 min-w-[200px] sm:min-w-[280px] sticky left-12 z-20 bg-slate-900 print:border-black print:min-w-[160px] print:static"
+                className="px-3 sm:px-4 py-3 text-left border-r border-slate-700 min-w-[200px] sm:min-w-[280px] sticky left-12 z-20 bg-slate-900 print:border-black print:w-[125px] print:min-w-[125px] print:max-w-[125px] print:bg-slate-100 print:text-black print:static print:p-1"
               >
                 Content Task & Target Platform
               </th>
@@ -349,13 +497,13 @@ export function UploadCalendarMatrix({
                   <th
                     key={dayStr}
                     scope="col"
-                    className={`px-1.5 py-2 text-center border-r border-slate-700 min-w-[48px] sm:min-w-[56px] ${
-                      isToday ? 'bg-indigo-600 text-white font-black ring-2 ring-indigo-400' : ''
-                    } print:border-black print:min-w-[24px]`}
+                    className={`px-1.5 py-2 text-center border-r border-slate-700 min-w-[48px] sm:min-w-[56px] print:min-w-0 print:w-auto print:border-black print:bg-slate-100 print:text-black print:p-0.5 ${
+                      isToday ? 'bg-indigo-600 text-white font-black ring-2 ring-indigo-400 print:bg-slate-100 print:ring-0' : ''
+                    }`}
                   >
                     <div className="leading-tight">
-                      <span className="block text-[8px] opacity-75 font-semibold uppercase">{dayOfWeek}</span>
-                      <span className="text-xs sm:text-sm font-bold">{dayNum}</span>
+                      <span className="block text-[8px] opacity-75 font-semibold uppercase print:text-[6pt] print:opacity-100">{dayOfWeek}</span>
+                      <span className="text-xs sm:text-sm font-bold print:text-[7pt]">{dayNum}</span>
                     </div>
                   </th>
                 );
@@ -383,7 +531,6 @@ export function UploadCalendarMatrix({
                   <React.Fragment key={cat.id || cat.name}>
                     {PLATFORM_CONFIGS.map((platform, pIdx) => {
                       const isFirstPlatformInGroup = pIdx === 0;
-                      const isLastPlatformInGroup = pIdx === PLATFORM_CONFIGS.length - 1;
                       const streamlinedSr = `${catSr}.${platform.subSr}`;
                       const PlatformIcon = platform.icon;
 
@@ -391,25 +538,26 @@ export function UploadCalendarMatrix({
                         <tr
                           key={`${cat.id || cat.name}_${platform.key}`}
                           className={`transition-colors hover:bg-slate-50/90 ${
-                            isFirstPlatformInGroup ? 'border-t-2 border-slate-300' : ''
+                            isFirstPlatformInGroup ? 'border-t-2 border-slate-300 print:border-t-2 print:border-black' : ''
                           } ${isEvenCategory ? 'bg-white' : 'bg-slate-50/30'}`}
                         >
                           {/* ── Serial Number (Sticky Left 0) ── */}
                           <td
-                            className={`px-2 py-2 text-center font-mono font-black text-slate-600 border-r border-gray-200 sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] print:border-black print:text-black print:static print:shadow-none ${
+                            className={`px-2 py-2 text-center font-mono font-black text-slate-600 border-r border-gray-200 sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] print:border-black print:text-black print:static print:shadow-none print:w-[26px] print:min-w-[26px] print:max-w-[26px] print:p-1 print:text-[6.5pt] ${
                               isEvenCategory ? 'bg-white' : 'bg-[#fafafa]'
                             }`}
                           >
-                            <span className="text-[11px] font-black">{streamlinedSr}</span>
+                            <span className="text-[11px] font-black print:text-[6.5pt]">{streamlinedSr}</span>
                           </td>
 
                           {/* ── Task Name + Platform (Sticky Left 12) ── */}
                           <td
-                            className={`px-3 py-2 border-r border-gray-200 sticky left-12 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] print:border-black print:static print:shadow-none ${
+                            className={`px-3 py-2 border-r border-gray-200 sticky left-12 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] print:border-black print:static print:shadow-none print:w-[125px] print:min-w-[125px] print:max-w-[125px] print:p-1 ${
                               isEvenCategory ? 'bg-white' : 'bg-[#fafafa]'
                             }`}
                           >
-                            <div className="flex items-center justify-between gap-2">
+                            {/* Screen View */}
+                            <div className="flex items-center justify-between gap-2 print:hidden">
                               <div className="flex items-center gap-2 min-w-0">
                                 {/* Platform Logo / Icon */}
                                 <div
@@ -439,10 +587,15 @@ export function UploadCalendarMatrix({
 
                               {/* Content Type Indicator on first row of category */}
                               {isFirstPlatformInGroup && (
-                                <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200 shrink-0 print:hidden">
+                                <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200 shrink-0">
                                   {cat.type || 'task'}
                                 </span>
                               )}
+                            </div>
+
+                            {/* Paper Print View (Clean, readable text) */}
+                            <div className="hidden print:block text-black font-bold text-[6.5pt] leading-tight truncate">
+                              {cat.name} · {platform.label}
                             </div>
                           </td>
 
@@ -455,17 +608,17 @@ export function UploadCalendarMatrix({
                             const isOverdue =
                               dayStr < todayKarachi && status !== 'posted' && status !== 'skipped';
 
-                            // Print representation
-                            const printIcon = status === 'posted' ? '✓' : status === 'skipped' ? '—' : ' ';
-
                             if (!item) {
                               return (
                                 <td
                                   key={dayStr}
-                                  className="px-1 py-1.5 text-center border-r border-gray-200 text-slate-300 print:border-black print:text-black"
+                                  className="px-1 py-1 text-center border-r border-gray-200 text-slate-300 print:border-black print:text-black print:p-0.5"
                                 >
                                   <span className="text-slate-300 select-none print:hidden">·</span>
-                                  <span className="hidden print:inline font-mono"> </span>
+                                  {/* Paper Print Empty Square Box */}
+                                  <div className="hidden print:flex items-center justify-center py-0.5">
+                                    <div className="print-checkbox" />
+                                  </div>
                                 </td>
                               );
                             }
@@ -473,7 +626,7 @@ export function UploadCalendarMatrix({
                             return (
                               <td
                                 key={dayStr}
-                                className={`px-1 py-1.5 text-center border-r border-gray-200 transition-colors relative print:border-black ${
+                                className={`px-1 py-1 text-center border-r border-gray-200 transition-colors relative print:border-black print:p-0.5 ${
                                   status === 'posted'
                                     ? 'bg-emerald-50/50 print:bg-transparent'
                                     : status === 'skipped'
@@ -539,9 +692,11 @@ export function UploadCalendarMatrix({
                                   )}
                                 </div>
 
-                                {/* Paper Print View */}
-                                <div className="hidden print:block font-mono text-center font-black">
-                                  {printIcon}
+                                {/* Paper Print View Square Checkbox Box */}
+                                <div className="hidden print:flex items-center justify-center py-0.5">
+                                  <div className="print-checkbox">
+                                    {status === 'posted' ? '✓' : status === 'skipped' ? '—' : ''}
+                                  </div>
                                 </div>
                               </td>
                             );
