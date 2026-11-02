@@ -18,7 +18,6 @@ import {
   FaInstagram,
   FaYoutube,
   FaTiktok,
-  FaWhatsapp,
   FaGlobe,
   FaLinkedin
 } from 'react-icons/fa';
@@ -103,19 +102,9 @@ const PLATFORM_CONFIGS: PlatformMeta[] = [
     badgeBorder: 'border-slate-300'
   },
   {
-    key: 'whatsapp',
-    label: 'WhatsApp',
-    subSr: 5,
-    icon: FaWhatsapp,
-    iconColor: 'text-[#25D366]',
-    badgeBg: 'bg-emerald-50',
-    badgeText: 'text-emerald-700',
-    badgeBorder: 'border-emerald-200'
-  },
-  {
     key: 'website',
     label: 'Website',
-    subSr: 6,
+    subSr: 5,
     icon: FaGlobe,
     iconColor: 'text-[#0284C7]',
     badgeBg: 'bg-cyan-50',
@@ -125,7 +114,7 @@ const PLATFORM_CONFIGS: PlatformMeta[] = [
   {
     key: 'linkedin',
     label: 'LinkedIn',
-    subSr: 7,
+    subSr: 6,
     icon: FaLinkedin,
     iconColor: 'text-[#0A66C2]',
     badgeBg: 'bg-sky-50',

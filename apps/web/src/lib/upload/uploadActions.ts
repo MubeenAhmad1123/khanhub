@@ -202,14 +202,12 @@ export async function generateUploadSheet(
       const contentType: 'image' | 'video' = isVideoType ? 'video' : 'image';
 
       // Default platform map
-      const initialPlatforms: Record<UploadPlatformKey, PlatformPublishState> = {
+      const initialPlatforms: Partial<Record<UploadPlatformKey, PlatformPublishState>> = {
         facebook: { status: 'todo', method: 'manual' },
         instagram: { status: 'todo', method: 'manual' },
         youtube: { status: 'todo', method: 'manual' },
         tiktok: { status: 'todo', method: 'manual' },
-        whatsapp: { status: 'todo', method: 'manual' },
-        website: { status: 'todo', method: 'manual' },
-        linkedin: { status: 'todo', method: 'manual' }
+        website: { status: 'todo', method: 'manual' }
       };
 
       const newItem: UploadItemDoc = {
@@ -422,7 +420,7 @@ export async function setPlatformStatus(
 
     // ── WORKFLOW LOCK 3: Website LAST Rule ───────────────────────────────────
     if (platform === 'website' && payload.status === 'posted') {
-      const otherPlatforms: UploadPlatformKey[] = ['facebook', 'instagram', 'youtube', 'tiktok', 'whatsapp'];
+      const otherPlatforms: UploadPlatformKey[] = ['facebook', 'instagram', 'youtube', 'tiktok'];
       const incomplete = otherPlatforms.filter((p) => {
         const s = item.platforms[p]?.status;
         return s !== 'posted' && s !== 'skipped';

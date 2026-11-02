@@ -343,12 +343,7 @@ export function TaskDetailDrawer({
             {/* Post URL Input */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 block mb-1">
-                Post URL{' '}
-                {selectedPlatform === 'whatsapp' ? (
-                  <span className="text-gray-400 font-normal">(Optional for WhatsApp)</span>
-                ) : (
-                  <span className="text-rose-500">*</span>
-                )}
+                Post URL <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -362,8 +357,6 @@ export function TaskDetailDrawer({
                       ? 'https://instagram.com/p/...'
                       : selectedPlatform === 'tiktok'
                       ? 'https://tiktok.com/@khanhub/video/...'
-                      : selectedPlatform === 'whatsapp'
-                      ? 'https://chat.whatsapp.com/... (optional)'
                       : selectedPlatform === 'linkedin'
                       ? 'https://linkedin.com/posts/... or https://www.linkedin.com/feed/update/...'
                       : '/departments/rehab/media'

@@ -7,16 +7,15 @@ export type UploadPlatformKey =
   | 'instagram'
   | 'youtube'
   | 'tiktok'
-  | 'whatsapp'
   | 'website'
-  | 'linkedin';
+  | 'linkedin'
+  | 'whatsapp';
 
 export const DEFAULT_PLATFORM_KEYS: UploadPlatformKey[] = [
   'facebook',
   'instagram',
   'youtube',
   'tiktok',
-  'whatsapp',
   'website'
 ];
 
@@ -25,7 +24,6 @@ export const ALL_PLATFORM_KEYS: UploadPlatformKey[] = [
   'instagram',
   'youtube',
   'tiktok',
-  'whatsapp',
   'website',
   'linkedin'
 ];
@@ -66,7 +64,7 @@ export interface UploadItemDoc {
     sourceType: 'cloudinary_image' | 'youtube_link' | 'social_link' | 'none';
     durationSeconds?: number;
   };
-  platforms: Record<UploadPlatformKey, PlatformPublishState>;
+  platforms: Partial<Record<UploadPlatformKey, PlatformPublishState>>;
   assigneeIds: string[];                    // Derived from all platform assignees for indexed querying
   syncStatus: 'in_sync' | 'out_of_sync' | 'orphaned' | 'needs_department';
   createdAt: string;                        // ISO string

@@ -11,7 +11,6 @@ import {
   FaInstagram,
   FaYoutube,
   FaTiktok,
-  FaWhatsapp,
   FaGlobe,
   FaLinkedin
 } from 'react-icons/fa';
@@ -84,15 +83,6 @@ const PLATFORM_OPTIONS: Array<{
     activeText: 'text-slate-900',
     activeBorder: 'border-slate-500',
     color: 'text-black'
-  },
-  {
-    key: 'whatsapp',
-    label: 'WhatsApp',
-    icon: FaWhatsapp,
-    activeBg: 'bg-emerald-50',
-    activeText: 'text-emerald-800',
-    activeBorder: 'border-emerald-400',
-    color: 'text-[#25D366]'
   },
   {
     key: 'website',
@@ -346,7 +336,7 @@ export function EditUploadTaskModal({
                 }
                 className="text-[10px] font-bold text-indigo-600 hover:underline cursor-pointer"
               >
-                {enabledPlatforms.length === ALL_PLATFORM_KEYS.length ? 'Reset to Default (6)' : 'Select All (7)'}
+                {enabledPlatforms.length === ALL_PLATFORM_KEYS.length ? 'Reset to Default (5)' : 'Select All (6)'}
               </button>
             </div>
             <p className="text-[10.5px] text-slate-400 mb-2">
