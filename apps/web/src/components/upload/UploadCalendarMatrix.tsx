@@ -19,7 +19,8 @@ import {
   FaYoutube,
   FaTiktok,
   FaWhatsapp,
-  FaGlobe
+  FaGlobe,
+  FaLinkedin
 } from 'react-icons/fa';
 
 export interface UploadCategoryRow {
@@ -120,6 +121,16 @@ const PLATFORM_CONFIGS: PlatformMeta[] = [
     badgeBg: 'bg-cyan-50',
     badgeText: 'text-cyan-700',
     badgeBorder: 'border-cyan-200'
+  },
+  {
+    key: 'linkedin',
+    label: 'LinkedIn',
+    subSr: 7,
+    icon: FaLinkedin,
+    iconColor: 'text-[#0A66C2]',
+    badgeBg: 'bg-sky-50',
+    badgeText: 'text-sky-800',
+    badgeBorder: 'border-sky-300'
   }
 ];
 
@@ -489,7 +500,7 @@ export function UploadCalendarMatrix({
               </span>
             </div>
             <p className="text-[7.5pt] font-bold text-gray-800 mt-0.5">
-              Monthly Multi-Platform Publishing & Distribution Matrix · 6 Targets Per Content Task
+              Monthly Multi-Platform Publishing & Distribution Matrix · Multi-Platform Publishing Matrix
             </p>
           </div>
           <div className="text-right text-[7pt] font-mono font-bold text-black leading-tight">
@@ -561,12 +572,13 @@ export function UploadCalendarMatrix({
                   cat.name.toLowerCase().includes('clip');
                 const typeLabel = isContentTypeVideo ? 'VIDEO' : 'GRAPHIC';
 
-                const activePlatforms = PLATFORM_CONFIGS.filter(
-                  (p) =>
-                    !cat.enabledPlatforms ||
-                    cat.enabledPlatforms.length === 0 ||
-                    cat.enabledPlatforms.includes(p.key)
-                );
+                const activePlatforms = PLATFORM_CONFIGS.filter((p) => {
+                  if (cat.enabledPlatforms && cat.enabledPlatforms.length > 0) {
+                    return cat.enabledPlatforms.includes(p.key);
+                  }
+                  // Standard rows default to the 6 primary targets (LinkedIn is excluded unless explicitly enabled)
+                  return p.key !== 'linkedin';
+                });
 
                 return (
                   <React.Fragment key={cat.id || cat.name}>

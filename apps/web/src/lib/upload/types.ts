@@ -2,7 +2,23 @@
 
 import { CanonicalCampusId, CanonicalDeptId } from './departmentRegistry';
 
-export type UploadPlatformKey = 'facebook' | 'instagram' | 'youtube' | 'tiktok' | 'whatsapp' | 'website';
+export type UploadPlatformKey =
+  | 'facebook'
+  | 'instagram'
+  | 'youtube'
+  | 'tiktok'
+  | 'whatsapp'
+  | 'website'
+  | 'linkedin';
+
+export const DEFAULT_PLATFORM_KEYS: UploadPlatformKey[] = [
+  'facebook',
+  'instagram',
+  'youtube',
+  'tiktok',
+  'whatsapp',
+  'website'
+];
 
 export const ALL_PLATFORM_KEYS: UploadPlatformKey[] = [
   'facebook',
@@ -10,7 +26,8 @@ export const ALL_PLATFORM_KEYS: UploadPlatformKey[] = [
   'youtube',
   'tiktok',
   'whatsapp',
-  'website'
+  'website',
+  'linkedin'
 ];
 
 export type UploadPlatformStatus = 'todo' | 'ready' | 'scheduled' | 'posted' | 'failed' | 'skipped';

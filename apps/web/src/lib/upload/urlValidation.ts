@@ -8,7 +8,8 @@ export const ALLOWED_MEDIA_HOSTS: Record<UploadPlatformKey, string[]> = {
   instagram: ['instagram.com', 'www.instagram.com'],
   tiktok: ['tiktok.com', 'www.tiktok.com', 'vm.tiktok.com'],
   whatsapp: ['whatsapp.com', 'chat.whatsapp.com', 'wa.me'],
-  website: ['khanhub.com.pk', 'www.khanhub.com.pk', 'localhost']
+  website: ['khanhub.com.pk', 'www.khanhub.com.pk', 'localhost'],
+  linkedin: ['linkedin.com', 'www.linkedin.com', 'lnkd.in']
 };
 
 /**

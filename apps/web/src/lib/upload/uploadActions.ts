@@ -9,6 +9,7 @@ import {
   UploadPlatformStatus,
   UploadAuditLogDoc,
   UploadSettingsDoc,
+  DEFAULT_PLATFORM_KEYS,
   ALL_PLATFORM_KEYS,
   PlatformPublishState
 } from './types';
@@ -207,7 +208,8 @@ export async function generateUploadSheet(
         youtube: { status: 'todo', method: 'manual' },
         tiktok: { status: 'todo', method: 'manual' },
         whatsapp: { status: 'todo', method: 'manual' },
-        website: { status: 'todo', method: 'manual' }
+        website: { status: 'todo', method: 'manual' },
+        linkedin: { status: 'todo', method: 'manual' }
       };
 
       const newItem: UploadItemDoc = {
@@ -776,7 +778,7 @@ export async function addCustomUploadTaskRow(
       name: params.name,
       type: params.type,
       departmentId: params.departmentId || null,
-      enabledPlatforms: params.enabledPlatforms || ALL_PLATFORM_KEYS,
+      enabledPlatforms: params.enabledPlatforms || DEFAULT_PLATFORM_KEYS,
       createdAt: new Date().toISOString()
     });
 

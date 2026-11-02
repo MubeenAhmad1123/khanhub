@@ -12,6 +12,7 @@ import {
   UploadPlatformKey,
   UploadPlatformStatus,
   UploadAuditLogDoc,
+  DEFAULT_PLATFORM_KEYS,
   ALL_PLATFORM_KEYS
 } from '@/lib/upload/types';
 import { CANONICAL_DEPARTMENTS } from '@/lib/upload/departmentRegistry';
@@ -29,6 +30,7 @@ interface TaskDetailDrawerProps {
   item: UploadItemDoc | null;
   focusedPlatform?: UploadPlatformKey;
   onItemUpdated: (updatedItem: UploadItemDoc) => void;
+  enabledPlatforms?: UploadPlatformKey[];
 }
 
 const PLATFORM_LABELS: Record<UploadPlatformKey, { label: string; color: string }> = {
@@ -37,7 +39,8 @@ const PLATFORM_LABELS: Record<UploadPlatformKey, { label: string; color: string 
   youtube: { label: 'YouTube', color: 'text-rose-600 bg-rose-50 border-rose-200' },
   tiktok: { label: 'TikTok', color: 'text-zinc-900 bg-zinc-100 border-zinc-300' },
   whatsapp: { label: 'WhatsApp', color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
-  website: { label: 'Website', color: 'text-indigo-600 bg-indigo-50 border-indigo-200' }
+  website: { label: 'Website', color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
+  linkedin: { label: 'LinkedIn', color: 'text-sky-700 bg-sky-50 border-sky-300' }
 };
 
 export function TaskDetailDrawer({
@@ -45,7 +48,8 @@ export function TaskDetailDrawer({
   onClose,
   item,
   focusedPlatform = 'facebook',
-  onItemUpdated
+  onItemUpdated,
+  enabledPlatforms
 }: TaskDetailDrawerProps) {
   const [selectedPlatform, setSelectedPlatform] = useState<UploadPlatformKey>(focusedPlatform);
   const [postUrlInput, setPostUrlInput] = useState<string>('');
@@ -57,6 +61,19 @@ export function TaskDetailDrawer({
   const [copiedCaption, setCopiedCaption] = useState<boolean>(false);
   const [auditLogs, setAuditLogs] = useState<UploadAuditLogDoc[]>([]);
   const [loadingAudit, setLoadingAudit] = useState<boolean>(false);
+
+  const platformsToDisplay: UploadPlatformKey[] = React.useMemo(() => {
+    if (enabledPlatforms && enabledPlatforms.length > 0) {
+      if (selectedPlatform && !enabledPlatforms.includes(selectedPlatform)) {
+        return [...enabledPlatforms, selectedPlatform];
+      }
+      return enabledPlatforms;
+    }
+    if (selectedPlatform === 'linkedin') {
+      return ALL_PLATFORM_KEYS;
+    }
+    return DEFAULT_PLATFORM_KEYS;
+  }, [enabledPlatforms, selectedPlatform]);
 
   useEffect(() => {
     if (focusedPlatform) {
@@ -275,8 +292,8 @@ export function TaskDetailDrawer({
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
               Select Target Platform:
             </label>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-              {ALL_PLATFORM_KEYS.map((pk) => {
+            <div className={`grid gap-1.5 ${platformsToDisplay.length > 6 ? 'grid-cols-4 sm:grid-cols-7' : 'grid-cols-3 sm:grid-cols-6'}`}>
+              {platformsToDisplay.map((pk) => {
                 const pstate = item.platforms[pk]?.status || 'todo';
                 const isSelected = selectedPlatform === pk;
                 return (
@@ -347,6 +364,8 @@ export function TaskDetailDrawer({
                       ? 'https://tiktok.com/@khanhub/video/...'
                       : selectedPlatform === 'whatsapp'
                       ? 'https://chat.whatsapp.com/... (optional)'
+                      : selectedPlatform === 'linkedin'
+                      ? 'https://linkedin.com/posts/... or https://www.linkedin.com/feed/update/...'
                       : '/departments/rehab/media'
                   }
                   value={postUrlInput}

@@ -95,6 +95,7 @@ export function UploadMatrixTable({
             <th className="py-4 px-3 text-center">TikTok</th>
             <th className="py-4 px-3 text-center">WhatsApp</th>
             <th className="py-4 px-3 text-center">Website</th>
+            <th className="py-4 px-3 text-center">LinkedIn</th>
             <th className="py-4 px-3 w-16 text-center">Action</th>
           </tr>
         </thead>

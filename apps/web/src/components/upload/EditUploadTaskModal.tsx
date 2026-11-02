@@ -12,12 +12,14 @@ import {
   FaYoutube,
   FaTiktok,
   FaWhatsapp,
-  FaGlobe
+  FaGlobe,
+  FaLinkedin
 } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { auth } from '@/lib/firebase';
 import {
   UploadPlatformKey,
+  DEFAULT_PLATFORM_KEYS,
   ALL_PLATFORM_KEYS
 } from '@/lib/upload/types';
 import {
@@ -100,6 +102,15 @@ const PLATFORM_OPTIONS: Array<{
     activeText: 'text-cyan-800',
     activeBorder: 'border-cyan-400',
     color: 'text-[#0284C7]'
+  },
+  {
+    key: 'linkedin',
+    label: 'LinkedIn',
+    icon: FaLinkedin,
+    activeBg: 'bg-sky-50',
+    activeText: 'text-sky-800',
+    activeBorder: 'border-sky-400',
+    color: 'text-[#0A66C2]'
   }
 ];
 
@@ -115,7 +126,7 @@ export function EditUploadTaskModal({
   const [title, setTitle] = useState('');
   const [contentType, setContentType] = useState<'video' | 'graphic'>('graphic');
   const [departmentId, setDepartmentId] = useState<CanonicalDeptId | ''>('hospital');
-  const [enabledPlatforms, setEnabledPlatforms] = useState<UploadPlatformKey[]>(ALL_PLATFORM_KEYS);
+  const [enabledPlatforms, setEnabledPlatforms] = useState<UploadPlatformKey[]>(DEFAULT_PLATFORM_KEYS);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -127,12 +138,16 @@ export function EditUploadTaskModal({
         task.name.toLowerCase().includes('reel');
       setContentType(isVideo ? 'video' : 'graphic');
       setDepartmentId((task.departmentId as CanonicalDeptId) || 'hospital');
-      setEnabledPlatforms(task.enabledPlatforms || ALL_PLATFORM_KEYS);
+      setEnabledPlatforms(
+        task.enabledPlatforms && task.enabledPlatforms.length > 0
+          ? task.enabledPlatforms
+          : DEFAULT_PLATFORM_KEYS
+      );
     } else {
       setTitle('');
       setContentType('graphic');
       setDepartmentId('hospital');
-      setEnabledPlatforms(ALL_PLATFORM_KEYS);
+      setEnabledPlatforms(DEFAULT_PLATFORM_KEYS);
     }
   }, [task, isOpen]);
 
@@ -318,20 +333,20 @@ export function EditUploadTaskModal({
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                Active Social Target Platforms ({enabledPlatforms.length}/6)
+                Active Social Target Platforms ({enabledPlatforms.length}/{PLATFORM_OPTIONS.length})
               </label>
               <button
                 type="button"
                 onClick={() =>
                   setEnabledPlatforms(
                     enabledPlatforms.length === ALL_PLATFORM_KEYS.length
-                      ? ['facebook', 'instagram']
+                      ? DEFAULT_PLATFORM_KEYS
                       : ALL_PLATFORM_KEYS
                   )
                 }
                 className="text-[10px] font-bold text-indigo-600 hover:underline cursor-pointer"
               >
-                {enabledPlatforms.length === ALL_PLATFORM_KEYS.length ? 'Select Main Only' : 'Select All'}
+                {enabledPlatforms.length === ALL_PLATFORM_KEYS.length ? 'Reset to Default (6)' : 'Select All (7)'}
               </button>
             </div>
             <p className="text-[10.5px] text-slate-400 mb-2">

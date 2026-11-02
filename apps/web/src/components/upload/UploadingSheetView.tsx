@@ -13,6 +13,7 @@ import { db, auth } from '@/lib/firebase';
 import {
   UploadItemDoc,
   UploadPlatformKey,
+  DEFAULT_PLATFORM_KEYS,
   ALL_PLATFORM_KEYS
 } from '@/lib/upload/types';
 import {
@@ -355,20 +356,34 @@ export function UploadingSheetView() {
 
   // ── Metrics & Aggregations ────────────────────────────────────────────────
   const metrics = useMemo(() => {
-    let totalTargetTasks = 0; // items * 6
+    let totalTargetTasks = 0; // items * 6 (or custom per task)
     let postedCount = 0;
     let skippedCount = 0;
     let overdueCount = 0;
     let needsDeptCount = 0;
+
+    // Build lookup for active platforms per task
+    const categoryPlatformMap = new Map<string, UploadPlatformKey[]>();
+    combinedCategories.forEach((c) => {
+      if (c.enabledPlatforms && c.enabledPlatforms.length > 0) {
+        categoryPlatformMap.set(c.id, c.enabledPlatforms);
+        categoryPlatformMap.set(c.name.toLowerCase().trim(), c.enabledPlatforms);
+      }
+    });
 
     items.forEach((it) => {
       if (it.syncStatus === 'needs_department' || !it.departmentId) {
         needsDeptCount++;
       }
 
-      ALL_PLATFORM_KEYS.forEach((p) => {
+      const activeKeys =
+        categoryPlatformMap.get(it.creationCategoryId || '') ||
+        categoryPlatformMap.get((it.title || '').toLowerCase().trim()) ||
+        DEFAULT_PLATFORM_KEYS;
+
+      activeKeys.forEach((p) => {
         totalTargetTasks++;
-        const pStatus = it.platforms?.[p]?.status || 'pending';
+        const pStatus = it.platforms?.[p]?.status || 'todo';
         if (pStatus === 'posted') postedCount++;
         else if (pStatus === 'skipped') skippedCount++;
         else if (it.date < todayKarachi) overdueCount++;
@@ -386,10 +401,19 @@ export function UploadingSheetView() {
       needsDeptCount,
       completionRate
     };
-  }, [items, todayKarachi]);
+  }, [items, combinedCategories, todayKarachi]);
 
   // ── Filtered Items for List View ──────────────────────────────────────────
   const filteredItems = useMemo(() => {
+    // Build lookup for active platforms per task
+    const categoryPlatformMap = new Map<string, UploadPlatformKey[]>();
+    combinedCategories.forEach((c) => {
+      if (c.enabledPlatforms && c.enabledPlatforms.length > 0) {
+        categoryPlatformMap.set(c.id, c.enabledPlatforms);
+        categoryPlatformMap.set(c.name.toLowerCase().trim(), c.enabledPlatforms);
+      }
+    });
+
     return items.filter((item) => {
       // Department
       if (deptFilter !== 'all') {
@@ -407,7 +431,11 @@ export function UploadingSheetView() {
 
       // Status
       if (statusFilter !== 'all') {
-        const platformStatuses = ALL_PLATFORM_KEYS.map((p) => item.platforms?.[p]?.status || 'todo');
+        const activeKeys =
+          categoryPlatformMap.get(item.creationCategoryId || '') ||
+          categoryPlatformMap.get((item.title || '').toLowerCase().trim()) ||
+          DEFAULT_PLATFORM_KEYS;
+        const platformStatuses = activeKeys.map((p) => item.platforms?.[p]?.status || 'todo');
         const hasPosted = platformStatuses.includes('posted');
         const hasPending = platformStatuses.some((s) => s === 'todo' || s === 'ready' || s === 'scheduled');
         const hasOverdue = item.date < todayKarachi && hasPending;
@@ -687,6 +715,15 @@ export function UploadingSheetView() {
         item={selectedDrawerItem}
         focusedPlatform={focusedPlatform}
         onItemUpdated={handleItemUpdated}
+        enabledPlatforms={
+          selectedDrawerItem
+            ? combinedCategories.find(
+                (c) =>
+                  c.id === selectedDrawerItem.creationCategoryId ||
+                  c.name.toLowerCase().trim() === (selectedDrawerItem.title || '').toLowerCase().trim()
+              )?.enabledPlatforms
+            : undefined
+        }
       />
 
       {/* ── Edit Upload Task Modal ── */}
