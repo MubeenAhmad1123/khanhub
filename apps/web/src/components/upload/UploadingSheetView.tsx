@@ -4,10 +4,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ChevronLeft, ChevronRight, RefreshCw, Sparkles, Filter,
-  Building2, Layers, AlertCircle, CheckCircle2, Clock, Search, Layers as LayersIcon
+  Building2, Layers, AlertCircle, CheckCircle2, Clock, Search,
+  Layers as LayersIcon, LayoutGrid, List, CheckSquare, Printer
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import {
   UploadItemDoc,
@@ -16,15 +17,33 @@ import {
 } from '@/lib/upload/types';
 import {
   CANONICAL_DEPARTMENTS,
-  CanonicalDeptId
+  CanonicalDeptId,
+  resolveCanonicalDept
 } from '@/lib/upload/departmentRegistry';
 import {
   generateUploadSheet,
   syncFromCreation
 } from '@/lib/upload/uploadActions';
 import { UploadMatrixTable } from './UploadMatrixTable';
+import {
+  UploadCalendarMatrix,
+  UploadCategoryRow
+} from './UploadCalendarMatrix';
 import { TaskDetailDrawer } from './TaskDetailDrawer';
 import { CategoryMappingModal } from './CategoryMappingModal';
+
+const DEFAULT_CATEGORIES: Omit<UploadCategoryRow, 'id'>[] = [
+  { serialNo: 1, name: 'Rehab Video', type: 'video', defaultRole: 'editor' },
+  { serialNo: 2, name: 'Rehab Graphics Post', type: 'graphic', defaultRole: 'designer' },
+  { serialNo: 3, name: 'Job Center Video', type: 'video', defaultRole: 'editor' },
+  { serialNo: 4, name: 'Job Center Graphics Post', type: 'graphic', defaultRole: 'designer' },
+  { serialNo: 5, name: 'SPIMS College Post', type: 'graphic', defaultRole: 'designer' },
+  { serialNo: 6, name: 'Hospital Video', type: 'video', defaultRole: 'editor' },
+  { serialNo: 7, name: 'Hospital Graphics Post', type: 'graphic', defaultRole: 'designer' },
+  { serialNo: 8, name: 'Surgical Post', type: 'graphic', defaultRole: 'designer' },
+  { serialNo: 9, name: 'Welfare Post', type: 'graphic', defaultRole: 'designer' },
+  { serialNo: 10, name: 'General Media Content', type: 'custom', defaultRole: 'all' },
+];
 
 // Helper to get today's date in Asia/Karachi (YYYY-MM-DD)
 function getKarachiTodayStr(): string {
@@ -51,6 +70,10 @@ export function UploadingSheetView() {
   const [generating, setGenerating] = useState<boolean>(false);
   const [syncing, setSyncing] = useState<boolean>(false);
 
+  // View Mode: 'matrix' (30-day grid with 6 platform rows per task) or 'list' (item rows)
+  const [viewMode, setViewMode] = useState<'matrix' | 'list'>('matrix');
+  const [matrixRange, setMatrixRange] = useState<'week' | 'half1' | 'half2' | 'full'>('full');
+
   // Filters
   const [deptFilter, setDeptFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -62,17 +85,56 @@ export function UploadingSheetView() {
   const [focusedPlatform, setFocusedPlatform] = useState<UploadPlatformKey>('facebook');
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [isMappingModalOpen, setIsMappingModalOpen] = useState<boolean>(false);
-  const [creationCategories, setCreationCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [categories, setCategories] = useState<UploadCategoryRow[]>([]);
 
-  // Load Creation Categories for the mapping modal
-  useEffect(() => {
-    getDocs(collection(db, 'media_content_categories'))
-      .then((snap) => {
-        const cats = snap.docs.map((d) => ({ id: d.id, name: (d.data() as any).name || 'Category' }));
-        setCreationCategories(cats);
-      })
-      .catch((err) => console.warn('Could not fetch categories for mapping:', err));
+  // Load Categories & Mappings from Firestore
+  const loadCategories = useCallback(async () => {
+    try {
+      // 1. Fetch saved mapping config
+      let savedMapping: Record<string, string> = {};
+      try {
+        const settingsSnap = await getDoc(doc(db, 'upload_settings', 'config_vehari'));
+        if (settingsSnap.exists()) {
+          savedMapping = (settingsSnap.data() as any).categoryDepartmentMap || {};
+        }
+      } catch (err) {
+        console.warn('Could not load upload_settings for category mapping:', err);
+      }
+
+      // 2. Fetch media_content_categories
+      const catSnap = await getDocs(collection(db, 'media_content_categories')).catch(() => ({ docs: [] } as any));
+      let loadedCats: UploadCategoryRow[] = catSnap.docs.map((d: any) => {
+        const data = d.data();
+        const mappedDept = savedMapping[d.id] || resolveCanonicalDept(data.name || '');
+        return {
+          id: d.id,
+          serialNo: data.serialNo || 0,
+          name: data.name || 'Untitled Task',
+          type: data.type || 'post',
+          defaultRole: data.defaultRole || 'all',
+          departmentId: mappedDept
+        };
+      });
+
+      // Fallback to default categories if none loaded
+      if (loadedCats.length === 0) {
+        loadedCats = DEFAULT_CATEGORIES.map((def, idx) => ({
+          id: `default_${idx + 1}`,
+          ...def,
+          departmentId: resolveCanonicalDept(def.name)
+        }));
+      }
+
+      loadedCats.sort((a, b) => (a.serialNo || 0) - (b.serialNo || 0));
+      setCategories(loadedCats);
+    } catch (err) {
+      console.warn('Error loading categories:', err);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadCategories();
+  }, [loadCategories]);
 
   // Fetch upload_items for selectedMonth (1 single query per month load)
   const loadMonthItems = useCallback(async () => {
@@ -106,6 +168,29 @@ export function UploadingSheetView() {
     void loadMonthItems();
   }, [loadMonthItems]);
 
+  // Combine categories with any ad-hoc/custom tasks found in items
+  const combinedCategories = useMemo(() => {
+    const list = [...categories];
+    const knownNames = new Set(list.map((c) => c.name.toLowerCase().trim()));
+    let nextSr = list.length > 0 ? Math.max(...list.map((c) => c.serialNo || 0)) + 1 : 1;
+
+    items.forEach((it) => {
+      const taskName = (it.title || it.creationCategoryName || '').trim();
+      if (taskName && !knownNames.has(taskName.toLowerCase())) {
+        knownNames.add(taskName.toLowerCase());
+        list.push({
+          id: it.creationCategoryId || `item_cat_${taskName}`,
+          serialNo: nextSr++,
+          name: taskName,
+          type: it.contentType === 'video' ? 'video' : 'graphic',
+          departmentId: it.departmentId || resolveCanonicalDept(taskName)
+        });
+      }
+    });
+
+    return list;
+  }, [categories, items]);
+
   const handlePrevMonth = () => {
     const [y, m] = selectedMonth.split('-').map(Number);
     const prevDate = new Date(y, m - 2, 1);
@@ -134,6 +219,7 @@ export function UploadingSheetView() {
           `Sheet generated! ${res.countCreated} items created, ${res.countExisting} already existed.`
         );
         await loadMonthItems();
+        await loadCategories();
       } else {
         toast.error(res.error || 'Failed to generate sheet');
       }
@@ -153,6 +239,7 @@ export function UploadingSheetView() {
       if (res.success) {
         toast.success(`Sync complete! ${res.updatedCount} items updated, ${res.orphanedCount} orphaned.`);
         await loadMonthItems();
+        await loadCategories();
       } else {
         toast.error(res.error || 'Sync failed');
       }
@@ -178,25 +265,28 @@ export function UploadingSheetView() {
 
   // ── Metrics & Aggregations ────────────────────────────────────────────────
   const metrics = useMemo(() => {
-    let totalTargetTasks = items.length * 6; // 6 platforms per item
+    let totalTargetTasks = 0; // items * 6
     let postedCount = 0;
     let skippedCount = 0;
     let overdueCount = 0;
     let needsDeptCount = 0;
 
-    items.forEach((item) => {
-      if (!item.departmentId) needsDeptCount++;
-      const isPast = item.date < todayKarachi;
+    items.forEach((it) => {
+      if (it.syncStatus === 'needs_department' || !it.departmentId) {
+        needsDeptCount++;
+      }
 
-      ALL_PLATFORM_KEYS.forEach((pk) => {
-        const st = item.platforms[pk]?.status || 'todo';
-        if (st === 'posted') postedCount++;
-        else if (st === 'skipped') skippedCount++;
-        else if (isPast) overdueCount++;
+      ALL_PLATFORM_KEYS.forEach((p) => {
+        totalTargetTasks++;
+        const pStatus = it.platforms?.[p]?.status || 'pending';
+        if (pStatus === 'posted') postedCount++;
+        else if (pStatus === 'skipped') skippedCount++;
+        else if (it.date < todayKarachi) overdueCount++;
       });
     });
 
-    const completionRate = totalTargetTasks > 0 ? Math.round((postedCount / totalTargetTasks) * 100) : 0;
+    const completionRate =
+      totalTargetTasks > 0 ? Math.round((postedCount / totalTargetTasks) * 100) : 0;
 
     return {
       totalTargetTasks,
@@ -208,25 +298,28 @@ export function UploadingSheetView() {
     };
   }, [items, todayKarachi]);
 
-  // ── Filtered Items List ───────────────────────────────────────────────────
+  // ── Filtered Items for List View ──────────────────────────────────────────
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
-      // Dept filter
-      if (deptFilter === 'needs_dept') {
-        if (item.departmentId) return false;
-      } else if (deptFilter !== 'all') {
-        if (item.departmentId !== deptFilter) return false;
+      // Department
+      if (deptFilter !== 'all') {
+        if (deptFilter === 'needs_dept') {
+          if (item.syncStatus !== 'needs_department' && item.departmentId) return false;
+        } else if (item.departmentId !== deptFilter) {
+          return false;
+        }
       }
 
-      // Content Type filter
+      // Content Type
       if (typeFilter !== 'all' && item.contentType !== typeFilter) {
         return false;
       }
 
-      // Status filter
+      // Status
       if (statusFilter !== 'all') {
-        const hasPosted = ALL_PLATFORM_KEYS.some((pk) => item.platforms[pk]?.status === 'posted');
-        const hasPending = ALL_PLATFORM_KEYS.some((pk) => item.platforms[pk]?.status === 'todo');
+        const platformStatuses = ALL_PLATFORM_KEYS.map((p) => item.platforms?.[p]?.status || 'todo');
+        const hasPosted = platformStatuses.includes('posted');
+        const hasPending = platformStatuses.some((s) => s === 'todo' || s === 'ready' || s === 'scheduled');
         const hasOverdue = item.date < todayKarachi && hasPending;
 
         if (statusFilter === 'posted' && !hasPosted) return false;
@@ -249,30 +342,61 @@ export function UploadingSheetView() {
 
   return (
     <div className="space-y-6">
-      {/* ── Top Control Bar: Month Selector & Actions ── */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-gray-100 shadow-xs">
-        {/* Month Selector */}
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handlePrevMonth}
-            className="p-2.5 rounded-2xl border border-gray-200 hover:bg-gray-50 active:scale-95 transition"
-            title="Previous month"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Active Upload Sheet</span>
-            <span className="text-base font-black text-gray-900 font-mono">{selectedMonth}</span>
+      {/* ── Top Control Bar: Month Selector, View Switcher & Actions ── */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-gray-100 shadow-xs print:hidden">
+        {/* Month Selector & View Switcher */}
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Month Stepper */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              className="p-2.5 rounded-2xl border border-gray-200 hover:bg-gray-50 active:scale-95 transition cursor-pointer"
+              title="Previous month"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Active Upload Sheet</span>
+              <span className="text-base font-black text-gray-900 font-mono">{selectedMonth}</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              className="p-2.5 rounded-2xl border border-gray-200 hover:bg-gray-50 active:scale-95 transition cursor-pointer"
+              title="Next month"
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={handleNextMonth}
-            className="p-2.5 rounded-2xl border border-gray-200 hover:bg-gray-50 active:scale-95 transition"
-            title="Next month"
-          >
-            <ChevronRight size={16} />
-          </button>
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-2xl text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => setViewMode('matrix')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+                viewMode === 'matrix'
+                  ? 'bg-white text-indigo-600 shadow-xs font-black'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <LayoutGrid size={14} />
+              <span>30-Day Matrix</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+                viewMode === 'list'
+                  ? 'bg-white text-indigo-600 shadow-xs font-black'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <List size={14} />
+              <span>Item List</span>
+            </button>
+          </div>
         </div>
 
         {/* Action Buttons */}
@@ -280,7 +404,7 @@ export function UploadingSheetView() {
           <button
             type="button"
             onClick={() => setIsMappingModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-2xl transition active:scale-95 shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-2xl transition active:scale-95 shadow-2xs cursor-pointer"
             title="Configure category-to-department routing"
           >
             <LayersIcon size={14} className="text-indigo-600" />
@@ -291,7 +415,7 @@ export function UploadingSheetView() {
             type="button"
             onClick={handleSyncCalendar}
             disabled={syncing || loading}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-2xl transition active:scale-95 shadow-2xs disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-2xl transition active:scale-95 shadow-2xs disabled:opacity-50 cursor-pointer"
             title="Sync metadata changes from Creation Calendar without overwriting posted items"
           >
             <RefreshCw size={14} className={syncing ? 'animate-spin text-indigo-600' : 'text-gray-500'} />
@@ -302,7 +426,7 @@ export function UploadingSheetView() {
             type="button"
             onClick={handleGenerateSheet}
             disabled={generating || loading}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-2xl shadow-xs transition active:scale-95 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-2xl shadow-xs transition active:scale-95 disabled:opacity-50 cursor-pointer"
             title="Idempotently create upload items for all planned tasks in Creation Calendar"
           >
             <Sparkles size={14} />
@@ -312,7 +436,7 @@ export function UploadingSheetView() {
       </div>
 
       {/* ── Progress & Operational Metrics Bar ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:hidden">
         {/* Total Progress */}
         <div className="p-4 rounded-3xl bg-white border border-gray-100 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs text-gray-500 font-bold mb-1">
@@ -363,7 +487,7 @@ export function UploadingSheetView() {
               <button
                 type="button"
                 onClick={() => setIsMappingModalOpen(true)}
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition underline"
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition underline cursor-pointer"
               >
                 Assign
               </button>
@@ -374,13 +498,13 @@ export function UploadingSheetView() {
       </div>
 
       {/* ── Search & Filters Bar ── */}
-      <div className="p-4 rounded-3xl bg-white border border-gray-100 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="p-4 rounded-3xl bg-white border border-gray-100 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 print:hidden">
         {/* Search Input */}
         <div className="relative w-full sm:w-72">
           <Search size={14} className="absolute left-3 top-3 text-gray-400" />
           <input
             type="text"
-            placeholder="Search title, date, caption..."
+            placeholder="Search task, platform, title..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full text-xs pl-8 pr-3 py-2 rounded-2xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:border-indigo-500"
@@ -404,32 +528,36 @@ export function UploadingSheetView() {
             ))}
           </select>
 
-          {/* Type filter */}
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="text-xs font-bold px-3 py-2 rounded-2xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none"
-          >
-            <option value="all">All Content Types</option>
-            <option value="video">Videos Only</option>
-            <option value="image">Graphics Only</option>
-          </select>
+          {/* Type filter (List view only) */}
+          {viewMode === 'list' && (
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="text-xs font-bold px-3 py-2 rounded-2xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none"
+            >
+              <option value="all">All Content Types</option>
+              <option value="video">Videos Only</option>
+              <option value="image">Graphics Only</option>
+            </select>
+          )}
 
-          {/* Status filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-xs font-bold px-3 py-2 rounded-2xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none"
-          >
-            <option value="all">All Statuses</option>
-            <option value="pending">Has Pending Targets</option>
-            <option value="posted">Has Posted Targets</option>
-            <option value="overdue">Overdue Items Only</option>
-          </select>
+          {/* Status filter (List view only) */}
+          {viewMode === 'list' && (
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="text-xs font-bold px-3 py-2 rounded-2xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none"
+            >
+              <option value="all">All Statuses</option>
+              <option value="pending">Has Pending Targets</option>
+              <option value="posted">Has Posted Targets</option>
+              <option value="overdue">Overdue Items Only</option>
+            </select>
+          )}
         </div>
       </div>
 
-      {/* ── Main Matrix Table ── */}
+      {/* ── Main View: Matrix Grid (Default) vs Item List ── */}
       {loading ? (
         <div className="py-24 text-center bg-white rounded-3xl border border-gray-100 shadow-xs">
           <div className="flex flex-col items-center gap-2">
@@ -437,7 +565,21 @@ export function UploadingSheetView() {
             <p className="text-xs font-bold text-gray-500">Loading upload sheet for {selectedMonth}...</p>
           </div>
         </div>
+      ) : viewMode === 'matrix' ? (
+        /* ── 30-Day Calendar Matrix with 6 Platform Rows per Task ── */
+        <UploadCalendarMatrix
+          categories={combinedCategories}
+          items={items}
+          selectedMonth={selectedMonth}
+          matrixRange={matrixRange}
+          setMatrixRange={setMatrixRange}
+          todayKarachi={todayKarachi}
+          onCellClick={handleCellClick}
+          departmentFilter={deptFilter}
+          searchQuery={searchQuery}
+        />
       ) : (
+        /* ── Item List Table View ── */
         <UploadMatrixTable
           items={filteredItems}
           onCellClick={handleCellClick}
@@ -458,10 +600,12 @@ export function UploadingSheetView() {
       <CategoryMappingModal
         isOpen={isMappingModalOpen}
         onClose={() => setIsMappingModalOpen(false)}
-        categories={creationCategories}
-        onSaved={loadMonthItems}
+        categories={combinedCategories}
+        onSaved={async () => {
+          await loadCategories();
+          await loadMonthItems();
+        }}
       />
     </div>
   );
 }
-
