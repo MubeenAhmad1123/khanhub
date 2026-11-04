@@ -1392,6 +1392,49 @@ service cloud.firestore {
       allow read: if isMediaAdminOrManager() || isItAdminOrManager() || isHqTier1();
       allow write: if isMediaAdminOrManager() || isItAdminOrManager() || isHqSuperOrManager();
     }
+
+    // ── Content Upload System (Step 1 Foundation) ───────────────────────────
+    function isUploadReader() {
+      return isAuth() && (
+        (request.auth.token.get('deptId', '') == 'social-media' &&
+         request.auth.token.get('role', '') in ['admin', 'manager', 'staff', 'uploader', 'superadmin']) ||
+        (request.auth.token.get('deptId', '') == 'hq' &&
+         request.auth.token.get('role', '') in ['superadmin', 'manager']) ||
+        (isMediaAuth() && mediaRole() in ['admin', 'manager', 'staff', 'uploader', 'superadmin']) ||
+        isHqTier1()
+      );
+    }
+
+    match /upload_items/{docId} {
+      allow read: if isUploadReader();
+      allow write: if false; // All mutations strictly executed via Admin SDK Server Actions
+    }
+
+    match /upload_stats_daily/{dateDoc} {
+      allow read: if isUploadReader();
+      allow write: if false; // Atomic increment by Server Actions only
+    }
+
+    match /upload_audit_logs/{auditId} {
+      allow read: if isUploadReader();
+      allow write: if false; // Append-only by Server Actions
+    }
+
+    match /upload_settings/{settingDoc} {
+      allow read: if isUploadReader();
+      allow write: if false; // Server Actions only
+    }
+
+    match /public_media/{docId} {
+      allow read: if false;  // Served exclusively via Next.js ISR Server Actions (Admin SDK)
+      allow write: if false; // Server Actions only
+    }
+
+    match /public_media_logs/{docId} {
+      allow read: if false;
+      allow write: if false;
+    }
+
     
     match /{collectionId}/{docId} {
       allow read: if (collectionId.matches('^it_.*') && (isItAdminOrManager() || isHqTier1()))

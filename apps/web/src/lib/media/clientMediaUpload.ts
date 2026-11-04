@@ -215,3 +215,4 @@ export async function uploadMediaPhotoToCloudinary(
     xhr.send(formData);
   });
 }
+

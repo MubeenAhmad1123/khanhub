@@ -11,3 +11,4 @@ export function getTodayInKarachi(): string {
     day: '2-digit'
   }).format(new Date());
 }
+
