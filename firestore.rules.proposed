@@ -1430,6 +1430,11 @@ service cloud.firestore {
       allow write: if false; // Server Actions only
     }
 
+    match /public_media_logs/{docId} {
+      allow read: if false;
+      allow write: if false;
+    }
+
     
     match /{collectionId}/{docId} {
       allow read: if (collectionId.matches('^it_.*') && (isItAdminOrManager() || isHqTier1()))

@@ -40,6 +40,22 @@ export default function sitemap(): MetadataRoute.Sitemap {
         priority: 0.7,
     }));
 
+    // Dynamic department media gallery pages
+    const mediaRoutes = [
+        {
+            url: `${baseUrl}/media/general`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly' as const,
+            priority: 0.6,
+        },
+        ...DEPARTMENTS.map((dept) => ({
+            url: `${baseUrl}/media/${dept.slug}`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly' as const,
+            priority: 0.6,
+        }))
+    ];
+
     // Dynamic program pages (only those with defined slugs)
     const programRoutes = DEPARTMENTS.flatMap((dept) => {
         if (!Array.isArray(dept.programs)) return [];
@@ -69,5 +85,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
         });
     });
 
-    return [...routes, ...departmentRoutes, ...programRoutes, ...courseRoutes];
+    return [...routes, ...departmentRoutes, ...mediaRoutes, ...programRoutes, ...courseRoutes];
 }

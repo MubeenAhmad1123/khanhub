@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {
     ArrowLeft, Phone, Mail, MapPin, Check,
-    Calendar, Users, Award, X, ZoomIn
+    Calendar, Users, Award, X, ZoomIn, Camera
 } from 'lucide-react';
 import { Department, DepartmentTheme, Course } from '@/types/department';
 import InquiryForm from '@/components/forms/InquiryForm';
@@ -153,6 +153,13 @@ export default function DepartmentPageContent({ department, theme, heroImage }: 
                                         </a>
                                     </>
                                 )}
+                                                            <Link
+                                    href={`/media/${department.slug}`}
+                                    className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 rounded-2xl font-bold hover:bg-white/20 transition-all active:scale-95 group"
+                                >
+                                    <Camera className="w-5 h-5 transition-transform group-hover:scale-110" />
+                                    Media
+                                </Link>
                             </div>
                         </div>
 

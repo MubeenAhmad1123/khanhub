@@ -4,10 +4,27 @@
       "collectionGroup": "public_media",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "campusId", "order": "ASCENDING" },
-        { "fieldPath": "departmentId", "order": "ASCENDING" },
         { "fieldPath": "visible", "order": "ASCENDING" },
-        { "fieldPath": "publishedAt", "order": "DESCENDING" }
+        { "fieldPath": "sortKey", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "public_media",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "departmentSlug", "order": "ASCENDING" },
+        { "fieldPath": "visible", "order": "ASCENDING" },
+        { "fieldPath": "sortKey", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "public_media",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "campusId", "order": "ASCENDING" },
+        { "fieldPath": "departmentSlug", "order": "ASCENDING" },
+        { "fieldPath": "visible", "order": "ASCENDING" },
+        { "fieldPath": "sortKey", "order": "DESCENDING" }
       ]
     },
     {
@@ -16,7 +33,7 @@
       "fields": [
         { "fieldPath": "campusId", "order": "ASCENDING" },
         { "fieldPath": "visible", "order": "ASCENDING" },
-        { "fieldPath": "publishedAt", "order": "DESCENDING" }
+        { "fieldPath": "sortKey", "order": "DESCENDING" }
       ]
     },
     {
@@ -49,4 +66,3 @@
   ],
   "fieldOverrides": []
 }
-
