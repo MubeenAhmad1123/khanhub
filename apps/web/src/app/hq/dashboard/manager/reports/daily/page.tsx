@@ -16,6 +16,7 @@ import { getDeptPrefix, getDeptCollection, type StaffDept, listStaffCards } from
 import { toast } from 'react-hot-toast';
 import { toDate, downloadElementAsPng } from '@/lib/utils';
 import { DutyProformaModal } from '@/components/shared/DutyProformaModal';
+import { resolveStaffDuties, ROLE_SPECIFIC_DUTIES, isGenericPlaceholderDuty } from '@/data/hqConfig';
 
 interface DailyReportRow {
   id: string;
@@ -52,29 +53,32 @@ const DEFAULT_UNIFORM_CONFIG = [
   { key: 'card', label: 'Identity Card' }
 ];
 
-const DEFAULT_DUTY_CONFIG = [
-  { key: 'morning', label: 'Morning Duty' },
-  { key: 'afternoon', label: 'Afternoon Duty' },
-  { key: 'evening', label: 'Evening Duty' }
-];
+const DEFAULT_DUTY_CONFIG = ROLE_SPECIFIC_DUTIES['default_staff'];
 
 const normalizeChecklistConfig = (rawConfig: any, defaultConfig: { key: string; label: string }[]) => {
-  if (!Array.isArray(rawConfig) || rawConfig.length === 0) {
-    return defaultConfig;
+  if (Array.isArray(rawConfig) && rawConfig.length > 0) {
+    const nonGeneric = rawConfig.filter((item: any) => {
+      const key = String(item?.key || '').trim();
+      const label = String(item?.label || item?.name || '').trim();
+      return !isGenericPlaceholderDuty(key) && !isGenericPlaceholderDuty(label);
+    });
+    if (nonGeneric.length > 0) {
+      return nonGeneric.map((item: any, idx: number) => {
+        if (typeof item === 'string') {
+          const label = item.trim();
+          const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_') || `item_${idx}`;
+          return { key, label };
+        }
+        if (typeof item === 'object' && item !== null) {
+          const label = String(item.label || item.name || item.title || item.key || `Item ${idx + 1}`).trim();
+          const key = String(item.key || label.toLowerCase().replace(/[^a-z0-9]+/g, '_') || `item_${idx}`);
+          return { key, label };
+        }
+        return { key: `item_${idx}`, label: `Item ${idx + 1}` };
+      });
+    }
   }
-  return rawConfig.map((item: any, idx: number) => {
-    if (typeof item === 'string') {
-      const label = item.trim();
-      const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_') || `item_${idx}`;
-      return { key, label };
-    }
-    if (typeof item === 'object' && item !== null) {
-      const label = String(item.label || item.name || item.title || item.key || `Item ${idx + 1}`).trim();
-      const key = String(item.key || label.toLowerCase().replace(/[^a-z0-9]+/g, '_') || `item_${idx}`);
-      return { key, label };
-    }
-    return { key: `item_${idx}`, label: `Item ${idx + 1}` };
-  });
+  return defaultConfig;
 };
 
 const getSimpleId = (id: string) => {
@@ -438,7 +442,7 @@ export default function DailyReportPage() {
           return !item || item.status === 'no';
         }).map((c: any) => c.label);
 
-        const dutyConfig = normalizeChecklistConfig(s.dutyConfig, DEFAULT_DUTY_CONFIG);
+        const dutyConfig = resolveStaffDuties(s);
         const dutyItems = duty?.duties || [];
         const dutiesPending = dutyConfig.filter((c: any) => {
           const item = dutyItems.find((d: any) => d && (d.key === c.key || String(d.label || '').toLowerCase() === String(c.label || '').toLowerCase()));

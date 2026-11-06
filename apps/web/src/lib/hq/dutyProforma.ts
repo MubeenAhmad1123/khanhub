@@ -1,5 +1,7 @@
 // apps/web/src/lib/hq/dutyProforma.ts
 
+import { resolveStaffDuties, isGenericPlaceholderDuty } from '@/data/hqConfig';
+
 export const PERFORMANCE_THRESHOLDS = {
   EXCELLENT: 90,
   GOOD: 75,
@@ -65,7 +67,7 @@ export type StaffDutyItem = string | {
   assignedBy?: string;
   isActive?: boolean;
   isPriority?: boolean;
-}
+};
 
 export interface DailyDutyRecord {
   date: string; // YYYY-MM-DD
@@ -81,6 +83,7 @@ export interface DailyDutyRecord {
     note?: string;
   }>;
   status?: string;
+  isCompliant?: boolean;
 }
 
 export interface HolidayRecord {
@@ -222,8 +225,8 @@ export function buildProformaModel({
     }
   });
 
-  // 5. Gather duties: CURRENT profile duties (active) + any duties present in that month's logs
-  const rawDuties = staff.duties || staff.dutyConfig || [];
+  // 5. Gather duties: Resolve comprehensive profile duties
+  const resolvedDuties = resolveStaffDuties(staff);
   const profileDuties: Array<{
     id: string;
     name: string;
@@ -233,26 +236,26 @@ export function buildProformaModel({
 
   const seenDutyKeys = new Set<string>();
 
-  rawDuties.forEach((d, idx) => {
+  resolvedDuties.forEach((d: any, idx: number) => {
     if (!d) return;
-    const name = typeof d === 'string' ? d.trim() : String(d.name || d.dutyName || d.label || '').trim();
-    if (!name) return;
-    if (d && typeof d === 'object' && d.isActive === false) return; // filter out deactivated from current
+    const name = String(d.label || d.name || d.dutyName || '').trim();
+    if (!name || isGenericPlaceholderDuty(name)) return;
+    if (d && typeof d === 'object' && d.isActive === false) return;
 
-    const id = typeof d === 'string' ? `duty-${idx + 1}` : String(d.id || d.dutyId || d.key || `duty-${idx + 1}`);
+    const id = String(d.key || d.id || `duty-${idx + 1}`);
     const key = name.toLowerCase();
     if (!seenDutyKeys.has(key)) {
       seenDutyKeys.add(key);
       profileDuties.push({
         id,
         name,
-        assignedAt: typeof d === 'string' ? undefined : d.assignedAt,
-        isPriority: typeof d === 'string' ? false : Boolean(d.isPriority),
+        assignedAt: typeof d === 'object' ? d.assignedAt : undefined,
+        isPriority: typeof d === 'object' ? Boolean(d.isPriority) : false,
       });
     }
   });
 
-  // Also check logs for historical duties not in current profile
+  // Also check logs for historical custom duties not in current profile, excluding generic placeholders
   const historicalDuties: Array<{
     id: string;
     name: string;
@@ -264,7 +267,8 @@ export function buildProformaModel({
     if (!log || !log.duties) return;
     log.duties.forEach((item) => {
       const name = String(item.name || item.dutyName || item.label || '').trim();
-      if (!name) return;
+      const rawKey = String(item.key || item.id || '').trim();
+      if (!name || isGenericPlaceholderDuty(name) || isGenericPlaceholderDuty(rawKey)) return;
       const key = name.toLowerCase();
       if (!seenDutyKeys.has(key)) {
         seenDutyKeys.add(key);
@@ -316,31 +320,48 @@ export function buildProformaModel({
       // Check log
       const dayLog = logMap.get(dayDate);
       if (!dayLog) {
-        // Rule: Past day with no log record at all is blank (never show ✗ for missing data)
+        // Rule: Past day with no log record at all is blank
         cells[dayDate] = '';
         return;
       }
 
-      // Sunday with log: evaluate; Sunday with no log: blank
       // Look up duty in dayLog.duties
       const items = dayLog.duties || [];
       const dutyKey = duty.name.toLowerCase();
       const matched = items.find((it) => {
         if (!it) return false;
-        const itId = String(it.id || it.dutyId || it.key || '');
-        if (itId && itId === duty.id) return true;
+        const itId = String(it.id || it.dutyId || it.key || '').trim().toLowerCase();
+        if (itId && itId === duty.id.toLowerCase()) return true;
         const itName = String(it.name || it.dutyName || it.label || '').trim().toLowerCase();
         return itName === dutyKey;
       });
 
       if (!matched) {
-        // If duty was not listed in that day's log
+        // If duty was not individually itemized in that day's log:
+        // Check overall day duty status
+        const dayStatus = String(dayLog.status || '').toLowerCase();
+        if (dayStatus === 'yes' || dayStatus === 'done' || dayStatus === 'completed' || dayLog.isCompliant === true) {
+          cells[dayDate] = 'done';
+          totalEvaluatedDuties++;
+          completedDuties++;
+          return;
+        }
+        if (dayStatus === 'no' || dayStatus === 'failed') {
+          cells[dayDate] = 'notdone';
+          totalEvaluatedDuties++;
+          pendingDuties++;
+          return;
+        }
+        if (dayStatus === 'na') {
+          cells[dayDate] = 'na';
+          return;
+        }
         cells[dayDate] = '';
         return;
       }
 
       const st = String(matched.status || '').toLowerCase();
-      const isDone = st === 'done' || matched.completed === true;
+      const isDone = st === 'done' || st === 'yes' || matched.completed === true;
       const isNa = st === 'na';
       const isNotDone = st === 'not_done' || st === 'no' || (matched.completed === false && !isNa);
 
@@ -355,7 +376,14 @@ export function buildProformaModel({
         totalEvaluatedDuties++;
         pendingDuties++;
       } else {
-        cells[dayDate] = '';
+        const dayStatus = String(dayLog.status || '').toLowerCase();
+        if (dayStatus === 'yes' || dayStatus === 'done' || dayLog.isCompliant === true) {
+          cells[dayDate] = 'done';
+          totalEvaluatedDuties++;
+          completedDuties++;
+        } else {
+          cells[dayDate] = '';
+        }
       }
     });
 

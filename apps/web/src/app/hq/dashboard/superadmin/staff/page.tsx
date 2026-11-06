@@ -24,6 +24,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { resolveStaffDuties } from '@/data/hqConfig';
 
 const DEPT_INFO: Record<string, { label: string; color: string; border: string; bg: string; text: string; gradient: string }> = {
   hq: { label: 'HQ Governance', color: 'bg-purple-600', border: 'border-purple-200', bg: 'bg-purple-50', text: 'text-purple-600', gradient: 'from-purple-500/10 to-transparent' },
@@ -84,11 +85,7 @@ export default function SuperadminStaffPage() {
           { key: 'shoes', label: 'Polished Shoes' },
           { key: 'card', label: 'Identity Card' }
         ])
-      : ((row as any).dutyConfig || [
-          { key: 'morning', label: 'Morning Duty' },
-          { key: 'afternoon', label: 'Afternoon Duty' },
-          { key: 'evening', label: 'Evening Duty' }
-        ]);
+      : resolveStaffDuties(row);
 
     if (newStatus === 'incomplete') {
       const checked: string[] = [];
@@ -197,11 +194,7 @@ export default function SuperadminStaffPage() {
           { key: 'shoes', label: 'Polished Shoes' },
           { key: 'card', label: 'Identity Card' }
         ])
-      : ((row as any).dutyConfig || [
-          { key: 'morning', label: 'Morning Duty' },
-          { key: 'afternoon', label: 'Afternoon Duty' },
-          { key: 'evening', label: 'Evening Duty' }
-        ]);
+      : resolveStaffDuties(row);
 
     const total = config.length;
     const checkedCount = checkedKeys.length;

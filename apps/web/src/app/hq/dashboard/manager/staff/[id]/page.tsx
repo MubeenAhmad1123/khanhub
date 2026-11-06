@@ -54,7 +54,7 @@ import VisibilityManager from '@/components/shared/VisibilityManager';
 import { saveVisibleSections } from '@/lib/visibilityManager';
 
 // Define unified icons for tasks
-import { GLOBAL_DUTIES, GLOBAL_DRESS_ITEMS } from '@/data/hqConfig';
+import { GLOBAL_DUTIES, GLOBAL_DRESS_ITEMS, resolveStaffDuties, ROLE_SPECIFIC_DUTIES } from '@/data/hqConfig';
 
 interface Staff {
   id?: string;
@@ -776,7 +776,7 @@ export default function StaffProfilePage() {
         address: profile.address || '',
         userId: profile.staffId || '',
         dressCodeConfig: (profile.dressCodeConfig?.length ? profile.dressCodeConfig : []),
-        dutyConfig: (profile.dutyConfig?.length ? profile.dutyConfig : []),
+        dutyConfig: resolveStaffDuties(profile),
         basicInfoExtras: profile.basicInfoExtras || {},
         joiningDate: profile.joiningDate ? toDate(profile.joiningDate).toISOString().slice(0, 10) : '',
         seniority: profile.seniority || '',
@@ -2360,6 +2360,8 @@ export default function StaffProfilePage() {
 
       let finalUpdates: any = {
         ...editForm,
+        dutyConfig: editForm.dutyConfig,
+        duties: (editForm.dutyConfig || []).map((d: any) => d.label || d.name || String(d)),
         documents: finalDocuments,
         updatedAt: serverTimestamp()
       };
@@ -3658,7 +3660,7 @@ export default function StaffProfilePage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(staff?.dutyConfig?.length ? staff.dutyConfig : GLOBAL_DUTIES.slice(0, 4).map(d => ({ key: d.toLowerCase().replace(/\s+/g, '_'), label: d }))).map((duty: { key: string; label: string }) => (
+                        {(staff?.dutyConfig?.length ? staff.dutyConfig : resolveStaffDuties(staff)).map((duty: { key: string; label: string }) => (
                           <tr key={duty.key} className="border-t border-zinc-800/10">
                             <td className="sticky left-0 z-10 bg-inherit pr-8 py-6 text-left">
                               <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{duty.label}</span>
@@ -4219,12 +4221,26 @@ export default function StaffProfilePage() {
                         </div>
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-500">Scheduled Duties</h4>
                       </div>
-                      <button
-                        onClick={() => setAddingConfig({ type: 'duty', mode: 'select' })}
-                        className="p-3 rounded-2xl bg-teal-500 text-white hover:scale-110 active:scale-90 transition-all shadow-lg shadow-teal-500/20"
-                      >
-                        <Plus size={20} />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const rec = resolveStaffDuties(staff || editForm);
+                            setEditForm(prev => ({ ...prev, dutyConfig: rec }));
+                            toast.success("Loaded recommended duties for role");
+                          }}
+                          className="px-3 py-2 rounded-xl bg-teal-50 text-teal-700 border border-teal-200 text-[10px] font-black uppercase tracking-wider hover:bg-teal-100 transition-all"
+                          title="Reset to recommended duties for this role"
+                        >
+                          Auto-Fill Role Duties
+                        </button>
+                        <button
+                          onClick={() => setAddingConfig({ type: 'duty', mode: 'select' })}
+                          className="p-3 rounded-2xl bg-teal-500 text-white hover:scale-110 active:scale-90 transition-all shadow-lg shadow-teal-500/20"
+                        >
+                          <Plus size={20} />
+                        </button>
+                      </div>
                     </div>
 
                     {addingConfig?.type === 'duty' && (

@@ -16,6 +16,7 @@ import { toast } from 'react-hot-toast';
 import { getDeptPrefix, getDeptCollection, StaffDept } from '@/lib/hq/superadmin/staff';
 import type { HqStaff } from '@/types/hq';
 import { DutyProformaModal } from '@/components/shared/DutyProformaModal';
+import { resolveStaffDuties } from '@/data/hqConfig';
 
 const getSimpleId = (id: string) => {
   if (!id) return '';
@@ -685,15 +686,29 @@ export default function ManagerReportsPage() {
       }) : existingUniformItems;
 
       const existingDutyItems = selectedDay.details?.dutyItems || [];
-      const configDuty = activeViewingStaff.dutyConfig || [];
-      const dutyItems = configDuty.length > 0 ? configDuty.map((c: any) => {
-        const found = existingDutyItems.find((i: any) => i.key === c.key);
+      const resolvedDutyConfig = resolveStaffDuties(activeViewingStaff);
+      const isDayMarkedDone = selectedDay.duty === 'yes' || selectedDay.duty === 'done';
+      const isDayMarkedNo = selectedDay.duty === 'no';
+      const dutyItems = resolvedDutyConfig.map((c: any) => {
+        const found = existingDutyItems.find((i: any) => 
+          i.key === c.key || String(i.label || '').trim().toLowerCase() === String(c.label || '').trim().toLowerCase()
+        );
+        let status = 'done';
+        if (found) {
+          status = (found.status === 'done' || found.status === 'yes') ? 'done' : 'not_done';
+        } else if (isDayMarkedNo) {
+          status = 'not_done';
+        } else if (isDayMarkedDone) {
+          status = 'done';
+        } else {
+          status = 'done';
+        }
         return {
           key: c.key,
           label: c.label || c.key,
-          status: found ? (found.status === 'done' || found.status === 'yes' ? 'done' : 'not_done') : 'done'
+          status
         };
-      }) : existingDutyItems;
+      });
 
       setEditForm({
         attendance: selectedDay.attendance || 'unmarked',
@@ -1951,7 +1966,15 @@ export default function ManagerReportsPage() {
                               <button
                                 key={opt.id}
                                 type="button"
-                                onClick={() => setEditForm((prev: any) => ({ ...prev, duty: opt.id }))}
+                                onClick={() => {
+                                  setEditForm((prev: any) => {
+                                    const nextItems = (prev.dutyItems || []).map((it: any) => ({
+                                      ...it,
+                                      status: opt.id === 'yes' ? 'done' : (opt.id === 'no' ? 'not_done' : (opt.id === 'na' ? 'na' : it.status))
+                                    }));
+                                    return { ...prev, duty: opt.id, dutyItems: nextItems };
+                                  });
+                                }}
                                 className={`px-2 py-2 rounded-xl border text-center transition-all ${
                                   editForm.duty === opt.id
                                     ? `${opt.cls} ring-2 ring-indigo-500 font-extrabold shadow-sm scale-[1.02]`

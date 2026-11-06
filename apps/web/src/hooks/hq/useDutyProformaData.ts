@@ -14,6 +14,7 @@ import {
   type LeaveRecord,
 } from '@/lib/hq/dutyProforma';
 import { getDeptPrefix, getDeptCollection } from '@/lib/hq/superadmin/staff';
+import { resolveStaffDuties } from '@/data/hqConfig';
 
 const CACHE_TTL_SECONDS = 300; // 5 minutes cache
 
@@ -146,12 +147,12 @@ export function useDutyProformaData(
         const monthKey = `${year}-${String(month).padStart(2, '0')}`;
         const candidateIds = Array.from(new Set([staffId, simpleSid].filter(Boolean)));
 
-        // 1. Fetch latest staff profile if duties are missing or incomplete
+        // 1. Fetch latest staff profile if duties or config need enrichment
         let staffProfile = staff;
-        if (!staff?.duties || staff.duties.length === 0) {
+        if (!staff?.duties || staff.duties.length === 0 || !staff?.dutyConfig || staff.dutyConfig.length === 0) {
           const colCandidates = [getStaffCollection(dept), getDeptCollection(dept)];
           for (const colName of colCandidates) {
-            if (staffProfile?.duties && staffProfile.duties.length > 0) break;
+            if (staffProfile?.duties && staffProfile.duties.length > 0 && staffProfile?.dutyConfig && staffProfile.dutyConfig.length > 0) break;
             for (const cId of candidateIds) {
               const staffDocRef = doc(db, colName, cId);
               const staffSnap = await getDoc(staffDocRef).catch(() => null);
@@ -164,7 +165,15 @@ export function useDutyProformaData(
           }
         }
 
-        // 2. Fetch Duty Logs for this staff (single equality filter: no composite index needed)
+        // Enrich with intelligent duty resolver
+        const resolvedDuties = resolveStaffDuties(staffProfile);
+        staffProfile = {
+          ...staffProfile,
+          dutyConfig: resolvedDuties,
+          duties: resolvedDuties.map((d: any) => d.label)
+        };
+
+        // 2. Fetch Duty Logs for this staff
         const dutyColName = `${prefix}_duty_logs`;
         const dutySnaps = await Promise.all(
           candidateIds.map((cId) =>
