@@ -76,14 +76,23 @@ export async function getCachedPublicMedia(
 }
 
 /**
- * Get paginated public media items
+ * Get paginated public media items (optionally filtered by mediaType)
  */
 export async function getPublicMediaPaginated(params: {
   departmentSlug?: string;
+  mediaType?: 'photo' | 'video' | 'all';
   cursor?: string;
   limit?: number;
 }): Promise<PublicMediaListResult> {
-  const allItems = await getCachedPublicMedia(params.departmentSlug);
+  let allItems = await getCachedPublicMedia(params.departmentSlug);
+
+  if (params.mediaType && params.mediaType !== 'all') {
+    allItems = allItems.filter((item) => {
+      const type = item.mediaType || 'photo';
+      return type === params.mediaType;
+    });
+  }
+
   const pageSize = params.limit || 24;
 
   let startIndex = 0;
@@ -111,6 +120,7 @@ export async function getPublicMediaPaginated(params: {
  */
 export async function loadMorePublicMedia(params: {
   departmentSlug?: string;
+  mediaType?: 'photo' | 'video' | 'all';
   cursor?: string;
   limit?: number;
 }): Promise<PublicMediaListResult> {
@@ -122,5 +132,13 @@ export async function loadMorePublicMedia(params: {
  */
 export async function getTotalPublicPhotoCount(): Promise<number> {
   const allItems = await getCachedPublicMedia();
-  return allItems.length;
+  return allItems.filter((i) => (i.mediaType || 'photo') === 'photo').length;
+}
+
+/**
+ * Returns the total count of visible public videos across all departments
+ */
+export async function getTotalPublicVideoCount(): Promise<number> {
+  const allItems = await getCachedPublicMedia();
+  return allItems.filter((i) => i.mediaType === 'video').length;
 }

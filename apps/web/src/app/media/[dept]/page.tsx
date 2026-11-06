@@ -2,7 +2,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { DEPARTMENTS } from '@/data/departments';
-import { getPublicMediaPaginated, getTotalPublicPhotoCount } from '@/lib/media/mediaQueries';
+import { getPublicMediaPaginated, getTotalPublicPhotoCount, getTotalPublicVideoCount } from '@/lib/media/mediaQueries';
 import MediaPageContent from '@/components/media/MediaPageContent';
 
 export const dynamicParams = false; // Strictly return 404 for unknown department slugs
@@ -63,9 +63,10 @@ export default async function DepartmentMediaPage({
 
   const departmentName = isGeneral ? 'Khan Hub (General)' : foundDept!.name;
 
-  const [initialResult, totalPhotosOverall] = await Promise.all([
-    getPublicMediaPaginated({ departmentSlug: slug, limit: 24 }),
-    getTotalPublicPhotoCount()
+  const [initialResult, totalPhotosOverall, totalVideosOverall] = await Promise.all([
+    getPublicMediaPaginated({ departmentSlug: slug, limit: 48 }),
+    getTotalPublicPhotoCount(),
+    getTotalPublicVideoCount()
   ]);
 
   return (
@@ -74,6 +75,7 @@ export default async function DepartmentMediaPage({
       currentDeptSlug={slug}
       departmentName={departmentName}
       totalPhotosOverall={totalPhotosOverall}
+      totalVideosOverall={totalVideosOverall}
     />
   );
 }

@@ -59,11 +59,20 @@ export interface PublishPhotoInput {
   publishedDate: string; // YYYY-MM-DD
 }
 
+export interface PublishVideoInput {
+  clientToken: string;
+  title: string;
+  departmentSlug: string;
+  youtubeUrl: string;
+  publishedDate: string; // YYYY-MM-DD
+}
+
 export interface UpdateMediaItemInput {
   id: string;
   title?: string;
   departmentSlug?: string;
   publishedDate?: string;
+  youtubeUrl?: string;
 }
 
 export interface DashboardMediaStats {
@@ -71,6 +80,8 @@ export interface DashboardMediaStats {
   visible: number;
   hidden: number;
   uploadedToday: number;
+  totalPhotos?: number;
+  totalVideos?: number;
 }
 
 export interface DashboardMediaListResult {

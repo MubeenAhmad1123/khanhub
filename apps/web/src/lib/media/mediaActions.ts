@@ -9,11 +9,13 @@ import {
   PublicMediaItem,
   PublicMediaLog,
   PublishPhotoInput,
+  PublishVideoInput,
   UpdateMediaItemInput,
   DashboardMediaListResult,
   DashboardMediaStats
 } from './types';
 import { getTodayInKarachi } from './dateUtils';
+import { extractYouTubeVideoId } from './youtubeUtils';
 
 const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dhshtdrjp';
 
@@ -227,6 +229,96 @@ export async function publishPhotos(
 }
 
 /**
+ * Server Action: Publish a YouTube video to public_media
+ */
+export async function publishVideo(
+  input: PublishVideoInput,
+  idToken?: string
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  try {
+    const caller = await verifyUploadCaller(idToken);
+
+    if (!input.clientToken || typeof input.clientToken !== 'string') {
+      throw new Error('A valid clientToken is required.');
+    }
+
+    const cleanTitle = sanitizeTitle(input.title);
+    const { slug: deptSlug, name: deptName } = resolveDepartment(input.departmentSlug);
+    const cleanDate = validatePublishedDate(input.publishedDate);
+
+    const videoId = extractYouTubeVideoId(input.youtubeUrl);
+    if (!videoId) {
+      throw new Error('Invalid YouTube URL. Please provide a valid YouTube watch link, short, or share link.');
+    }
+
+    const youtubeThumbUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    const canonicalYoutubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+    const adminDb = getAdminDb();
+    const docId = `${caller.uid}_${input.clientToken}`;
+    const nowIso = new Date().toISOString();
+    const sortKey = `${nowIso}_${docId}`;
+
+    const mediaDoc: PublicMediaItem = {
+      id: docId,
+      mediaType: 'video',
+      title: cleanTitle,
+      departmentSlug: deptSlug,
+      departmentName: deptName,
+      imageUrl: youtubeThumbUrl,
+      cloudinaryPublicId: '',
+      width: 1280,
+      height: 720,
+      bytes: 0,
+      publishedDate: cleanDate,
+      publishedAt: nowIso,
+      sortKey,
+      visible: true,
+      deletedAt: null,
+      uploadedBy: caller.uid,
+      uploadedByName: caller.name,
+      campusId: 'vehari',
+      clientToken: input.clientToken,
+      youtubeVideoId: videoId,
+      externalUrl: canonicalYoutubeUrl
+    };
+
+    const batch = adminDb.batch();
+    const docRef = adminDb.collection('public_media').doc(docId);
+    batch.set(docRef, mediaDoc);
+
+    const logId = `${docId}_pub_${Date.now()}`;
+    const logRef = adminDb.collection('public_media_logs').doc(logId);
+    const logDoc: PublicMediaLog = {
+      id: logId,
+      mediaId: docId,
+      action: 'published',
+      performedBy: caller.uid,
+      name: caller.name,
+      role: caller.role,
+      timestamp: nowIso,
+      details: {
+        mediaType: 'video',
+        title: cleanTitle,
+        departmentSlug: deptSlug,
+        publishedDate: cleanDate,
+        youtubeVideoId: videoId
+      }
+    };
+    batch.set(logRef, logDoc);
+
+    await batch.commit();
+
+    revalidateMediaCaches(deptSlug);
+
+    return { success: true, id: docId };
+  } catch (err: any) {
+    console.error('[publishVideo] Error:', err);
+    return { success: false, error: err.message || 'Failed to publish video' };
+  }
+}
+
+/**
  * Server Action: Update media item title, department, or publishedDate
  */
 export async function updateMediaItem(
@@ -278,6 +370,18 @@ export async function updateMediaItem(
       logDetails.oldDate = currentData.publishedDate;
       logDetails.newDate = updates.publishedDate;
       primaryAction = 'date_edited';
+    }
+
+    if (input.youtubeUrl !== undefined && input.youtubeUrl.trim() !== '') {
+      const videoId = extractYouTubeVideoId(input.youtubeUrl);
+      if (!videoId) {
+        throw new Error('Invalid YouTube URL.');
+      }
+      updates.youtubeVideoId = videoId;
+      updates.externalUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      updates.imageUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+      logDetails.oldYoutubeId = currentData.youtubeVideoId;
+      logDetails.newYoutubeId = videoId;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -440,6 +544,7 @@ export async function listMediaForDashboard(
     departmentSlug?: string;
     month?: string; // YYYY-MM
     visible?: 'all' | 'visible' | 'hidden';
+    mediaType?: 'all' | 'photo' | 'video';
     cursor?: string; // sortKey
     limit?: number;
   },
@@ -460,6 +565,8 @@ export async function listMediaForDashboard(
     let visibleCount = 0;
     let hiddenCount = 0;
     let uploadedToday = 0;
+    let totalPhotos = 0;
+    let totalVideos = 0;
 
     snapshot.forEach((doc) => {
       const data = doc.data() as PublicMediaItem;
@@ -477,10 +584,23 @@ export async function listMediaForDashboard(
         uploadedToday++;
       }
 
+      if (data.mediaType === 'video') {
+        totalVideos++;
+      } else {
+        totalPhotos++;
+      }
+
       allDocs.push(data);
     });
 
     // Apply dashboard filters
+    if (input.mediaType && input.mediaType !== 'all') {
+      allDocs = allDocs.filter((item) => {
+        const itemType = item.mediaType || 'photo';
+        return itemType === input.mediaType;
+      });
+    }
+
     if (input.departmentSlug && input.departmentSlug !== 'all') {
       allDocs = allDocs.filter((item) => item.departmentSlug === input.departmentSlug);
     }
@@ -520,7 +640,9 @@ export async function listMediaForDashboard(
         total,
         visible: visibleCount,
         hidden: hiddenCount,
-        uploadedToday
+        uploadedToday,
+        totalPhotos,
+        totalVideos
       }
     };
   } catch (err: any) {
@@ -528,7 +650,7 @@ export async function listMediaForDashboard(
     return {
       items: [],
       hasMore: false,
-      stats: { total: 0, visible: 0, hidden: 0, uploadedToday: 0 }
+      stats: { total: 0, visible: 0, hidden: 0, uploadedToday: 0, totalPhotos: 0, totalVideos: 0 }
     };
   }
 }

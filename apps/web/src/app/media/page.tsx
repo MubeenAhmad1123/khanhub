@@ -1,6 +1,6 @@
 // apps/web/src/app/media/page.tsx
 import { Metadata } from 'next';
-import { getPublicMediaPaginated, getTotalPublicPhotoCount } from '@/lib/media/mediaQueries';
+import { getPublicMediaPaginated, getTotalPublicPhotoCount, getTotalPublicVideoCount } from '@/lib/media/mediaQueries';
 import MediaPageContent from '@/components/media/MediaPageContent';
 
 export const metadata: Metadata = {
@@ -16,9 +16,10 @@ export const metadata: Metadata = {
 export const revalidate = 3600; // 1 hour ISR
 
 export default async function MediaPage() {
-  const [initialResult, totalPhotosOverall] = await Promise.all([
-    getPublicMediaPaginated({ limit: 24 }),
-    getTotalPublicPhotoCount()
+  const [initialResult, totalPhotosOverall, totalVideosOverall] = await Promise.all([
+    getPublicMediaPaginated({ limit: 48 }),
+    getTotalPublicPhotoCount(),
+    getTotalPublicVideoCount()
   ]);
 
   return (
@@ -26,6 +27,7 @@ export default async function MediaPage() {
       initialResult={initialResult}
       currentDeptSlug="all"
       totalPhotosOverall={totalPhotosOverall}
+      totalVideosOverall={totalVideosOverall}
     />
   );
 }

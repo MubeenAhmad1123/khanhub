@@ -10,13 +10,15 @@ interface MediaPageContentProps {
   currentDeptSlug?: string;
   departmentName?: string;
   totalPhotosOverall: number;
+  totalVideosOverall?: number;
 }
 
 export default function MediaPageContent({
   initialResult,
   currentDeptSlug = 'all',
   departmentName,
-  totalPhotosOverall
+  totalPhotosOverall,
+  totalVideosOverall = 0
 }: MediaPageContentProps) {
   const isSpecificDept = currentDeptSlug !== 'all';
   const heroBadge = isSpecificDept ? `${departmentName || currentDeptSlug} Gallery` : 'Media Gallery';
@@ -52,6 +54,7 @@ export default function MediaPageContent({
           currentDeptSlug={currentDeptSlug}
           departmentName={departmentName}
           totalPhotosOverall={totalPhotosOverall}
+          totalVideosOverall={totalVideosOverall}
         />
       </section>
 
