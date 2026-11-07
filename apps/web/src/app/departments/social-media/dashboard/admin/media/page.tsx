@@ -177,6 +177,20 @@ export default function MediaLibraryDashboardPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Lock body scroll and keep modals firmly positioned at top of viewport
+  useEffect(() => {
+    const isAnyModalOpen = Boolean(
+      isWizardOpen || isVideoModalOpen || previewVideoItem || editingItem || removingItem
+    );
+    if (isAnyModalOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isWizardOpen, isVideoModalOpen, previewVideoItem, editingItem, removingItem]);
+
   // Fetch dashboard list
   const loadDashboardData = async (reset = true) => {
     if (reset) {
@@ -973,8 +987,8 @@ export default function MediaLibraryDashboardPage() {
       {/* YOUTUBE VIDEO PUBLISHING MODAL */}
       {/* ───────────────────────────────────────────────────────────── */}
       {isVideoModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl border border-gray-200 animate-fade-in flex flex-col max-h-[92vh]">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-start justify-center p-2.5 sm:p-4 pt-3 sm:pt-6 md:pt-10">
+          <div className="bg-white rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl border border-gray-200 animate-fade-in flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] my-0">
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-red-50/40">
               <div className="flex items-center gap-2.5">
@@ -1166,13 +1180,13 @@ export default function MediaLibraryDashboardPage() {
       {/* ───────────────────────────────────────────────────────────── */}
       {previewVideoItem && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fade-in"
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/90 backdrop-blur-md flex items-start justify-center p-2.5 sm:p-6 pt-3 sm:pt-8 md:pt-12 animate-fade-in"
           onClick={() => setPreviewVideoItem(null)}
           role="dialog"
           aria-modal="true"
         >
           <div
-            className="relative max-w-4xl w-full flex flex-col rounded-3xl overflow-hidden bg-zinc-950 border border-zinc-800 shadow-2xl"
+            className="relative max-w-4xl w-full flex flex-col rounded-3xl overflow-hidden bg-zinc-950 border border-zinc-800 shadow-2xl my-0"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Top Bar */}
@@ -1238,8 +1252,8 @@ export default function MediaLibraryDashboardPage() {
       {/* PHOTO WIZARD MODAL (Steps 1 to 4) */}
       {/* ───────────────────────────────────────────────────────────── */}
       {isWizardOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl border border-gray-200/80 animate-fade-in flex flex-col max-h-[92vh]">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-start justify-center p-2.5 sm:p-4 pt-3 sm:pt-6 md:pt-10">
+          <div className="bg-white rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl border border-gray-200/80 animate-fade-in flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] my-0">
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
               <div>
@@ -1259,45 +1273,64 @@ export default function MediaLibraryDashboardPage() {
             </div>
 
             {/* Wizard Steps Content */}
-            <div className="p-6 overflow-y-auto flex-1">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1">
               {/* STEP 1: Select or Drag & Drop Photos */}
               {wizardStep === 1 && (
                 <div className="space-y-4">
-                  <div
-                    onDragEnter={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDragOver={handleDrag}
-                    onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center cursor-pointer transition-all ${
-                      dragActive
-                        ? 'border-cyan-500 bg-cyan-50/50'
-                        : 'border-gray-200 hover:border-gray-300 bg-gray-50/40'
-                    }`}
-                  >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={(e) => handleFilesSelected(e.target.files)}
-                      className="hidden"
-                    />
-                    <div className="w-14 h-14 rounded-2xl bg-cyan-50 text-cyan-600 flex items-center justify-center mx-auto mb-3">
-                      <UploadCloud size={28} />
+                  {stagedPhotos.length === 0 ? (
+                    <div
+                      onDragEnter={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDragOver={handleDrag}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`border-2 border-dashed rounded-3xl p-6 sm:p-10 text-center cursor-pointer transition-all ${
+                        dragActive
+                          ? 'border-cyan-500 bg-cyan-50/50'
+                          : 'border-gray-200 hover:border-gray-300 bg-gray-50/40'
+                      }`}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(e) => handleFilesSelected(e.target.files)}
+                        className="hidden"
+                      />
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-cyan-50 text-cyan-600 flex items-center justify-center mx-auto mb-2.5 sm:mb-3">
+                        <UploadCloud size={26} />
+                      </div>
+                      <p className="text-xs sm:text-sm font-bold text-gray-800">
+                        Click to upload photos or drag and drop
+                      </p>
+                      <p className="text-[11px] sm:text-xs text-gray-500 mt-1">
+                        JPG, PNG, or WebP only (up to 10 photos per batch). Files will be optimized automatically in WebP.
+                      </p>
                     </div>
-                    <p className="text-sm font-bold text-gray-800">
-                      Click to upload photos or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      JPG, PNG, or WebP only (up to 10 photos per batch). Files will be optimized automatically in WebP.
-                    </p>
-                  </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {stagedPhotos.length < 10 && (
+                        <div
+                          onClick={() => fileInputRef.current?.click()}
+                          className="border-2 border-dashed border-cyan-300 hover:border-cyan-500 rounded-2xl p-3 sm:p-3.5 text-center cursor-pointer bg-cyan-50/40 hover:bg-cyan-50/80 transition-all flex items-center justify-center gap-2 text-cyan-700"
+                        >
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            multiple
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={(e) => handleFilesSelected(e.target.files)}
+                            className="hidden"
+                          />
+                          <Plus size={16} />
+                          <span className="text-xs sm:text-sm font-semibold">
+                            Add more photos ({stagedPhotos.length}/10 selected)
+                          </span>
+                        </div>
+                      )}
 
-                  {/* Staged photos list preview */}
-                  {stagedPhotos.length > 0 && (
-                    <div className="space-y-3 pt-2">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between pt-1">
                         <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
                           Selected Photos ({stagedPhotos.length}/10)
                         </span>
@@ -1617,8 +1650,8 @@ export default function MediaLibraryDashboardPage() {
       {/* EDIT MODAL */}
       {/* ───────────────────────────────────────────────────────────── */}
       {editingItem && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-gray-200 animate-fade-in p-6">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-start justify-center p-2.5 sm:p-4 pt-3 sm:pt-6 md:pt-10">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-gray-200 animate-fade-in p-6 my-0 max-h-[calc(100dvh-1.5rem)] overflow-y-auto">
             <h3 className="text-base font-bold text-gray-900 mb-4">
               Edit {editingItem.mediaType === 'video' ? 'Video' : 'Media Item'}
             </h3>
@@ -1701,8 +1734,8 @@ export default function MediaLibraryDashboardPage() {
       {/* REMOVE MODAL (Soft delete with required reason) */}
       {/* ───────────────────────────────────────────────────────────── */}
       {removingItem && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-gray-200 animate-fade-in p-6">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-start justify-center p-2.5 sm:p-4 pt-3 sm:pt-6 md:pt-10">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-gray-200 animate-fade-in p-6 my-0 max-h-[calc(100dvh-1.5rem)] overflow-y-auto">
             <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-3">
               <Trash2 size={24} />
             </div>
