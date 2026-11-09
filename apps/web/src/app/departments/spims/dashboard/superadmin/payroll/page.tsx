@@ -287,11 +287,25 @@ export default function SpimsPayrollPage() {
         const joiningRaw = staff.joiningDate || staff.startDate || staff.dateJoined || staff.createdAt;
         const joiningDateStr = formatDateString(joiningRaw);
 
+        // If staff has actual attendance in this month earlier than joiningDate, respect the marked attendance!
+        const attDatesInMonth = staffAtt
+          .map((a: any) => formatDateString(a.date))
+          .filter((d: string) => Boolean(d && d.startsWith(monthStr)))
+          .sort();
+
+        let effectiveJoiningDateStr = joiningDateStr;
+        if (attDatesInMonth.length > 0) {
+          const earliestAtt = attDatesInMonth[0];
+          if (!effectiveJoiningDateStr || earliestAtt < effectiveJoiningDateStr) {
+            effectiveJoiningDateStr = earliestAtt;
+          }
+        }
+
         let joiningDay = 1;
         let joinedMidMonth = false;
 
-        if (joiningDateStr && joiningDateStr.startsWith(monthStr)) {
-          joiningDay = parseInt(joiningDateStr.substring(8, 10), 10) || 1;
+        if (effectiveJoiningDateStr && effectiveJoiningDateStr.startsWith(monthStr)) {
+          joiningDay = parseInt(effectiveJoiningDateStr.substring(8, 10), 10) || 1;
           if (joiningDay > 1) {
             joinedMidMonth = true;
           }
@@ -306,15 +320,22 @@ export default function SpimsPayrollPage() {
         let daysPassed = totalBaseDaysForStaff;
         if (monthStr === currentMonthStr) {
           const currentDay = today.getDate();
+          let maxMarkedDay = currentDay;
+          attDatesInMonth.forEach((dStr: string) => {
+            const dNum = parseInt(dStr.substring(8, 10), 10);
+            if (dNum > maxMarkedDay) maxMarkedDay = dNum;
+          });
+          const effectivePassedDay = Math.min(maxMarkedDay, 30);
+
           if (joinedMidMonth) {
-            if (currentDay < joiningDay) {
+            if (effectivePassedDay < joiningDay) {
               daysPassed = 0;
             } else {
-              const elapsedDays = currentDay - joiningDay + 1;
+              const elapsedDays = effectivePassedDay - joiningDay + 1;
               daysPassed = Math.min(elapsedDays, totalBaseDaysForStaff);
             }
           } else {
-            daysPassed = Math.min(currentDay, 30);
+            daysPassed = Math.min(effectivePassedDay, 30);
           }
         } else if (monthStr > currentMonthStr) {
           daysPassed = 0;
@@ -327,8 +348,8 @@ export default function SpimsPayrollPage() {
         let unpaidLeaveCount = 0;
 
         monthDays.forEach(dayStr => {
-          // Ignore dates before staff joining date
-          if (joiningDateStr && dayStr < joiningDateStr) {
+          // Ignore dates before staff effective joining date
+          if (effectiveJoiningDateStr && dayStr < effectiveJoiningDateStr) {
             return;
           }
 

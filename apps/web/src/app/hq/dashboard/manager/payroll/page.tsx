@@ -150,10 +150,42 @@ function calculateStaffMonthPayroll(
   const daysInThisTargetMonth = new Date(targetYear, targetMonthZeroIndexed + 1, 0).getDate();
   const targetMonthEndStr = `${tMonthStr}-${String(daysInThisTargetMonth).padStart(2, '0')}`;
 
+  // Filter attendance docs for this staff member FIRST so we can check actual activity in the month
+  const staffAtt = allStaffAttDocs.filter((a: any) => {
+    let aStaffId = String(a.staffId || a.userId || a.customId || a.employeeId || '');
+    if (!aStaffId && a.id) {
+      const rawId = String(a.id).replace(/^[a-z_]+-/, '');
+      if (rawId.includes('_') && a.date && rawId.endsWith(`_${a.date}`)) {
+        aStaffId = rawId.slice(0, -(a.date.length + 1));
+      }
+    }
+    if (aStaffId) {
+      if (candidateIds.has(aStaffId)) return true;
+      const strippedA = aStaffId.replace(/^(hq|rehab|spims|hospital|sukoon|welfare|jobcenter|media|it)_/, '');
+      if (candidateIds.has(strippedA)) return true;
+    }
+    if (staffNameLower && a.staffName && String(a.staffName).toLowerCase() === staffNameLower) return true;
+    return false;
+  });
+
+  const attDatesInMonth = staffAtt
+    .map((a: any) => formatDateString(a.date))
+    .filter((d: string) => Boolean(d && d.startsWith(tMonthStr)))
+    .sort();
+
   const joiningRaw = staff.joiningDate || staff.startDate || staff.dateJoined || staff.createdAt;
   const joiningDateStr = formatDateString(joiningRaw);
 
-  if (joiningDateStr && joiningDateStr > targetMonthEndStr) {
+  // If staff has actual attendance in this month earlier than joiningDate, respect the marked attendance!
+  let effectiveJoiningDateStr = joiningDateStr;
+  if (attDatesInMonth.length > 0) {
+    const earliestAtt = attDatesInMonth[0];
+    if (!effectiveJoiningDateStr || earliestAtt < effectiveJoiningDateStr || effectiveJoiningDateStr > targetMonthEndStr) {
+      effectiveJoiningDateStr = earliestAtt;
+    }
+  }
+
+  if (effectiveJoiningDateStr && effectiveJoiningDateStr > targetMonthEndStr) {
     return {
       gross: 0,
       effectiveGross: 0,
@@ -184,15 +216,15 @@ function calculateStaffMonthPayroll(
       slip: null,
       candidateIds,
       staffNameLower,
-      joiningDateStr,
+      joiningDateStr: effectiveJoiningDateStr,
     };
   }
 
   let joiningDay = 1;
   let joinedMidMonth = false;
 
-  if (joiningDateStr && joiningDateStr.startsWith(tMonthStr)) {
-    joiningDay = parseInt(joiningDateStr.substring(8, 10), 10) || 1;
+  if (effectiveJoiningDateStr && effectiveJoiningDateStr.startsWith(tMonthStr)) {
+    joiningDay = parseInt(effectiveJoiningDateStr.substring(8, 10), 10) || 1;
     if (joiningDay > 1) {
       joinedMidMonth = true;
     }
@@ -209,29 +241,29 @@ function calculateStaffMonthPayroll(
   let daysPassed = totalBaseDaysForStaff;
   if (tMonthStr === currentMonthStr) {
     const currentDay = currentDateObj.getDate();
+    // Allow marked days in advance (e.g. 1-click whole month mark)
+    let maxMarkedDay = currentDay;
+    attDatesInMonth.forEach((dStr: string) => {
+      const dNum = parseInt(dStr.substring(8, 10), 10);
+      if (dNum > maxMarkedDay) maxMarkedDay = dNum;
+    });
+    const effectivePassedDay = Math.min(maxMarkedDay, 30);
+
     if (joinedMidMonth) {
-      if (currentDay < joiningDay) {
+      if (effectivePassedDay < joiningDay) {
         daysPassed = 0;
       } else {
-        const elapsedDays = currentDay - joiningDay + 1;
+        const elapsedDays = effectivePassedDay - joiningDay + 1;
         daysPassed = Math.min(elapsedDays, totalBaseDaysForStaff);
       }
     } else {
-      daysPassed = Math.min(currentDay, 30);
+      daysPassed = Math.min(effectivePassedDay, 30);
     }
   } else if (tMonthStr > currentMonthStr) {
     daysPassed = 0;
   } else {
     daysPassed = totalBaseDaysForStaff;
   }
-
-  // Filter attendance docs for this staff member
-  const staffAtt = allStaffAttDocs.filter((a: any) => {
-    const aStaffId = String(a.staffId || a.userId || a.customId || a.employeeId || '');
-    if (aStaffId && candidateIds.has(aStaffId)) return true;
-    if (staffNameLower && a.staffName && String(a.staffName).toLowerCase() === staffNameLower) return true;
-    return false;
-  });
 
   const getAttPriority = (statusVal?: string) => {
     if (!statusVal) return 0;
@@ -265,7 +297,7 @@ function calculateStaffMonthPayroll(
   let holidayDaysCount = 0;
 
   tMonthDays.forEach(dayStr => {
-    if (joiningDateStr && dayStr < joiningDateStr) {
+    if (effectiveJoiningDateStr && dayStr < effectiveJoiningDateStr) {
       return;
     }
 
@@ -467,7 +499,7 @@ function calculateStaffMonthPayroll(
     netPayable,
     candidateIds,
     staffNameLower,
-    joiningDateStr,
+    joiningDateStr: effectiveJoiningDateStr || joiningDateStr,
   };
 }
 
@@ -997,11 +1029,25 @@ export default function ManagerPayrollPage() {
               const hasSalaryField = s.monthlySalary !== undefined || s.salary !== undefined;
               if (role && !STAFF_ROLES.has(role) && !hasSalaryField) return false;
 
-              // Exclude if staff joined after selected month
+              // Exclude if staff joined after selected month (unless attendance exists in month)
               const joiningRaw = s.joiningDate || s.startDate || s.dateJoined || s.createdAt;
               const joiningStr = formatDateString(joiningRaw);
               if (joiningStr && joiningStr > monthEndStr) {
-                return false;
+                const sUid = s.staffId || s.id;
+                const sCustomId = s.customId || '';
+                const sEmpId = s.employeeId || '';
+                const sNameLower = String(s.name || s.displayName || '').toLowerCase();
+                const hasAttInScope = allAttDocs.some((a: any) => {
+                  const aDate = formatDateString(a.date);
+                  if (!aDate || (!aDate.startsWith(monthStr) && !aDate.startsWith(prevMonthStr))) return false;
+                  const aSid = String(a.staffId || a.userId || a.customId || a.employeeId || '');
+                  if (aSid && (aSid === sUid || aSid === s.id || aSid === sCustomId || aSid === sEmpId)) return true;
+                  if (sNameLower && a.staffName && String(a.staffName).toLowerCase() === sNameLower) return true;
+                  return false;
+                });
+                if (!hasAttInScope) {
+                  return false;
+                }
               }
 
               const statusStr = String(s.status || '').toLowerCase();

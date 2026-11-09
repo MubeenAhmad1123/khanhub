@@ -808,6 +808,8 @@ export default function ManagerReportsPage() {
       const attRef = doc(db, `${prefix}_attendance`, `${simpleSid}_${date}`);
       await setDoc(attRef, {
         staffId: simpleSid,
+        staffName: viewingStaff?.name || viewingStaff?.displayName || '',
+        department: viewingStaff?.department || '',
         date,
         status: targetStatus,
         isLate: targetStatus === 'late',
@@ -952,6 +954,8 @@ export default function ManagerReportsPage() {
         if (isSunday && quickMarkSundayRule === 'leave') {
           operations.push(b => b.set(attRef, {
             staffId: simpleSid,
+            staffName: quickMarkStaff?.name || quickMarkStaff?.displayName || '',
+            department: quickMarkStaff?.department || '',
             date,
             status: 'paid_leave',
             isLate: false,
@@ -977,6 +981,8 @@ export default function ManagerReportsPage() {
           daysMarked++;
           operations.push(b => b.set(attRef, {
             staffId: simpleSid,
+            staffName: quickMarkStaff?.name || quickMarkStaff?.displayName || '',
+            department: quickMarkStaff?.department || '',
             date,
             status: 'present',
             isLate: false,
@@ -1090,6 +1096,8 @@ export default function ManagerReportsPage() {
             if (isSunday && bulkSundayRule === 'leave') {
               operations.push(b => b.set(attRef, {
                 staffId: simpleSid,
+                staffName: member?.name || (member as any)?.displayName || '',
+                department: member?.department || '',
                 date,
                 status: 'paid_leave',
                 isLate: false,
@@ -1115,6 +1123,8 @@ export default function ManagerReportsPage() {
               totalDaysMarked++;
               operations.push(b => b.set(attRef, {
                 staffId: simpleSid,
+                staffName: member?.name || (member as any)?.displayName || '',
+                department: member?.department || '',
                 date,
                 status: 'present',
                 isLate: false,
@@ -1193,6 +1203,8 @@ export default function ManagerReportsPage() {
             const attRef = doc(db, `${prefix}_attendance`, `${simpleSid}_${date}`);
             operations.push(b => b.set(attRef, {
               staffId: simpleSid,
+              staffName: member?.name || (member as any)?.displayName || '',
+              department: member?.department || '',
               date,
               status: targetStatus,
               isLate: targetStatus === 'late',

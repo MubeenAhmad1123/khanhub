@@ -450,11 +450,21 @@ export default function StaffProfilePage() {
       }
     }
 
+    // If attendance is marked in this month earlier than joiningDate, respect the marked attendance!
+    const markedDates = Object.keys(attendanceMap).filter(d => d.startsWith(selectedMonth)).sort();
+    let effectiveJoiningDateStr = joiningDateStr;
+    if (markedDates.length > 0) {
+      const earliestAtt = markedDates[0];
+      if (!effectiveJoiningDateStr || earliestAtt < effectiveJoiningDateStr) {
+        effectiveJoiningDateStr = earliestAtt;
+      }
+    }
+
     let joiningDay = 1;
     let joinedMidMonth = false;
 
-    if (joiningDateStr && joiningDateStr.startsWith(selectedMonth)) {
-      joiningDay = parseInt(joiningDateStr.substring(8, 10), 10) || 1;
+    if (effectiveJoiningDateStr && effectiveJoiningDateStr.startsWith(selectedMonth)) {
+      joiningDay = parseInt(effectiveJoiningDateStr.substring(8, 10), 10) || 1;
       if (joiningDay > 1) {
         joinedMidMonth = true;
       }
@@ -469,15 +479,22 @@ export default function StaffProfilePage() {
     let daysPassed = totalBaseDaysForStaff;
     if (isCurrentMonth) {
       const currentDay = new Date().getDate();
+      let maxMarkedDay = currentDay;
+      markedDates.forEach(dStr => {
+        const dNum = parseInt(dStr.substring(8, 10), 10);
+        if (dNum > maxMarkedDay) maxMarkedDay = dNum;
+      });
+      const effectivePassedDay = Math.min(maxMarkedDay, 30);
+
       if (joinedMidMonth) {
-        if (currentDay < joiningDay) {
+        if (effectivePassedDay < joiningDay) {
           daysPassed = 0;
         } else {
-          const elapsedDays = currentDay - joiningDay + 1;
+          const elapsedDays = effectivePassedDay - joiningDay + 1;
           daysPassed = Math.min(elapsedDays, totalBaseDaysForStaff);
         }
       } else {
-        daysPassed = Math.min(currentDay, 30);
+        daysPassed = Math.min(effectivePassedDay, 30);
       }
     } else if (selectedMonth > todayStr.slice(0, 7)) {
       daysPassed = 0;
@@ -494,8 +511,8 @@ export default function StaffProfilePage() {
     const deductedDatesList: { date: string; status: string; deduction: number }[] = [];
 
     days.forEach(dayStr => {
-      // Skip dates before staff joining date
-      if (joiningDateStr && dayStr < joiningDateStr) {
+      // Skip dates before staff effective joining date
+      if (effectiveJoiningDateStr && dayStr < effectiveJoiningDateStr) {
         return;
       }
 
