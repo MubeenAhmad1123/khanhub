@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, query, where, doc, setDoc, deleteDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, setDoc, deleteDoc, Timestamp, serverTimestamp, writeBatch, WriteBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
@@ -10,13 +10,14 @@ import {
   Loader2, Printer, Award, Clock, XCircle, ArrowRight, ArrowLeft, 
   Search, Filter, Calendar, Crown, Trophy, Medal, ChevronRight, 
   Coins, Sparkles, AlertCircle, AlertTriangle, ExternalLink, Shield,
-  ThumbsUp, Check, X, ClipboardList, Star, Edit3, Save, FileText, User
+  ThumbsUp, Check, X, ClipboardList, Star, Edit3, Save, FileText, User,
+  CheckCircle2, Zap
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getDeptPrefix, getDeptCollection, StaffDept } from '@/lib/hq/superadmin/staff';
 import type { HqStaff } from '@/types/hq';
 import { DutyProformaModal } from '@/components/shared/DutyProformaModal';
-import { resolveStaffDuties } from '@/data/hqConfig';
+import { resolveStaffDuties, resolveStaffDressCode } from '@/data/hqConfig';
 
 const getSimpleId = (id: string) => {
   if (!id) return '';
@@ -86,13 +87,54 @@ export default function ManagerReportsPage() {
   // Weekly vs Monthly Toggle State
   const [reportPeriod, setReportPeriod] = useState<'monthly' | 'weekly'>('monthly');
 
+  // Date helper utilities
+  const getMonthDateRange = (monthStr: string) => {
+    const [y, m] = monthStr.split('-').map(Number);
+    const totalDays = new Date(y, m, 0).getDate();
+    const start = `${monthStr}-01`;
+    const end = `${monthStr}-${String(totalDays).padStart(2, '0')}`;
+    return { start, end, totalDays };
+  };
+
+  const getDatesBetween = (startStr: string, endStr: string) => {
+    const dates: string[] = [];
+    const [sY, sM, sD] = startStr.split('-').map(Number);
+    const [eY, eM, eD] = endStr.split('-').map(Number);
+    const curr = new Date(sY, sM - 1, sD);
+    const end = new Date(eY, eM - 1, eD);
+    while (curr <= end) {
+      const y = curr.getFullYear();
+      const m = String(curr.getMonth() + 1).padStart(2, '0');
+      const d = String(curr.getDate()).padStart(2, '0');
+      dates.push(`${y}-${m}-${d}`);
+      curr.setDate(curr.getDate() + 1);
+    }
+    return dates;
+  };
+
+  const isDateSunday = (dateStr: string) => {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d).getDay() === 0;
+  };
+
   // Bulk Edit Modal State
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [bulkMode, setBulkMode] = useState<'one_click' | 'single_action'>('one_click');
   const [bulkStaffId, setBulkStaffId] = useState<string>('all');
   const [bulkStartDate, setBulkStartDate] = useState<string>(`${selectedMonth}-01`);
-  const [bulkEndDate, setBulkEndDate] = useState<string>(`${selectedMonth}-05`);
+  const [bulkEndDate, setBulkEndDate] = useState<string>(`${selectedMonth}-30`);
+  const [bulkSundayRule, setBulkSundayRule] = useState<'present' | 'leave' | 'skip'>('present');
   const [bulkAction, setBulkAction] = useState<'auto_leave' | 'paid_leave' | 'unpaid_leave' | 'present' | 'absent' | 'late'>('auto_leave');
   const [savingBulk, setSavingBulk] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number } | null>(null);
+
+  // Single Staff 1-Click Month Modal State
+  const [isQuickMarkModalOpen, setIsQuickMarkModalOpen] = useState(false);
+  const [quickMarkStaff, setQuickMarkStaff] = useState<any | null>(null);
+  const [quickMarkSundayRule, setQuickMarkSundayRule] = useState<'present' | 'leave' | 'skip'>('present');
+  const [quickMarkStartDate, setQuickMarkStartDate] = useState<string>('');
+  const [quickMarkEndDate, setQuickMarkEndDate] = useState<string>('');
+  const [savingQuickMark, setSavingQuickMark] = useState(false);
 
   // Duty Proforma state
   const [proformaStaff, setProformaStaff] = useState<any | null>(null);
@@ -103,11 +145,9 @@ export default function ManagerReportsPage() {
 
   useEffect(() => {
     if (selectedMonth) {
-      setBulkStartDate(`${selectedMonth}-01`);
-      const [y, m] = selectedMonth.split('-');
-      const daysInM = new Date(parseInt(y, 10), parseInt(m, 10), 0).getDate();
-      const endDay = Math.min(5, daysInM);
-      setBulkEndDate(`${selectedMonth}-${String(endDay).padStart(2, '0')}`);
+      const range = getMonthDateRange(selectedMonth);
+      setBulkStartDate(range.start);
+      setBulkEndDate(range.end);
     }
   }, [selectedMonth]);
 
@@ -675,15 +715,15 @@ export default function ManagerReportsPage() {
   useEffect(() => {
     if (selectedDay && activeViewingStaff) {
       const existingUniformItems = selectedDay.details?.uniformItems || [];
-      const configDress = activeViewingStaff.dressCodeConfig || [];
-      const uniformItems = configDress.length > 0 ? configDress.map((c: any) => {
+      const resolvedDressConfig = resolveStaffDressCode(activeViewingStaff);
+      const uniformItems = resolvedDressConfig.map((c: any) => {
         const found = existingUniformItems.find((i: any) => i.key === c.key);
         return {
           key: c.key,
           label: c.label || c.key,
           status: found ? found.status : 'yes'
         };
-      }) : existingUniformItems;
+      });
 
       const existingDutyItems = selectedDay.details?.dutyItems || [];
       const resolvedDutyConfig = resolveStaffDuties(activeViewingStaff);
@@ -844,6 +884,148 @@ export default function ManagerReportsPage() {
     }
   };
 
+  const handleOpenQuickMarkStaffModal = (targetStaff: any) => {
+    if (!targetStaff) return;
+    const range = getMonthDateRange(selectedMonth);
+    setQuickMarkStaff(targetStaff);
+    setQuickMarkStartDate(range.start);
+    setQuickMarkEndDate(range.end);
+    setQuickMarkSundayRule('present');
+    setIsQuickMarkModalOpen(true);
+  };
+
+  const handleOpenBulkModal = (mode: 'one_click' | 'single_action' = 'one_click') => {
+    setBulkMode(mode);
+    const range = getMonthDateRange(selectedMonth);
+    setBulkStartDate(range.start);
+    setBulkEndDate(range.end);
+    setIsBulkModalOpen(true);
+  };
+
+  const handleExecuteQuickMarkStaff = async () => {
+    if (!quickMarkStaff) return;
+    const startDate = quickMarkStartDate || `${selectedMonth}-01`;
+    const endDate = quickMarkEndDate || `${selectedMonth}-31`;
+    if (startDate > endDate) {
+      toast.error("Start date cannot be after end date.");
+      return;
+    }
+
+    setSavingQuickMark(true);
+    try {
+      const dates = getDatesBetween(startDate, endDate);
+      const dept = quickMarkStaff.department as StaffDept;
+      const prefix = getDeptPrefix(dept);
+      const simpleSid = getSimpleId(quickMarkStaff.id);
+
+      const resolvedDuties = resolveStaffDuties(quickMarkStaff);
+      const resolvedDress = resolveStaffDressCode(quickMarkStaff);
+
+      const uniformItemsDone = resolvedDress.map(item => ({
+        key: item.key,
+        label: item.label,
+        status: 'yes'
+      }));
+
+      const dutyItemsDone = resolvedDuties.map(duty => ({
+        key: duty.key,
+        label: duty.label,
+        status: 'done'
+      }));
+
+      type BatchOp = (b: WriteBatch) => void;
+      const operations: BatchOp[] = [];
+
+      let daysMarked = 0;
+
+      for (const date of dates) {
+        const isSunday = isDateSunday(date);
+
+        if (isSunday && quickMarkSundayRule === 'skip') {
+          continue;
+        }
+
+        const attRef = doc(db, `${prefix}_attendance`, `${simpleSid}_${date}`);
+        const dressRef = doc(db, `${prefix}_dress_logs`, `${simpleSid}_${date}`);
+        const dutyRef = doc(db, `${prefix}_duty_logs`, `${simpleSid}_${date}`);
+
+        if (isSunday && quickMarkSundayRule === 'leave') {
+          operations.push(b => b.set(attRef, {
+            staffId: simpleSid,
+            date,
+            status: 'paid_leave',
+            isLate: false,
+            updatedAt: serverTimestamp()
+          }, { merge: true }));
+
+          operations.push(b => b.set(dressRef, {
+            staffId: simpleSid,
+            date,
+            status: 'na',
+            items: [],
+            updatedAt: serverTimestamp()
+          }, { merge: true }));
+
+          operations.push(b => b.set(dutyRef, {
+            staffId: simpleSid,
+            date,
+            status: 'na',
+            duties: [],
+            updatedAt: serverTimestamp()
+          }, { merge: true }));
+        } else {
+          daysMarked++;
+          operations.push(b => b.set(attRef, {
+            staffId: simpleSid,
+            date,
+            status: 'present',
+            isLate: false,
+            updatedAt: serverTimestamp()
+          }, { merge: true }));
+
+          operations.push(b => b.set(dressRef, {
+            staffId: simpleSid,
+            date,
+            status: 'yes',
+            items: uniformItemsDone,
+            updatedAt: serverTimestamp()
+          }, { merge: true }));
+
+          operations.push(b => b.set(dutyRef, {
+            staffId: simpleSid,
+            date,
+            status: 'yes',
+            duties: dutyItemsDone,
+            updatedAt: serverTimestamp()
+          }, { merge: true }));
+        }
+      }
+
+      if (operations.length === 0) {
+        toast.error("No dates to mark.");
+        setSavingQuickMark(false);
+        return;
+      }
+
+      const CHUNK_SIZE = 400;
+      for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
+        const batch = writeBatch(db);
+        const chunk = operations.slice(i, i + CHUNK_SIZE);
+        chunk.forEach(op => op(batch));
+        await batch.commit();
+      }
+
+      toast.success(`⚡ Successfully marked ${daysMarked} days with 3/3 Pts for ${quickMarkStaff.name}!`);
+      setIsQuickMarkModalOpen(false);
+      await fetchData();
+    } catch (err: any) {
+      console.error("Error running 1-click mark month:", err);
+      toast.error("Failed to mark month: " + (err.message || 'Unknown error'));
+    } finally {
+      setSavingQuickMark(false);
+    }
+  };
+
   const handleSaveBulkAudit = async () => {
     if (!bulkStartDate || !bulkEndDate) {
       toast.error("Please select valid start and end dates.");
@@ -855,14 +1037,9 @@ export default function ManagerReportsPage() {
     }
 
     setSavingBulk(true);
+    setBulkProgress(null);
     try {
-      const dates: string[] = [];
-      let curr = new Date(bulkStartDate);
-      const end = new Date(bulkEndDate);
-      while (curr <= end) {
-        dates.push(curr.toISOString().slice(0, 10));
-        curr.setDate(curr.getDate() + 1);
-      }
+      const dates = getDatesBetween(bulkStartDate, bulkEndDate);
 
       const targetStaffList = bulkStaffId === 'all'
         ? staff
@@ -874,89 +1051,201 @@ export default function ManagerReportsPage() {
         return;
       }
 
-      let totalUpdated = 0;
-      let paidAssigned = 0;
-      let unpaidAssigned = 0;
+      type BatchOp = (b: WriteBatch) => void;
+      const operations: BatchOp[] = [];
 
-      for (const member of targetStaffList) {
-        const simpleSid = getSimpleId(member.id);
-        const prefix = getDeptPrefix(member.department as StaffDept);
-        const monthStr = bulkStartDate.substring(0, 7);
+      if (bulkMode === 'one_click') {
+        // ── 1-CLICK FULL MONTH BATCH (ATTENDANCE + UNIFORM + DUTIES = 3/3 PTS) ──
+        let totalDaysMarked = 0;
 
-        let existingPaidCount = 0;
-        logs?.attMap?.forEach((att: any, key: string) => {
-          if (key.startsWith(`${simpleSid}_${monthStr}-`)) {
-            const recDate = key.replace(`${simpleSid}_`, '');
-            if (!dates.includes(recDate)) {
-              if (att.status === 'paid_leave' || att.status === 'leave') {
-                existingPaidCount++;
-              }
+        for (const member of targetStaffList) {
+          const simpleSid = getSimpleId(member.id);
+          const prefix = getDeptPrefix(member.department as StaffDept);
+          const resolvedDuties = resolveStaffDuties(member);
+          const resolvedDress = resolveStaffDressCode(member);
+
+          const uniformItemsDone = resolvedDress.map(item => ({
+            key: item.key,
+            label: item.label,
+            status: 'yes'
+          }));
+
+          const dutyItemsDone = resolvedDuties.map(duty => ({
+            key: duty.key,
+            label: duty.label,
+            status: 'done'
+          }));
+
+          for (const date of dates) {
+            const isSunday = isDateSunday(date);
+
+            if (isSunday && bulkSundayRule === 'skip') {
+              continue;
+            }
+
+            const attRef = doc(db, `${prefix}_attendance`, `${simpleSid}_${date}`);
+            const dressRef = doc(db, `${prefix}_dress_logs`, `${simpleSid}_${date}`);
+            const dutyRef = doc(db, `${prefix}_duty_logs`, `${simpleSid}_${date}`);
+
+            if (isSunday && bulkSundayRule === 'leave') {
+              operations.push(b => b.set(attRef, {
+                staffId: simpleSid,
+                date,
+                status: 'paid_leave',
+                isLate: false,
+                updatedAt: serverTimestamp()
+              }, { merge: true }));
+
+              operations.push(b => b.set(dressRef, {
+                staffId: simpleSid,
+                date,
+                status: 'na',
+                items: [],
+                updatedAt: serverTimestamp()
+              }, { merge: true }));
+
+              operations.push(b => b.set(dutyRef, {
+                staffId: simpleSid,
+                date,
+                status: 'na',
+                duties: [],
+                updatedAt: serverTimestamp()
+              }, { merge: true }));
+            } else {
+              totalDaysMarked++;
+              operations.push(b => b.set(attRef, {
+                staffId: simpleSid,
+                date,
+                status: 'present',
+                isLate: false,
+                updatedAt: serverTimestamp()
+              }, { merge: true }));
+
+              operations.push(b => b.set(dressRef, {
+                staffId: simpleSid,
+                date,
+                status: 'yes',
+                items: uniformItemsDone,
+                updatedAt: serverTimestamp()
+              }, { merge: true }));
+
+              operations.push(b => b.set(dutyRef, {
+                staffId: simpleSid,
+                date,
+                status: 'yes',
+                duties: dutyItemsDone,
+                updatedAt: serverTimestamp()
+              }, { merge: true }));
             }
           }
-        });
+        }
 
-        for (const date of dates) {
-          let targetStatus = bulkAction;
+        const CHUNK_SIZE = 400;
+        for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
+          const batch = writeBatch(db);
+          const chunk = operations.slice(i, i + CHUNK_SIZE);
+          chunk.forEach(op => op(batch));
+          await batch.commit();
+          setBulkProgress({ current: Math.min(i + CHUNK_SIZE, operations.length), total: operations.length });
+        }
 
-          if (bulkAction === 'auto_leave' || bulkAction === 'paid_leave') {
-            if (existingPaidCount < 2) {
-              targetStatus = 'paid_leave';
-              existingPaidCount++;
-              paidAssigned++;
-            } else {
+        toast.success(`⚡ 1-Click Batch Complete! Marked ${targetStaffList.length} staff across ${dates.length} days with 3/3 Pts!`);
+      } else {
+        // ── SINGLE ACTION / LEAVES BATCH ──
+        let totalUpdated = 0;
+        let paidAssigned = 0;
+        let unpaidAssigned = 0;
+
+        for (const member of targetStaffList) {
+          const simpleSid = getSimpleId(member.id);
+          const prefix = getDeptPrefix(member.department as StaffDept);
+          const monthStr = bulkStartDate.substring(0, 7);
+
+          let existingPaidCount = 0;
+          logs?.attMap?.forEach((att: any, key: string) => {
+            if (key.startsWith(`${simpleSid}_${monthStr}-`)) {
+              const recDate = key.replace(`${simpleSid}_`, '');
+              if (!dates.includes(recDate)) {
+                if (att.status === 'paid_leave' || att.status === 'leave') {
+                  existingPaidCount++;
+                }
+              }
+            }
+          });
+
+          for (const date of dates) {
+            let targetStatus = bulkAction;
+
+            if (bulkAction === 'auto_leave' || bulkAction === 'paid_leave') {
+              if (existingPaidCount < 2) {
+                targetStatus = 'paid_leave';
+                existingPaidCount++;
+                paidAssigned++;
+              } else {
+                targetStatus = 'unpaid_leave';
+                unpaidAssigned++;
+              }
+            } else if (bulkAction === 'unpaid_leave') {
               targetStatus = 'unpaid_leave';
               unpaidAssigned++;
             }
-          } else if (bulkAction === 'unpaid_leave') {
-            targetStatus = 'unpaid_leave';
-            unpaidAssigned++;
-          }
 
-          const attRef = doc(db, `${prefix}_attendance`, `${simpleSid}_${date}`);
-          await setDoc(attRef, {
-            staffId: simpleSid,
-            date,
-            status: targetStatus,
-            isLate: targetStatus === 'late',
-            updatedAt: serverTimestamp()
-          }, { merge: true });
-
-          if (['paid_leave', 'unpaid_leave', 'leave'].includes(targetStatus)) {
-            const dressRef = doc(db, `${prefix}_dress_logs`, `${simpleSid}_${date}`);
-            await setDoc(dressRef, {
+            const attRef = doc(db, `${prefix}_attendance`, `${simpleSid}_${date}`);
+            operations.push(b => b.set(attRef, {
               staffId: simpleSid,
               date,
-              status: 'na',
-              items: [],
+              status: targetStatus,
+              isLate: targetStatus === 'late',
               updatedAt: serverTimestamp()
-            }, { merge: true });
+            }, { merge: true }));
 
-            const dutyRef = doc(db, `${prefix}_duty_logs`, `${simpleSid}_${date}`);
-            await setDoc(dutyRef, {
-              staffId: simpleSid,
-              date,
-              status: 'na',
-              duties: [],
-              updatedAt: serverTimestamp()
-            }, { merge: true });
+            if (['paid_leave', 'unpaid_leave', 'leave'].includes(targetStatus)) {
+              const dressRef = doc(db, `${prefix}_dress_logs`, `${simpleSid}_${date}`);
+              operations.push(b => b.set(dressRef, {
+                staffId: simpleSid,
+                date,
+                status: 'na',
+                items: [],
+                updatedAt: serverTimestamp()
+              }, { merge: true }));
+
+              const dutyRef = doc(db, `${prefix}_duty_logs`, `${simpleSid}_${date}`);
+              operations.push(b => b.set(dutyRef, {
+                staffId: simpleSid,
+                date,
+                status: 'na',
+                duties: [],
+                updatedAt: serverTimestamp()
+              }, { merge: true }));
+            }
+
+            totalUpdated++;
           }
-
-          totalUpdated++;
         }
-      }
 
-      toast.success(
-        `Bulk update completed! ${totalUpdated} logs updated.` +
-        (paidAssigned > 0 || unpaidAssigned > 0 ? ` (${paidAssigned} Paid, ${unpaidAssigned} Unpaid leaves)` : '')
-      );
+        const CHUNK_SIZE = 400;
+        for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
+          const batch = writeBatch(db);
+          const chunk = operations.slice(i, i + CHUNK_SIZE);
+          chunk.forEach(op => op(batch));
+          await batch.commit();
+          setBulkProgress({ current: Math.min(i + CHUNK_SIZE, operations.length), total: operations.length });
+        }
+
+        toast.success(
+          `Bulk update completed! ${totalUpdated} logs updated.` +
+          (paidAssigned > 0 || unpaidAssigned > 0 ? ` (${paidAssigned} Paid, ${unpaidAssigned} Unpaid leaves)` : '')
+        );
+      }
 
       await fetchData();
       setIsBulkModalOpen(false);
     } catch (err: any) {
       console.error("Error saving bulk audit:", err);
-      toast.error("Failed to save bulk changes.");
+      toast.error("Failed to save bulk audit: " + (err.message || 'Unknown error'));
     } finally {
       setSavingBulk(false);
+      setBulkProgress(null);
     }
   };
 
@@ -1084,8 +1373,17 @@ export default function ManagerReportsPage() {
             </div>
             <button 
               type="button"
-              onClick={() => setIsBulkModalOpen(true)} 
-              className="w-1/2 md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-5 py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-95 duration-200"
+              onClick={() => handleOpenBulkModal('one_click')} 
+              className="w-1/2 md:w-auto bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-extrabold text-xs px-5 py-3 rounded-2xl transition-all shadow-md hover:shadow-indigo-500/25 flex items-center justify-center gap-2 active:scale-95 duration-200"
+              title="1-Click Mark Whole Month (Attendance, Uniform, Duties = 3/3 Pts)"
+            >
+              <Sparkles size={16} className="text-amber-300 animate-pulse" /> 1-Click Mark Month
+            </button>
+            <button 
+              type="button"
+              onClick={() => handleOpenBulkModal('single_action')} 
+              className="w-1/2 md:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs px-5 py-3 rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95 duration-200"
+              title="Bulk Leaves or Single Action Edit"
             >
               <Edit3 size={16} /> Bulk Leaves / Edit
             </button>
@@ -1431,6 +1729,18 @@ export default function ManagerReportsPage() {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
+                              handleOpenQuickMarkStaffModal(member);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-2 hover:bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl text-[10px] font-black flex items-center gap-1 transition-all shadow-xs"
+                            title="1-Click Mark Whole Month (Attendance, Uniform, Duties)"
+                          >
+                            <Sparkles size={12} className="text-amber-500" />
+                            <span>1-Click</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setProformaStaff(member);
                               setIsProformaModalOpen(true);
                             }}
@@ -1535,6 +1845,33 @@ export default function ManagerReportsPage() {
                       {stats.totalPoints} <span className="text-[10px] text-indigo-400 font-bold">/ {stats.maxPoints}</span>
                     </span>
                   </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenQuickMarkStaffModal(member);
+                      }}
+                      className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-[10px] font-black flex items-center gap-1 transition-all"
+                      title="1-Click Mark Whole Month"
+                    >
+                      <Sparkles size={12} className="text-amber-500" />
+                      <span>1-Click Month</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setProformaStaff(member);
+                        setIsProformaModalOpen(true);
+                      }}
+                      className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-[10px] font-black flex items-center gap-1 transition-all"
+                    >
+                      <FileText size={12} />
+                      <span>Proforma</span>
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -1577,6 +1914,15 @@ export default function ManagerReportsPage() {
                 </div>
                 
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenQuickMarkStaffModal(activeViewingStaff)}
+                    className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl transition-all shadow-md hover:shadow-indigo-500/25 flex items-center gap-1.5 active:scale-95"
+                    title="1-Click Mark Whole Month (Attendance + Uniform + Duties = 3/3 Pts)"
+                  >
+                    <Sparkles size={15} className="text-amber-300 animate-pulse" />
+                    <span>1-Click Mark Month</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -1763,6 +2109,27 @@ export default function ManagerReportsPage() {
                         </button>
                       ) : (
                         <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditForm((prev: any) => ({
+                                ...prev,
+                                attendance: 'present',
+                                uniform: 'yes',
+                                uniformItems: (prev.uniformItems || []).map((u: any) => ({ ...u, status: 'yes' })),
+                                duty: 'yes',
+                                dutyItems: (prev.dutyItems || []).map((d: any) => ({ ...d, status: 'done' })),
+                                fines: 0,
+                                fineReasons: ''
+                              }));
+                              toast.success("1-Click 3/3 applied! Click Save Audit to finalize.");
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white rounded-xl font-extrabold text-xs shadow-sm transition-all active:scale-95"
+                            title="Quick mark 3/3 points (Present + 100% Uniform + 100% Duties)"
+                          >
+                            <Sparkles size={13} className="text-amber-200" />
+                            <span>1-Click 3/3</span>
+                          </button>
                           <button
                             onClick={handleSaveDayAudit}
                             disabled={savingAudit}
@@ -2192,19 +2559,193 @@ export default function ManagerReportsPage() {
         </div>
       )}
 
-      {/* ==================== BULK EDIT & LEAVE MODAL ==================== */}
-      {isBulkModalOpen && (
+      {/* ==================== SINGLE STAFF 1-CLICK MONTH MODAL ==================== */}
+      {isQuickMarkModalOpen && quickMarkStaff && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200 print:hidden">
-          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-xl p-6 shadow-2xl space-y-5 my-8">
+          <div className="bg-white border border-slate-200 rounded-[2.5rem] w-full max-w-xl p-6 sm:p-8 shadow-2xl space-y-6 my-8 animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-2xl">
-                  <Edit3 size={20} />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-violet-600 text-white flex items-center justify-center shadow-md">
+                  <Sparkles size={24} className="text-amber-300" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-slate-900 text-lg">Bulk Leave & Attendance Edit</h3>
-                  <p className="text-slate-500 text-xs font-medium">Apply bulk leave or status changes across date ranges</p>
+                  <h3 className="text-lg font-black text-slate-900 leading-tight">1-Click Mark Whole Month</h3>
+                  <p className="text-xs text-slate-500 font-medium">Instantly mark Attendance, Uniform &amp; Duties (3/3 Score)</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsQuickMarkModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Staff Info Banner */}
+            <div className="bg-indigo-50/60 border border-indigo-100/80 rounded-2xl p-4 flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-xl bg-white border border-indigo-100 flex items-center justify-center font-black text-indigo-600 text-lg shadow-sm overflow-hidden shrink-0">
+                {quickMarkStaff.photoUrl ? (
+                  <img src={quickMarkStaff.photoUrl} alt={quickMarkStaff.name} className="w-full h-full object-cover" />
+                ) : (
+                  quickMarkStaff.name?.[0]
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-extrabold text-slate-900 text-sm truncate">{quickMarkStaff.name}</h4>
+                <p className="text-indigo-600 font-extrabold text-[11px] uppercase tracking-wide">
+                  {formatDesignation(quickMarkStaff.designation)} • {getDeptLabel(quickMarkStaff.department)}
+                </p>
+                <p className="text-slate-400 font-bold text-[9px] uppercase tracking-widest mt-0.5">
+                  ID: {quickMarkStaff.employeeId || quickMarkStaff.customId}
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-xl">
+                  Target: 3/3 Pts
+                </span>
+              </div>
+            </div>
+
+            {/* What Gets Marked Checklist Preview */}
+            <div className="bg-slate-50 border border-slate-200/70 rounded-2xl p-4 space-y-2.5 text-xs">
+              <p className="font-extrabold uppercase tracking-widest text-[10px] text-slate-400">Items Marked Per Day</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="bg-white border border-slate-200/80 rounded-xl p-2.5 flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                  <div>
+                    <p className="font-extrabold text-slate-800 text-[11px]">Attendance</p>
+                    <p className="text-[10px] text-emerald-600 font-bold">Present (+1 Pt)</p>
+                  </div>
+                </div>
+                <div className="bg-white border border-slate-200/80 rounded-xl p-2.5 flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                  <div>
+                    <p className="font-extrabold text-slate-800 text-[11px]">Uniform</p>
+                    <p className="text-[10px] text-emerald-600 font-bold">Compliant (+1 Pt)</p>
+                  </div>
+                </div>
+                <div className="bg-white border border-slate-200/80 rounded-xl p-2.5 flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                  <div>
+                    <p className="font-extrabold text-slate-800 text-[11px]">Duties</p>
+                    <p className="text-[10px] text-emerald-600 font-bold">Accomplished (+1 Pt)</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Date Range Selection */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  value={quickMarkStartDate}
+                  onChange={(e) => setQuickMarkStartDate(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  value={quickMarkEndDate}
+                  onChange={(e) => setQuickMarkEndDate(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* Sunday Policy Options */}
+            <div>
+              <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
+                Sunday Policy
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                {[
+                  {
+                    id: 'present',
+                    title: 'Mark All Days (3/3 Pts)',
+                    desc: 'Full score every day',
+                    cls: 'border-emerald-200 bg-emerald-50/60 text-emerald-900'
+                  },
+                  {
+                    id: 'leave',
+                    title: 'Sundays as Paid Off',
+                    desc: 'Paid Leave / N/A',
+                    cls: 'border-indigo-200 bg-indigo-50/60 text-indigo-900'
+                  },
+                  {
+                    id: 'skip',
+                    title: 'Skip Sundays',
+                    desc: 'Keep unmarked',
+                    cls: 'border-slate-200 bg-slate-50 text-slate-800'
+                  }
+                ].map(rule => (
+                  <button
+                    key={rule.id}
+                    type="button"
+                    onClick={() => setQuickMarkSundayRule(rule.id as any)}
+                    className={`p-3 rounded-2xl border text-left transition-all ${
+                      quickMarkSundayRule === rule.id
+                        ? `${rule.cls} ring-2 ring-indigo-500 font-extrabold shadow-sm scale-[1.02]`
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <p className="font-black text-xs">{rule.title}</p>
+                    <p className="text-[10px] opacity-75 font-semibold mt-0.5">{rule.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsQuickMarkModalOpen(false)}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-xs transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={savingQuickMark}
+                onClick={handleExecuteQuickMarkStaff}
+                className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-2xl font-extrabold text-xs shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+              >
+                {savingQuickMark ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} className="text-amber-300" />}
+                <span>Confirm &amp; Mark Entire Month</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== BULK EDIT & LEAVE MODAL ==================== */}
+      {isBulkModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200 print:hidden">
+          <div className="bg-white border border-slate-200 rounded-[2.5rem] w-full max-w-xl p-6 sm:p-8 shadow-2xl space-y-5 my-8">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-2xl">
+                  {bulkMode === 'one_click' ? <Sparkles size={20} className="text-amber-500" /> : <Edit3 size={20} />}
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-lg">
+                    {bulkMode === 'one_click' ? '⚡ 1-Click Full Month Mark' : 'Bulk Leave & Attendance Edit'}
+                  </h3>
+                  <p className="text-slate-500 text-xs font-medium">
+                    {bulkMode === 'one_click'
+                      ? 'Mark Attendance, Uniform & Duties together in 1 click (3/3 Score)'
+                      : 'Apply bulk leave or status changes across date ranges'}
+                  </p>
                 </div>
               </div>
               <button
@@ -2215,95 +2756,239 @@ export default function ManagerReportsPage() {
               </button>
             </div>
 
-            {/* Capping Policy Alert Banner */}
-            <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 flex items-start gap-3 text-amber-900">
-              <Shield className="text-amber-600 shrink-0 mt-0.5" size={18} />
-              <div className="text-xs space-y-1">
-                <p className="font-extrabold uppercase tracking-wider text-[10px] text-amber-700">Monthly Paid Leave Policy (Max 2 Days)</p>
-                <p className="font-medium leading-relaxed">
-                  Each staff member receives a maximum of <strong>2 Paid Leaves</strong> per calendar month. Any additional leaves assigned within the month will be automatically saved as <strong>Unpaid Leave</strong> (wage deducted).
-                </p>
-              </div>
+            {/* Mode Switcher Tabs */}
+            <div className="flex bg-slate-100/80 p-1.5 rounded-2xl gap-1 text-xs font-black">
+              <button
+                type="button"
+                onClick={() => setBulkMode('one_click')}
+                className={`flex-1 py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                  bulkMode === 'one_click'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <Sparkles size={14} className="text-amber-400" />
+                <span>1-Click Month Mark (3/3 Pts)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setBulkMode('single_action')}
+                className={`flex-1 py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                  bulkMode === 'single_action'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <Edit3 size={14} />
+                <span>Leaves &amp; Single Action</span>
+              </button>
             </div>
 
-            {/* Form Controls */}
-            <div className="space-y-4 text-xs font-bold">
-              {/* Target Staff Selection */}
-              <div>
-                <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
-                  Select Staff Member
-                </label>
-                <select
-                  value={bulkStaffId}
-                  onChange={(e) => setBulkStaffId(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                >
-                  <option value="all">👥 All Active Staff ({staff.length} Members)</option>
-                  {staff.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({getDeptLabel(s.department)} — {formatDesignation(s.designation)})
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {bulkMode === 'one_click' ? (
+              /* ── 1-CLICK MONTH FORM ── */
+              <div className="space-y-4 text-xs font-bold">
+                {/* Visual Explanation Banner */}
+                <div className="bg-gradient-to-r from-indigo-50 to-emerald-50 border border-indigo-100/80 rounded-2xl p-4 flex items-start gap-3">
+                  <Zap className="text-indigo-600 shrink-0 mt-0.5" size={18} />
+                  <div className="text-xs space-y-1">
+                    <p className="font-extrabold uppercase tracking-wider text-[10px] text-indigo-700">
+                      High-Speed 1-Click Monthly Audit
+                    </p>
+                    <p className="font-medium text-slate-600 leading-relaxed">
+                      Marks every selected day with <strong>Attendance: Present</strong> (+1 Pt), <strong>Uniform: 100% Compliant</strong> (+1 Pt), and <strong>Duties: 100% Accomplished</strong> (+1 Pt) for a full <strong>3/3 Daily Points</strong> score.
+                    </p>
+                  </div>
+                </div>
 
-              {/* Date Range Selection */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Target Staff Selection */}
                 <div>
                   <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
-                    Start Date
+                    Target Staff
                   </label>
-                  <input
-                    type="date"
-                    value={bulkStartDate}
-                    onChange={(e) => setBulkStartDate(e.target.value)}
+                  <select
+                    value={bulkStaffId}
+                    onChange={(e) => setBulkStaffId(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                  />
+                  >
+                    <option value="all">👥 All Active Staff ({staff.length} Members)</option>
+                    {staff.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({getDeptLabel(s.department)} — {formatDesignation(s.designation)})
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
+                {/* Date Range Selection */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={bulkStartDate}
+                      onChange={(e) => setBulkStartDate(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={bulkEndDate}
+                      onChange={(e) => setBulkEndDate(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Sunday Policy Options */}
                 <div>
                   <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
-                    End Date
+                    Sunday Handling Policy
                   </label>
-                  <input
-                    type="date"
-                    value={bulkEndDate}
-                    onChange={(e) => setBulkEndDate(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {[
+                      {
+                        id: 'present',
+                        title: 'Mark All Days (3/3 Pts)',
+                        desc: 'Full score every day',
+                        cls: 'border-emerald-200 bg-emerald-50/60 text-emerald-900'
+                      },
+                      {
+                        id: 'leave',
+                        title: 'Sundays as Paid Off',
+                        desc: 'Paid Leave / N/A',
+                        cls: 'border-indigo-200 bg-indigo-50/60 text-indigo-900'
+                      },
+                      {
+                        id: 'skip',
+                        title: 'Skip Sundays',
+                        desc: 'Leave unmarked',
+                        cls: 'border-slate-200 bg-slate-50 text-slate-800'
+                      }
+                    ].map(rule => (
+                      <button
+                        key={rule.id}
+                        type="button"
+                        onClick={() => setBulkSundayRule(rule.id as any)}
+                        className={`p-3 rounded-2xl border text-left transition-all ${
+                          bulkSundayRule === rule.id
+                            ? `${rule.cls} ring-2 ring-indigo-500 font-extrabold shadow-sm scale-[1.02]`
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <p className="font-black text-xs">{rule.title}</p>
+                        <p className="text-[10px] opacity-75 font-semibold mt-0.5">{rule.desc}</p>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Attendance Action Selection */}
-              <div>
-                <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
-                  Select Attendance Action
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {[
-                    { id: 'auto_leave', label: 'Apply Leave (Auto Max 2 Paid)', desc: 'First 2 = Paid, 3rd+ = Unpaid', cls: 'bg-purple-50 border-purple-200 text-purple-800' },
-                    { id: 'paid_leave', label: 'Paid Leave', desc: 'Max 2 per month', cls: 'bg-indigo-50 border-indigo-200 text-indigo-800' },
-                    { id: 'unpaid_leave', label: 'Unpaid Leave', desc: 'Deducted from salary', cls: 'bg-amber-50 border-amber-200 text-amber-800' },
-                    { id: 'present', label: 'Mark Present', desc: '+1 Point', cls: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
-                    { id: 'absent', label: 'Mark Absent', desc: '0 Point (Deducted)', cls: 'bg-rose-50 border-rose-200 text-rose-800' },
-                    { id: 'late', label: 'Mark Late', desc: '0 Point', cls: 'bg-amber-50 border-amber-200 text-amber-800' },
-                  ].map(opt => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setBulkAction(opt.id as any)}
-                      className={`p-3 rounded-2xl border text-left transition-all ${
-                        bulkAction === opt.id
-                          ? `${opt.cls} ring-2 ring-indigo-500 font-extrabold shadow-sm scale-[1.02]`
-                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      <div className="text-xs font-black">{opt.label}</div>
-                      <div className="text-[9px] opacity-75 font-semibold mt-0.5">{opt.desc}</div>
-                    </button>
-                  ))}
+                {/* Fast Summary Badge */}
+                <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200/70 text-slate-600 text-[11px] font-bold flex items-center justify-between">
+                  <span>Scope: {bulkStaffId === 'all' ? `${staff.length} staff members` : '1 selected staff'}</span>
+                  <span className="text-indigo-600 font-black">
+                    {bulkStartDate && bulkEndDate && bulkStartDate <= bulkEndDate
+                      ? `${getDatesBetween(bulkStartDate, bulkEndDate).length} Days Selected`
+                      : 'Invalid Date Range'}
+                  </span>
                 </div>
               </div>
-            </div>
+            ) : (
+              /* ── SINGLE ACTION / LEAVES FORM ── */
+              <div className="space-y-4 text-xs font-bold">
+                {/* Capping Policy Alert Banner */}
+                <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 flex items-start gap-3 text-amber-900">
+                  <Shield className="text-amber-600 shrink-0 mt-0.5" size={18} />
+                  <div className="text-xs space-y-1">
+                    <p className="font-extrabold uppercase tracking-wider text-[10px] text-amber-700">Monthly Paid Leave Policy (Max 2 Days)</p>
+                    <p className="font-medium leading-relaxed">
+                      Each staff member receives a maximum of <strong>2 Paid Leaves</strong> per calendar month. Any additional leaves assigned within the month will be automatically saved as <strong>Unpaid Leave</strong> (wage deducted).
+                    </p>
+                  </div>
+                </div>
+
+                {/* Target Staff Selection */}
+                <div>
+                  <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
+                    Select Staff Member
+                  </label>
+                  <select
+                    value={bulkStaffId}
+                    onChange={(e) => setBulkStaffId(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  >
+                    <option value="all">👥 All Active Staff ({staff.length} Members)</option>
+                    {staff.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({getDeptLabel(s.department)} — {formatDesignation(s.designation)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Date Range Selection */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={bulkStartDate}
+                      onChange={(e) => setBulkStartDate(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={bulkEndDate}
+                      onChange={(e) => setBulkEndDate(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Attendance Action Selection */}
+                <div>
+                  <label className="block text-slate-500 font-extrabold uppercase tracking-widest text-[10px] mb-1.5">
+                    Select Attendance Action
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {[
+                      { id: 'auto_leave', label: 'Apply Leave (Auto Max 2 Paid)', desc: 'First 2 = Paid, 3rd+ = Unpaid', cls: 'bg-purple-50 border-purple-200 text-purple-800' },
+                      { id: 'paid_leave', label: 'Paid Leave', desc: 'Max 2 per month', cls: 'bg-indigo-50 border-indigo-200 text-indigo-800' },
+                      { id: 'unpaid_leave', label: 'Unpaid Leave', desc: 'Deducted from salary', cls: 'bg-amber-50 border-amber-200 text-amber-800' },
+                      { id: 'present', label: 'Mark Present', desc: '+1 Point', cls: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
+                      { id: 'absent', label: 'Mark Absent', desc: '0 Point (Deducted)', cls: 'bg-rose-50 border-rose-200 text-rose-800' },
+                      { id: 'late', label: 'Mark Late', desc: '0 Point', cls: 'bg-amber-50 border-amber-200 text-amber-800' },
+                    ].map(opt => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setBulkAction(opt.id as any)}
+                        className={`p-3 rounded-2xl border text-left transition-all ${
+                          bulkAction === opt.id
+                            ? `${opt.cls} ring-2 ring-indigo-500 font-extrabold shadow-sm scale-[1.02]`
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        <div className="text-xs font-black">{opt.label}</div>
+                        <div className="text-[9px] opacity-75 font-semibold mt-0.5">{opt.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Modal Actions */}
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
@@ -2318,10 +3003,23 @@ export default function ManagerReportsPage() {
                 type="button"
                 disabled={savingBulk}
                 onClick={handleSaveBulkAudit}
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-extrabold text-xs shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-2xl font-extrabold text-xs shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
               >
-                {savingBulk ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                Apply Bulk Changes
+                {savingBulk ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>
+                      {bulkProgress
+                        ? `Saving (${bulkProgress.current}/${bulkProgress.total})...`
+                        : 'Applying Changes...'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    {bulkMode === 'one_click' ? <Sparkles size={16} className="text-amber-300" /> : <Save size={16} />}
+                    <span>{bulkMode === 'one_click' ? '⚡ Execute 1-Click Month Mark' : 'Apply Bulk Changes'}</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

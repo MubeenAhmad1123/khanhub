@@ -401,3 +401,73 @@ export function resolveStaffDuties(staff: any): { key: string; label: string }[]
 
   return ROLE_SPECIFIC_DUTIES['default_staff'];
 }
+
+// ── UTILITY: INTELLIGENT DRESS CODE RESOLVER FOR ANY STAFF ───────────────────
+export function resolveStaffDressCode(staff: any): { key: string; label: string }[] {
+  if (!staff) {
+    return [
+      { key: 'dress_pant', label: 'Dress Pant' },
+      { key: 'dress_shirt', label: 'Dress Shirt' },
+      { key: 'tie', label: 'Tie' },
+      { key: 'shoes', label: 'Shoes' },
+      { key: 'id_card', label: 'ID Card' }
+    ];
+  }
+
+  // 1. Check staff.dressCodeConfig
+  if (Array.isArray(staff.dressCodeConfig) && staff.dressCodeConfig.length > 0) {
+    return staff.dressCodeConfig.map((item: any, idx: number) => ({
+      key: String(item?.key || `dress_${idx + 1}`).trim(),
+      label: String(item?.label || item?.name || item?.key || `Item ${idx + 1}`).trim()
+    }));
+  }
+
+  // 2. Check staff.uniformItems or staff.dressItems
+  const rawUniform = staff.uniformItems || staff.dressItems || staff.uniformRules;
+  if (Array.isArray(rawUniform) && rawUniform.length > 0) {
+    return rawUniform.map((item: any, idx: number) => ({
+      key: typeof item === 'object' && item?.key ? String(item.key) : String(item).toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+      label: typeof item === 'object' ? String(item?.label || item?.name || item?.key || `Item ${idx + 1}`) : String(item)
+    }));
+  }
+
+  // 3. Match from UNIFORM_RULES
+  const dept = String(staff.department || staff.dept || staff._dept || '').toLowerCase().trim();
+  const gender = String(staff.gender || 'male').toLowerCase().trim();
+  const desig = String(staff.designation || '').toLowerCase().trim();
+
+  let ruleKey = `${dept}_${gender}_default`;
+  if (desig.includes('doctor')) ruleKey = `${dept}_${gender}_doctor`;
+  else if (desig.includes('admin')) ruleKey = `${dept}_${gender}_admin`;
+  else if (desig.includes('security') || desig.includes('guard')) ruleKey = `${dept}_${gender}_security`;
+  else if (desig.includes('reception')) ruleKey = `${dept}_${gender}_reception`;
+  else if (desig.includes('teacher') || desig.includes('lecturer')) ruleKey = `${dept}_${gender}_teacher`;
+  else if (desig.includes('cashier')) ruleKey = `${dept}_${gender}_cashier`;
+  else if (desig.includes('nurse')) ruleKey = `${dept}_${gender}_staff`;
+
+  if (UNIFORM_RULES[ruleKey]) {
+    return UNIFORM_RULES[ruleKey];
+  }
+
+  // Generic department fallbacks
+  if (UNIFORM_RULES[`${dept}_${gender}_default`]) {
+    return UNIFORM_RULES[`${dept}_${gender}_default`];
+  }
+
+  // Default gender fallbacks
+  if (gender === 'female') {
+    return [
+      { key: 'white_overall', label: 'White Overall' },
+      { key: 'shoes', label: 'Shoes' },
+      { key: 'id_card', label: 'ID Card' }
+    ];
+  }
+
+  return [
+    { key: 'dress_pant', label: 'Dress Pant' },
+    { key: 'dress_shirt', label: 'Dress Shirt' },
+    { key: 'tie', label: 'Tie' },
+    { key: 'shoes', label: 'Shoes' },
+    { key: 'id_card', label: 'ID Card' }
+  ];
+}
