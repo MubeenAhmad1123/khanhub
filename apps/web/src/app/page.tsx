@@ -5,6 +5,8 @@
 // ─────────────────────────────────────────────
 
 import HeroSection from '@/components/sections/HeroSection';
+import { VisionMissionSection } from '@/components/sections/VisionMissionSection';
+import { LeadershipSection } from '@/components/sections/LeadershipSection';
 import { DonateCTASection } from '@/components/sections/Donationsection';
 import DepartmentsSection from '@/components/sections/DepartmentsSection';
 import { MissionSection } from '@/components/sections/MissionSection';
@@ -15,6 +17,8 @@ export default function HomePage() {
   return (
     <main className="w-full overflow-x-hidden relative bg-white">
       <HeroSection />
+      <VisionMissionSection />
+      <LeadershipSection />
       <MissionSection />
       <DepartmentsSection />
       <SuccessStoriesSection />
