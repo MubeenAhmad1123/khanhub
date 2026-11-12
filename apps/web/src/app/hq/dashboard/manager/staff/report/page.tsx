@@ -1,8 +1,8 @@
 // src/app/hq/dashboard/manager/staff/report/page.tsx
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useHqSession } from '@/hooks/hq/useHqSession';
 import Link from 'next/link';
 import {
@@ -10,7 +10,14 @@ import {
   Users, RotateCcw, FileText, Layers, Loader2, Sparkles, Check,
   Clock, Shield, Building2, Phone, DollarSign, Award, Shirt, SlidersHorizontal
 } from 'lucide-react';
-import { listStaffCards, type StaffCardRow, type StaffDept } from '@/lib/hq/superadmin/staff';
+import {
+  listStaffCards,
+  type StaffCardRow,
+  type StaffDept,
+  REPORT_STATUS_OPTIONS,
+  resolveEffectiveStaffStatus,
+  type EffectiveStaffStatus,
+} from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
 
 type ColumnKey =
@@ -47,19 +54,41 @@ const AVAILABLE_COLUMNS: ColumnOption[] = [
   { key: 'salary', label: 'Monthly Salary', description: 'Base Pay Amount (Manager Access)', icon: DollarSign },
 ];
 
-export default function StaffReportGeneratorPage() {
+const VALID_STATUS_KEYS = new Set<EffectiveStaffStatus>(REPORT_STATUS_OPTIONS.map(o => o.key));
+
+function StaffReportGeneratorContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { session, loading: sessionLoading } = useHqSession();
   const [staff, setStaff] = useState<StaffCardRow[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const initialStatuses = useMemo<EffectiveStaffStatus[]>(() => {
+    const raw = searchParams.get('statuses');
+    if (!raw) return ['active'];
+    const parsed = raw
+      .split(',')
+      .map(s => s.trim() as EffectiveStaffStatus)
+      .filter(s => VALID_STATUS_KEYS.has(s));
+    return parsed.length > 0 ? Array.from(new Set(parsed)) : ['active'];
+  }, [searchParams]);
+
   // Filters & Controls
   const [search, setSearch] = useState('');
-  const [deptFilter, setDeptFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('active');
+  const [deptFilter, setDeptFilter] = useState<string>(() => searchParams.get('dept') || 'all');
+  const [selectedStatuses, setSelectedStatuses] = useState<EffectiveStaffStatus[]>(initialStatuses);
   const [sortBy, setSortBy] = useState<'dept' | 'seniority' | 'name' | 'id'>('dept');
   const [groupByDept, setGroupByDept] = useState<boolean>(true);
   const [printOrientation, setPrintOrientation] = useState<'landscape' | 'portrait'>('landscape');
+
+  useEffect(() => {
+    setSelectedStatuses(initialStatuses);
+  }, [initialStatuses]);
+
+  useEffect(() => {
+    const deptParam = searchParams.get('dept');
+    if (deptParam) setDeptFilter(deptParam);
+  }, [searchParams]);
 
   // Checkbox field selection
   const [columns, setColumns] = useState<Record<ColumnKey, boolean>>({
@@ -90,10 +119,9 @@ export default function StaffReportGeneratorPage() {
     const fetchAllStaff = async () => {
       try {
         setLoading(true);
-        const queryStatus = statusFilter === 'active' ? 'active' : statusFilter === 'inactive' ? 'inactive' : 'all';
         const data = await listStaffCards({
           dept: 'all',
-          status: queryStatus as any,
+          status: 'all_with_vacancies',
           role: 'personnel',
           fullEnrichment: true,
         });
@@ -107,7 +135,13 @@ export default function StaffReportGeneratorPage() {
     };
 
     fetchAllStaff();
-  }, [session, statusFilter]);
+  }, [session]);
+
+  const toggleStatusFilter = (key: EffectiveStaffStatus) => {
+    setSelectedStatuses(prev =>
+      prev.includes(key) ? prev.filter(item => item !== key) : [...prev, key]
+    );
+  };
 
   const toggleColumn = (key: ColumnKey) => {
     setColumns(prev => ({ ...prev, [key]: !prev[key] }));
@@ -205,6 +239,28 @@ export default function StaffReportGeneratorPage() {
     }
   };
 
+  const statusCounts = useMemo(() => {
+    const counts: Record<EffectiveStaffStatus, number> = {
+      active: 0,
+      hidden: 0,
+      inactive: 0,
+      resigned: 0,
+      terminated: 0,
+      vacancy: 0,
+    };
+    staff.forEach(s => {
+      const matchesSearch =
+        search === '' ||
+        (s.name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (s.employeeId || '').toLowerCase().includes(search.toLowerCase()) ||
+        (s.designation || '').toLowerCase().includes(search.toLowerCase());
+      const matchesDept = deptFilter === 'all' || s.dept === deptFilter;
+      if (!matchesSearch || !matchesDept) return;
+      counts[resolveEffectiveStaffStatus(s)] += 1;
+    });
+    return counts;
+  }, [staff, search, deptFilter]);
+
   const filteredStaff = useMemo(() => {
     let result = staff.filter(s => {
       const matchesSearch =
@@ -214,7 +270,8 @@ export default function StaffReportGeneratorPage() {
         (s.designation || '').toLowerCase().includes(search.toLowerCase());
 
       const matchesDept = deptFilter === 'all' || s.dept === deptFilter;
-      return matchesSearch && matchesDept;
+      const matchesStatus = selectedStatuses.includes(resolveEffectiveStaffStatus(s));
+      return matchesSearch && matchesDept && matchesStatus;
     });
 
     if (sortBy === 'dept') {
@@ -246,7 +303,7 @@ export default function StaffReportGeneratorPage() {
     }
 
     return result;
-  }, [staff, search, deptFilter, sortBy]);
+  }, [staff, search, deptFilter, selectedStatuses, sortBy]);
 
   const groupedStaff = useMemo(() => {
     if (!groupByDept) return { 'All Staff': filteredStaff };
@@ -507,7 +564,7 @@ export default function StaffReportGeneratorPage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Search */}
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
@@ -564,21 +621,90 @@ export default function StaffReportGeneratorPage() {
                   <option value="id">Sort by Staff ID</option>
                 </select>
               </div>
+            </div>
 
-              {/* Status Filter */}
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
-                  Personnel Status
-                </label>
-                <select
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all cursor-pointer"
-                  value={statusFilter}
-                  onChange={e => setStatusFilter(e.target.value)}
-                >
-                  <option value="active">Active Personnel Only</option>
-                  <option value="inactive">Inactive Personnel</option>
-                  <option value="all">All Records</option>
-                </select>
+            {/* Staff Status Inclusion Matrix */}
+            <div className="pt-4 border-t border-slate-100 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    Include Staff Categories ({selectedStatuses.length} selected)
+                  </span>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Select any combination — Active, Hidden, Inactive, Resigned, Terminated, or Vacancies.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStatuses(['active'])}
+                    className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[11px] transition-all cursor-pointer"
+                  >
+                    Active Only
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStatuses(['active', 'hidden'])}
+                    className="px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-[11px] transition-all cursor-pointer"
+                  >
+                    Active + Hidden
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStatuses(['inactive', 'resigned', 'terminated'])}
+                    className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[11px] transition-all cursor-pointer"
+                  >
+                    Inactive / Resigned / Terminated
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStatuses(['active', 'hidden', 'inactive', 'resigned', 'terminated'])}
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-black text-white font-bold text-[11px] transition-all cursor-pointer"
+                  >
+                    All Staff
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStatuses(['active', 'hidden', 'inactive', 'resigned', 'terminated', 'vacancy'])}
+                    className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] transition-all cursor-pointer"
+                  >
+                    All + Vacancies
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+                {REPORT_STATUS_OPTIONS.map(opt => {
+                  const isChecked = selectedStatuses.includes(opt.key);
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => toggleStatusFilter(opt.key)}
+                      className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        isChecked
+                          ? opt.activeChipClass
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                            isChecked ? 'bg-white' : opt.dotClass
+                          }`}
+                        />
+                        <span className="text-[11px] font-black truncate">{opt.shortLabel}</span>
+                      </div>
+                      <span
+                        className={`text-[10px] font-black px-1.5 py-0.5 rounded-md flex-shrink-0 ${
+                          isChecked ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700'
+                        }`}
+                      >
+                        {statusCounts[opt.key]}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -656,8 +782,13 @@ export default function StaffReportGeneratorPage() {
               <p className="text-[10px] font-bold text-slate-500 mt-0.5">
                 Total Personnel: <span className="text-slate-900 font-black">{filteredStaff.length}</span>
               </p>
-              <p className="text-[9px] font-semibold text-slate-400 mt-0.5 print:block hidden">
-                Filtered: {deptFilter !== 'all' ? getDeptLabel(deptFilter) : 'All Departments'}
+              <p className="text-[9px] font-semibold text-slate-500 mt-0.5 print:text-slate-700">
+                {deptFilter !== 'all' ? getDeptLabel(deptFilter) : 'All Departments'} &bull;{' '}
+                {selectedStatuses.length === 0
+                  ? 'No Statuses Selected'
+                  : selectedStatuses
+                      .map(k => REPORT_STATUS_OPTIONS.find(o => o.key === k)?.shortLabel || k)
+                      .join(', ')}
               </p>
             </div>
           </div>
@@ -786,15 +917,19 @@ export default function StaffReportGeneratorPage() {
 
                             {columns.status && (
                               <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                                <span
-                                  className={`inline-block px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                                    row.status === 'active' || row.isActive !== false
-                                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                      : 'bg-slate-100 text-slate-600 border border-slate-300'
-                                  }`}
-                                >
-                                  {row.status || 'Active'}
-                                </span>
+                                {(() => {
+                                  const effectiveStatus = resolveEffectiveStaffStatus(row);
+                                  const statusMeta = REPORT_STATUS_OPTIONS.find(o => o.key === effectiveStatus);
+                                  return (
+                                    <span
+                                      className={`inline-block px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                                        statusMeta?.badgeClass || 'bg-slate-100 text-slate-600 border border-slate-300'
+                                      }`}
+                                    >
+                                      {statusMeta?.shortLabel || row.status || 'Active'}
+                                    </span>
+                                  );
+                                })()}
                               </td>
                             )}
                           </tr>
@@ -816,5 +951,19 @@ export default function StaffReportGeneratorPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function StaffReportGeneratorPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+          <Loader2 className="animate-spin text-blue-600" size={32} />
+        </div>
+      }
+    >
+      <StaffReportGeneratorContent />
+    </Suspense>
   );
 }

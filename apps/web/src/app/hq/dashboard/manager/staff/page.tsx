@@ -11,9 +11,16 @@ import {
   Users, Search, Shield, ArrowRight,
   Filter, Plus, Download, LayoutGrid, List as ListIcon,
   Activity, Clock, Star, Loader2, AlertCircle, Printer,
-  FileText, UserMinus
+  FileText, UserMinus, X, Check
 } from 'lucide-react';
-import { listStaffCards, type StaffCardRow, getDeptPrefix, type StaffDept } from '@/lib/hq/superadmin/staff';
+import {
+  listStaffCards,
+  type StaffCardRow,
+  getDeptPrefix,
+  type StaffDept,
+  REPORT_STATUS_OPTIONS,
+  type EffectiveStaffStatus,
+} from '@/lib/hq/superadmin/staff';
 import { toast } from 'react-hot-toast';
 import { Spinner } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -62,6 +69,46 @@ export default function ManagerStaffPage() {
   const [unmarkedStaff, setUnmarkedStaff] = useState<any[]>([]);
   const [enriched, setEnriched] = useState(false);
   const [enriching, setEnriching] = useState(false);
+
+  // Printable Report Options Modal
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportStatuses, setReportStatuses] = useState<EffectiveStaffStatus[]>(['active']);
+  const [reportDept, setReportDept] = useState<string>('all');
+
+  const openReportModal = () => {
+    const mapFilterToReport = (): EffectiveStaffStatus[] => {
+      if (statusFilter === 'executive') return ['hidden'];
+      if (statusFilter === 'inactive') return ['inactive'];
+      if (statusFilter === 'resigned') return ['resigned'];
+      if (statusFilter === 'terminated') return ['terminated'];
+      if (statusFilter === 'active_vacancy') return ['vacancy'];
+      if (statusFilter === 'all') return ['active', 'hidden', 'inactive', 'resigned', 'terminated'];
+      return ['active'];
+    };
+    setReportStatuses(mapFilterToReport());
+    setReportDept(deptFilter || 'all');
+    setShowReportModal(true);
+  };
+
+  const toggleReportStatus = (key: EffectiveStaffStatus) => {
+    setReportStatuses(prev =>
+      prev.includes(key) ? prev.filter(item => item !== key) : [...prev, key]
+    );
+  };
+
+  const handleLaunchReport = () => {
+    if (reportStatuses.length === 0) {
+      toast.error('Please select at least one staff status to include.');
+      return;
+    }
+    const params = new URLSearchParams();
+    params.set('statuses', reportStatuses.join(','));
+    if (reportDept && reportDept !== 'all') {
+      params.set('dept', reportDept);
+    }
+    setShowReportModal(false);
+    router.push(`/hq/dashboard/manager/staff/report?${params.toString()}`);
+  };
 
 
 
@@ -299,13 +346,14 @@ export default function ManagerStaffPage() {
                 <UserMinus size={16} className="text-rose-600" />
                 <span>Termination Letter</span>
               </Link>
-              <Link
-                href="/hq/dashboard/manager/staff/report"
-                className="flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-500/25 active:scale-95 transition-all whitespace-nowrap"
+              <button
+                type="button"
+                onClick={openReportModal}
+                className="flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-500/25 active:scale-95 transition-all whitespace-nowrap cursor-pointer"
               >
                 <Printer size={18} />
                 <span>Generate Printable Report</span>
-              </Link>
+              </button>
               <div className="bg-white rounded-3xl p-2 border border-gray-100 flex items-center justify-between md:justify-start gap-4 sm:gap-6 shadow-2xl shadow-gray-200/50 w-full md:w-auto">
                 <div className="px-4 sm:px-6 py-2 border-r border-gray-100 flex-1 md:flex-initial">
                   <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">Total Active</p>
@@ -679,6 +727,175 @@ export default function ManagerStaffPage() {
           </div>
         )}
       </div>
+
+      {/* Printable Report Scope Modal */}
+      {showReportModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+          onClick={() => setShowReportModal(false)}
+        >
+          <div
+            className="w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto p-5 sm:p-7 space-y-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                  <Printer size={22} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight">
+                    Printable Report Options
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    Choose which staff categories and department to include in your report.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReportModal(false)}
+                className="p-2 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors cursor-pointer"
+                aria-label="Close report options"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="space-y-2.5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                Quick Presets
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReportStatuses(['active'])}
+                  className="px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs transition-all cursor-pointer"
+                >
+                  Active Only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReportStatuses(['active', 'hidden'])}
+                  className="px-3 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs transition-all cursor-pointer"
+                >
+                  Active + Hidden Staff
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReportStatuses(['inactive', 'resigned', 'terminated'])}
+                  className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs transition-all cursor-pointer"
+                >
+                  Inactive / Resigned / Terminated
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReportStatuses(['active', 'hidden', 'inactive', 'resigned', 'terminated'])}
+                  className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-xs transition-all cursor-pointer"
+                >
+                  All Staff (Incl. Hidden & Former)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReportStatuses(['active', 'hidden', 'inactive', 'resigned', 'terminated', 'vacancy'])}
+                  className="px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-all cursor-pointer"
+                >
+                  All + Vacancies
+                </button>
+              </div>
+            </div>
+
+            {/* Multi-select Checkboxes */}
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Include Staff Statuses ({reportStatuses.length} Selected)
+                </p>
+                {reportStatuses.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setReportStatuses([])}
+                    className="text-[11px] font-bold text-slate-400 hover:text-slate-700 cursor-pointer"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {REPORT_STATUS_OPTIONS.map(opt => {
+                  const checked = reportStatuses.includes(opt.key);
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => toggleReportStatus(opt.key)}
+                      className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                        checked
+                          ? 'bg-blue-50/70 border-blue-300 text-slate-900 shadow-sm'
+                          : 'bg-slate-50/60 border-slate-200 text-slate-500 hover:border-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${
+                          checked ? 'bg-blue-600 text-white' : 'bg-slate-200 text-transparent'
+                        }`}
+                      >
+                        <Check size={13} strokeWidth={3} />
+                      </span>
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${opt.dotClass}`} />
+                      <span className="text-xs font-extrabold truncate">{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Department Filter */}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
+                Department Scope
+              </label>
+              <select
+                value={reportDept}
+                onChange={e => setReportDept(e.target.value)}
+                className="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer"
+              >
+                <option value="all">All Departments</option>
+                <option value="hq">Khan Hub Official</option>
+                <option value="rehab">Rehab Department</option>
+                <option value="spims">SPIMS Department</option>
+                <option value="hospital">Hospital Department</option>
+                <option value="sukoon">Sukoon Department</option>
+                <option value="welfare">Welfare Department</option>
+                <option value="job-center">Job Center Department</option>
+                <option value="social-media">Social Media Department</option>
+                <option value="it">IT Department</option>
+              </select>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowReportModal(false)}
+                className="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleLaunchReport}
+                disabled={reportStatuses.length === 0}
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-500/25 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+              >
+                <Printer size={16} />
+                <span>Open Printable Report</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

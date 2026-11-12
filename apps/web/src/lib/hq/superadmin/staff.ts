@@ -362,6 +362,77 @@ async function loadDeptTodayStats(dept: StaffDept, date: string, staffConfigs: R
   return results;
 }
 
+export type EffectiveStaffStatus = 'active' | 'hidden' | 'inactive' | 'resigned' | 'terminated' | 'vacancy';
+
+export const REPORT_STATUS_OPTIONS: {
+  key: EffectiveStaffStatus;
+  label: string;
+  shortLabel: string;
+  dotClass: string;
+  activeChipClass: string;
+  badgeClass: string;
+}[] = [
+  {
+    key: 'active',
+    label: 'Active Staff',
+    shortLabel: 'Active',
+    dotClass: 'bg-emerald-500',
+    activeChipClass: 'bg-emerald-600 text-white border-emerald-600 shadow-sm',
+    badgeClass: 'bg-emerald-100 text-emerald-800 border border-emerald-300',
+  },
+  {
+    key: 'hidden',
+    label: 'Hidden Staff (Hide / Executive)',
+    shortLabel: 'Hidden',
+    dotClass: 'bg-purple-500',
+    activeChipClass: 'bg-purple-600 text-white border-purple-600 shadow-sm',
+    badgeClass: 'bg-purple-100 text-purple-800 border border-purple-300',
+  },
+  {
+    key: 'inactive',
+    label: 'Inactive Staff',
+    shortLabel: 'Inactive',
+    dotClass: 'bg-amber-500',
+    activeChipClass: 'bg-amber-500 text-white border-amber-500 shadow-sm',
+    badgeClass: 'bg-amber-100 text-amber-800 border border-amber-300',
+  },
+  {
+    key: 'resigned',
+    label: 'Resigned Staff',
+    shortLabel: 'Resigned',
+    dotClass: 'bg-rose-500',
+    activeChipClass: 'bg-rose-600 text-white border-rose-600 shadow-sm',
+    badgeClass: 'bg-rose-100 text-rose-800 border border-rose-300',
+  },
+  {
+    key: 'terminated',
+    label: 'Terminated Staff',
+    shortLabel: 'Terminated',
+    dotClass: 'bg-red-600',
+    activeChipClass: 'bg-red-600 text-white border-red-600 shadow-sm',
+    badgeClass: 'bg-red-100 text-red-800 border border-red-300',
+  },
+  {
+    key: 'vacancy',
+    label: 'Open Vacancies',
+    shortLabel: 'Vacancy',
+    dotClass: 'bg-indigo-500',
+    activeChipClass: 'bg-indigo-600 text-white border-indigo-600 shadow-sm',
+    badgeClass: 'bg-indigo-100 text-indigo-800 border border-indigo-300',
+  },
+];
+
+/** Normalizes raw Firestore status/isActive flags into a single report category. */
+export function resolveEffectiveStaffStatus(row: { status?: string; isActive?: boolean }): EffectiveStaffStatus {
+  const statusStr = String(row.status || '').toLowerCase().trim();
+  if (statusStr === 'active_vacancy') return 'vacancy';
+  if (statusStr === 'hide' || statusStr === 'executive') return 'hidden';
+  if (statusStr === 'resigned') return 'resigned';
+  if (statusStr === 'terminated') return 'terminated';
+  if (statusStr === 'inactive' || row.isActive === false) return 'inactive';
+  return 'active';
+}
+
 export async function listStaffCards({
   dept,
   status,
@@ -370,7 +441,7 @@ export async function listStaffCards({
   includeTodayStats = true,
 }: {
   dept: 'all' | StaffDept;
-  status: 'all' | 'active' | 'inactive' | 'active_vacancy' | 'executive';
+  status: 'all' | 'active' | 'inactive' | 'active_vacancy' | 'executive' | 'all_with_vacancies';
   role: 'all' | 'admin' | 'staff' | 'cashier' | 'personnel';
   fullEnrichment?: boolean;
   includeTodayStats?: boolean;
@@ -674,6 +745,8 @@ export async function listStaffCards({
         photoUrl: s.photoUrl || s.photoURL,
         monthlySalary: Number(s.monthlySalary || 0),
         lastDutyLabel: lastDuty,
+        emergencyContactName: s.emergencyContactName || s.emergencyContact,
+        emergencyPhone: s.emergencyPhone || s.phone,
         seniority: s.seniority || 'Staff',
         todayUniformStatus: today.uniform,
         todayDutyStatus: today.duty,
