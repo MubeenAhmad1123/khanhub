@@ -433,6 +433,23 @@ export function resolveEffectiveStaffStatus(row: { status?: string; isActive?: b
   return 'active';
 }
 
+function extractEmergencyContact(rawName: any, rawContact: any, rawPhone: any): {
+  emergencyContactName?: string;
+  emergencyPhone?: string;
+} {
+  const contactObj = rawContact && typeof rawContact === 'object' ? rawContact : null;
+  const contactName =
+    (typeof rawName === 'string' && rawName.trim()) ||
+    (contactObj && typeof contactObj.name === 'string' && contactObj.name.trim()) ||
+    (typeof rawContact === 'string' && rawContact.trim()) ||
+    undefined;
+  const contactPhone =
+    (typeof rawPhone === 'string' && rawPhone.trim()) ||
+    (contactObj && typeof contactObj.phone === 'string' && contactObj.phone.trim()) ||
+    undefined;
+  return { emergencyContactName: contactName, emergencyPhone: contactPhone };
+}
+
 export async function listStaffCards({
   dept,
   status,
@@ -726,6 +743,11 @@ export async function listStaffCards({
 
       // Only fetch expensive individual logs if fullEnrichment is enabled (like lastDuty)
       const lastDuty = fullEnrichment ? await loadLastDuty(d, staffId) : undefined;
+      const emergency = extractEmergencyContact(
+        s.emergencyContactName,
+        s.emergencyContact,
+        s.emergencyPhone || s.phone
+      );
 
       return {
         id: `${d}_${s.id}`,
@@ -745,8 +767,8 @@ export async function listStaffCards({
         photoUrl: s.photoUrl || s.photoURL,
         monthlySalary: Number(s.monthlySalary || 0),
         lastDutyLabel: lastDuty,
-        emergencyContactName: s.emergencyContactName || s.emergencyContact,
-        emergencyPhone: s.emergencyPhone || s.phone,
+        emergencyContactName: emergency.emergencyContactName,
+        emergencyPhone: emergency.emergencyPhone,
         seniority: s.seniority || 'Staff',
         todayUniformStatus: today.uniform,
         todayDutyStatus: today.duty,
@@ -790,6 +812,12 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     loadLastDuty(dept, uid).catch(() => undefined),
   ]);
 
+  const emergency = extractEmergencyContact(
+    data.emergencyContactName,
+    data.emergencyContact,
+    data.emergencyPhone || data.phone
+  );
+
   return {
     id: compositeId,
     dept,
@@ -808,9 +836,9 @@ export async function fetchStaffProfile(compositeId: string): Promise<StaffProfi
     gender: data.gender,
     fatherName: data.fatherName,
     bloodGroup: data.bloodGroup,
-    emergencyContact: data.emergencyContact,
-    emergencyContactName: data.emergencyContactName || data.emergencyContact,
-    emergencyPhone: data.emergencyPhone,
+    emergencyContact: typeof data.emergencyContact === 'string' ? data.emergencyContact : emergency.emergencyPhone || emergency.emergencyContactName,
+    emergencyContactName: emergency.emergencyContactName,
+    emergencyPhone: emergency.emergencyPhone,
     joiningDate: data.createdAt || data.joiningDate,
     lastLoginAt: data.lastLoginAt,
     photoUrl: data.photoUrl || data.photoURL,
