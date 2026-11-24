@@ -5,8 +5,8 @@
 // Purpose & Direction Section — Khan Hub Vision and Khan Hub Mission
 // ─────────────────────────────────────────────────────────────────
 
+import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Eye, Compass, Sparkles } from 'lucide-react';
 
 const VISION_PILLARS = [
   'Education',
@@ -50,7 +50,9 @@ export function VisionMissionSection() {
           className="max-w-3xl mx-auto text-center mb-10 sm:mb-14"
         >
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary-50 border border-primary-200 mb-4">
-            <Sparkles className="w-3.5 h-3.5 text-primary-600" aria-hidden="true" />
+            <div className="w-4 h-4 relative flex-shrink-0">
+              <Image src="/logo-circle.webp" alt="Khan Hub" fill className="object-contain" />
+            </div>
             <span className="text-xs font-bold uppercase tracking-widest text-primary-700 font-display">
               Purpose &amp; Direction
             </span>
@@ -88,8 +90,14 @@ export function VisionMissionSection() {
               {/* Card Header */}
               <div className="flex items-center justify-between gap-3 mb-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-primary-50 border border-primary-200 text-primary-600 flex items-center justify-center flex-shrink-0 group-hover:bg-primary-500 group-hover:text-white transition-colors duration-300">
-                    <Eye className="w-5 h-5 sm:w-6 sm:h-6" aria-hidden="true" />
+                  <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white border border-primary-200 shadow-sm flex items-center justify-center flex-shrink-0 p-1.5 overflow-hidden group-hover:border-primary-400 group-hover:shadow-md transition-all duration-300">
+                    <Image
+                      src="/logo-circle.webp"
+                      alt="Khan Hub Logo"
+                      width={40}
+                      height={40}
+                      className="w-full h-full object-contain"
+                    />
                   </div>
                   <div>
                     <span className="block text-[11px] font-bold uppercase tracking-widest text-primary-600 font-display">
@@ -152,8 +160,14 @@ export function VisionMissionSection() {
               {/* Card Header */}
               <div className="flex items-center justify-between gap-3 mb-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-success-50 border border-success-200 text-success-600 flex items-center justify-center flex-shrink-0 group-hover:bg-success-500 group-hover:text-white transition-colors duration-300">
-                    <Compass className="w-5 h-5 sm:w-6 sm:h-6" aria-hidden="true" />
+                  <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white border border-success-200 shadow-sm flex items-center justify-center flex-shrink-0 p-1.5 overflow-hidden group-hover:border-success-400 group-hover:shadow-md transition-all duration-300">
+                    <Image
+                      src="/logo-circle.webp"
+                      alt="Khan Hub Logo"
+                      width={40}
+                      height={40}
+                      className="w-full h-full object-contain"
+                    />
                   </div>
                   <div>
                     <span className="block text-[11px] font-bold uppercase tracking-widest text-success-600 font-display">
@@ -202,4 +216,3 @@ export function VisionMissionSection() {
     </section>
   );
 }
-
